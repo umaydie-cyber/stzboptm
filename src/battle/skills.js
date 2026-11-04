@@ -624,7 +624,7 @@ export const __SKILLS__ = [
         callskill: function (self) {
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
             let subskill = (attacker, damageInfo, skill) => {
-                if (damageInfo.type == 1 && skill == null) {
+                if (damageInfo.type == 1 && (skill == null || damageInfo.isBasicAttack)) {
                     // 恢复一定兵力
                     if (getRandomBool(self.getRealSkillRate(50))) {
                         self.revocer(calcRecover(self, 200, 0, 2), self, this.name);
@@ -1451,6 +1451,46 @@ export const __SKILLS__ = [
             const bonus = clacSkillAdditionRate(5, 5 / 150, self.Attrs.int);
             self.addState('inteDamageAdd', bonus, -1, this, self, true);
             return true;
+        }
+    },
+    {
+        id: 1041, name: "长兵方阵",
+        desc: "战斗开始后前3回合，使我军群体每回合都有75.0%的几率进入分兵状态，普通攻击后同时对附近的敌军造成伤害（伤害率60.0%）",
+        level: "A", type: 1, target: 2, target_type: "team", limit: 3, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.getTarget(this.limit, this.target, 2).forEach(target => {
+                target.addHook('回合开始时', '长兵方阵分兵', () => {
+                    if (self.Manger.Round >= 1 && self.Manger.Round <= 3 && getRandomBool(75)) {
+                        target.applySplitAttack(60, 1, this, self);
+                    }
+                }, this, self);
+            });
+        }
+    },
+    {
+        id: 1042, name: "三军齐出",
+        desc: "每回合行动时90.0%几率使自身进入分兵状态，普通攻击后同时对附近的敌军造成伤害（伤害率70.0%）",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('行动时', '三军齐出分兵', () => {
+                if (getRandomBool(90)) self.applySplitAttack(70, 1, this, self);
+            }, this, self);
+        }
+    },
+    {
+        id: 1043, name: "疾击其后",
+        desc: "普通攻击后，随机对敌军单体再发动2次攻击（伤害率80.0%-140.0%），每次攻击的目标及伤害率独立判定",
+        level: "S", type: 3, target: 1, target_type: "enemy", limit: 0, rate: 35, study: true, randomTargets: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `的攻击发动【${this.name}】`);
+            for (let i = 0; i < 2; i++) {
+                if (self.Manger.Over || self.Arms <= 0) break;
+                const target = self.getTarget(self.Limit, 1)[0];
+                if (!target) break;
+                target.beHurt(self, { type: 1, rate: getRandomInt(80, 140) }, this);
+            }
         }
     }
 ]

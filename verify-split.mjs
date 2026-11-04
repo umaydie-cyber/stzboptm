@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'vite';
+const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+const originalRandom = Math.random;
+try {
+  const { BattleHero } = await vite.ssrLoadModule('/src/battle/battleHero.js');
+  const { __SKILLS__ } = await vite.ssrLoadModule('/src/battle/skills.js');
+  const messages = [];
+  const manager = { Round: 1, Over: false, Record: {
+    pushRecord: (...v) => messages.push(v), pushActionRecord: (...v) => messages.push(v)
+  }, BlueTeam: { hero: [] }, RedTeam: { hero: [] } };
+  const make = camp => new BattleHero({id: 1001, level: 50, up: 0, extraAttrsAlloc: {}, equipskill: []}, camp, manager, 100);
+  manager.BlueTeam.hero = Array.from({length: 3}, () => make('blue'));
+  manager.RedTeam.hero = Array.from({length: 3}, () => make('red'));
+  const [self, friend] = manager.BlueTeam.hero;
+  const [rear, middle, front] = manager.RedTeam.hero;
+  const command = __SKILLS__.find(s => s.id === 1041);
+  const passive = __SKILLS__.find(s => s.id === 1042);
+  const pursuit = __SKILLS__.find(s => s.id === 1043);
+  assert.equal(self.applySplitAttack(60, 2, command, self), true);
+  assert.equal(self.applySplitAttack(70, 1, passive, self), false);
+  assert.equal(self.State.splitAttack.rate, 60);
+  self.finishRound();
+  assert.ok(self.State.splitAttack);
+  manager.Round = 2;
+  self.finishRound();
+  assert.equal(self.State.splitAttack, null);
+  self.applySplitAttack(70, 1, passive, self);
+  assert.deepEqual(self.getSplitAttackTargets(middle), [front, rear]);
+  self.State.rage.rounds = 1;
+  assert.ok(self.getSplitAttackTargets(friend).includes(self));
+  self.State.rage.rounds = 0;
+  Math.random = () => 0;
+  const lei = __SKILLS__.find(s => s.id === 1015);
+  lei.callskill(middle);
+  let heals = 0;
+  middle.revocer = () => heals++;
+  self.performSplitAttack([middle]);
+  assert.equal(heals, 1, '分兵必须触发垒实的普通攻击受伤判定');
+  const hits = [];
+  let rolls = 0;
+  Math.random = () => rolls++ === 0 ? 0 : 0.999;
+  let picks = 0;
+  self.getTarget = () => [picks++ === 0 ? middle : rear];
+  middle.beHurt = (_, info) => hits.push(['middle', info.rate]);
+  rear.beHurt = (_, info) => hits.push(['rear', info.rate]);
+  pursuit.callskill(self);
+  assert.deepEqual(hits, [['middle', 80], ['rear', 140]]);
+  Math.random = () => 0;
+  self.State.splitAttack = null;
+  self.getTarget = () => [self];
+  command.callskill(self);
+  manager.Round = 3;
+  self.callHook('回合开始时');
+  assert.equal(self.State.splitAttack.rate, 60);
+  passive.callskill(self);
+  self.callHook('行动时');
+  assert.equal(self.State.splitAttack.rate, 60);
+  self.finishRound();
+  manager.Round = 4;
+  self.callHook('回合开始时');
+  assert.equal(self.State.splitAttack, null);
+  self.callHook('行动时');
+  assert.equal(self.State.splitAttack.rate, 70);
+  assert.ok(messages.some(r => r.some(v => String(v).includes('分兵效果冲突'))));
+  console.log('Verified split conflict, round-end expiration, adjacency, rage self-hit, 垒实 and independent pursuit targets');
+} finally {
+  Math.random = originalRandom;
+  await vite.close();
+}
+

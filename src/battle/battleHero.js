@@ -109,6 +109,7 @@ export class BattleHero {
             },
 
             continuousDamage: {},
+            splitAttack: null,
 
             // 犹豫 任意类型不叠加
             activeLimit: {
@@ -388,7 +389,7 @@ export class BattleHero {
             if (skill.type == 3) {
                 this.triggerPursuitCurses();
                 if (this.Arms <= 0) return;
-                if (target.Arms != 0 && getRandomBool(this.getRealSkillRate(skill.rate))) {
+                if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate))) {
                     skill.callskill(this, target);
                 }
             }
@@ -510,13 +511,52 @@ export class BattleHero {
 
     //普通攻击
     basicAttack(target) {
+        // 在普攻结算前确定相邻位置，避免目标阵亡后队列收缩改变分兵目标。
+        const splitTargets = this.getSplitAttackTargets(target);
         this.Manger.Record.pushActionRecord(this, target, '对', '发动普通攻击');
         target.beHurt(this, {
             type: 1,
             rate: 100
         });
         if (this.Manger.Over == true) return;
+        this.performSplitAttack(splitTargets);
+        if (this.Manger.Over || this.Arms <= 0) return;
         this.callPursuitSkill(target);
+    }
+
+    applySplitAttack(rate, rounds, skill, source) {
+        if (this.State.splitAttack) {
+            this.Manger.Record.pushRecord(this, '已存在分兵状态，分兵效果冲突', 1);
+            return false;
+        }
+        this.State.splitAttack = { rate, skill, source, expiresRound: this.Manger.Round + rounds - 1 };
+        this.Manger.Record.pushRecord(this, `进入分兵状态（伤害率${rate}%），持续${rounds}回合`, 1);
+        return true;
+    }
+
+    getSplitAttackTargets(target) {
+        if (!this.State.splitAttack) return [];
+        const line = [...this.Manger.BlueTeam.hero, ...[...this.Manger.RedTeam.hero].reverse()].filter(h => h.Arms > 0);
+        const index = line.indexOf(target);
+        return line.filter((h, i) => Math.abs(i - index) === 1 && (this.isRage() || h.BattleCamp !== this.BattleCamp));
+    }
+
+    performSplitAttack(targets) {
+        const split = this.State.splitAttack;
+        if (!split) return;
+        for (const target of targets) {
+            if (this.Manger.Over || this.Arms <= 0) break;
+            if (target.Arms <= 0) continue;
+            this.Manger.Record.pushActionRecord(this, target, '的分兵对', '造成伤害');
+            target.beHurt(this, { type: 1, rate: split.rate, isBasicAttack: true, isSplitAttack: true }, split.skill);
+        }
+    }
+
+    finishRound() {
+        if (this.State.splitAttack && this.State.splitAttack.expiresRound <= this.Manger.Round) {
+            this.State.splitAttack = null;
+            this.Manger.Record.pushRecord(this, '分兵状态在回合结束时消失', 1);
+        }
     }
 
     //受到伤害
