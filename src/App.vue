@@ -797,5 +797,93 @@ const battleStart = () => {
 		}
 	}
 }
+@media (max-width: 900px) {
+	.main {
+		width: 100%;
+		height: auto;
+		min-height: 100dvh;
+		padding: 16px 10px calc(24px + env(safe-area-inset-bottom));
+		box-sizing: border-box;
+		gap: 16px;
+		background-position: center;
+
+		&>.battle {
+			width: 100%;
+			height: auto;
+			margin-top: 0;
+
+			.header-area {
+				height: 82px;
+				gap: 12px;
+				.blue-team, .red-team { width: calc(50% - 6px); }
+				.blue-team .bar, .red-team .bar { width: 100%; height: 12px; }
+				.blue-team, .red-team {
+					.role-name, .bar-box .text, .team-name { font-size: 12px; }
+					.bar-box { height: auto; flex-wrap: wrap; gap: 4px; }
+					.team-name { width: auto; min-width: 50px; }
+				}
+				.red-team .bar-box { flex-direction: row-reverse; }
+			}
+
+			.card-area {
+				width: 100%;
+				height: auto;
+				display: flex;
+				flex-direction: column;
+				gap: 34px;
+				.card-box {
+					width: 100%;
+					height: auto;
+					gap: 5px;
+					.card {
+						width: calc((100% - 10px) / 3);
+						height: auto;
+						aspect-ratio: 12 / 17;
+						flex: none;
+						.hero-name, &>.level { font-size: clamp(11px, 3vw, 15px); }
+						.arms, .hurtarms { font-size: 10px; }
+						.skills { display: none; }
+						.stars .star { width: 9px; height: 9px; }
+						.range { font-size: 10px; }
+						.range .army { width: 24px; height: 24px; }
+						.cost { font-size: 10px; }
+						.cost .cost-icon { width: 24px; height: 12px; }
+					}
+				}
+			}
+		}
+
+		&>.stbtn-box {
+			width: 100%;
+			height: auto;
+			align-self: stretch;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+			&>.stbtn-1 {
+				min-width: 0;
+				min-height: 44px;
+				margin: 0;
+				padding: 7px 4px;
+				box-sizing: border-box;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 16px;
+				letter-spacing: 0;
+			}
+		}
+		&>.record {
+			box-sizing: border-box;
+			padding: 10px 4px;
+			font-size: 13px;
+			line-height: 1.6;
+			.record-item { padding: 5px 8px; flex-wrap: wrap; }
+			.record-item.round-title { font-size: 15px; padding: 8px; margin: 8px 0; }
+			.record-item.hero-round-start { padding: 8px; margin: 8px 0; }
+			.record-item .sub { width: 8px; height: 8px; }
+		}
+	}
+}
 </style>
 
