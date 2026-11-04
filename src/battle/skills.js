@@ -1492,6 +1492,27 @@ export const __SKILLS__ = [
                 target.beHurt(self, { type: 1, rate: getRandomInt(80, 140) }, this);
             }
         }
+    },
+    {
+        id: 1044, name: "攻其不备",
+        desc: "战斗中，使敌军群体在每受到一次攻击的伤害后，其所受到的所有伤害提高5.2%（受速度属性影响，以80速度为基准），此效果最多叠加5次，持续直到战斗结束",
+        level: "S", type: 1, target: 2, target_type: "enemy", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const perLayer = Math.max(0, Math.round(5.2 + (self.Attrs.spd - 80) * 0.04));
+            self.getTarget(this.limit, this.target).forEach(target => {
+                let layers = 0;
+                target.addHook('受伤时', '攻其不备叠层', (attacker, damageInfo, skill, damage) => {
+                    if (damageInfo.type !== 1 || damage <= 0 || target.Arms <= 0 || layers >= 5) return;
+                    const physical = target.addState('beAttackDamageAdd', perLayer, -1, this, self, true);
+                    const strategy = target.addState('beInteDamageAdd', perLayer, -1, this, self, true);
+                    if (physical || strategy) {
+                        layers++;
+                        self.Manger.Record.pushRecord(target, `【攻其不备】已叠加${layers}/5层，每层${perLayer}%`, 1);
+                    }
+                }, this, self, 'debuff');
+            });
+        }
     }
 ]
 

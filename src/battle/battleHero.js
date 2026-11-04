@@ -617,7 +617,7 @@ export class BattleHero {
             this.HurtArms = Math.floor(this.HurtArms * 0.6);
         }
 
-        this.callHook('受伤时', attacker, damageInfo, skill);
+        this.callHook('受伤时', attacker, damageInfo, skill, realDamage);
     }
 
     //受到伤害,不计算伤害,使用传入的值作为伤害值。 给类似【白衣渡江】这种指挥阶段就确定伤害的战法使用
