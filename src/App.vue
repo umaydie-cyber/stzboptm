@@ -161,8 +161,8 @@ const battleStart = () => {
 			<div class="card-area">
 				<div class="card-box">
 					<div class="card" v-for="item in [...[...battleinfo.BlueTeam.hero].reverse()]">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1020].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1020].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
@@ -199,8 +199,8 @@ const battleStart = () => {
 				</div>
 				<div class="card-box">
 					<div class="card" v-for="item in [...[...battleinfo.RedTeam.hero].reverse()]">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1020].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1020].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${item.Camp}.png`">

@@ -142,6 +142,7 @@ export class BattleManger {
             // 先执行回合开始时的效果
             this.SortSpdHeros.forEach((e) => {
                 if(e.Arms > 0 && this.Round > 0){
+                    e.triggerContinuousDamage();
                     e.callHook("回合开始时");
                 }
             });

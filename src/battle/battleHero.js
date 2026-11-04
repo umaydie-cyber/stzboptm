@@ -108,6 +108,8 @@ export class BattleHero {
                 from: { hero: null, skill: 0 }
             },
 
+            continuousDamage: {},
+
             // 犹豫 任意类型不叠加
             activeLimit: {
                 rounds: 0,
@@ -384,6 +386,8 @@ export class BattleHero {
             if (!e) return;
             let skill = this.Skills[e];
             if (skill.type == 3) {
+                this.triggerPursuitCurses();
+                if (this.Arms <= 0) return;
                 if (target.Arms != 0 && getRandomBool(this.getRealSkillRate(skill.rate))) {
                     skill.callskill(this, target);
                 }
@@ -606,6 +610,41 @@ export class BattleHero {
         value += this.getState(name, 3);
         value += this.getState(name, 4);
         return value;
+    }
+
+    // 同名持续伤害仅保留较强的一份；重新施加强效果时刷新持续时间。
+    applyContinuousDamage(kind, source, skill, rate, rounds, onPursuit = false) {
+        const damageInfo = { type: 4, rate };
+        const damage = clacInte2Damage(source, this, damageInfo, skill);
+        const current = this.State.continuousDamage[kind];
+        if (current && current.expiresRound > this.Manger.Round && damage < current.damage) {
+            this.Manger.Record.pushRecord(this, `已有更强大的${kind}效果`, 1);
+            return false;
+        }
+        this.State.continuousDamage[kind] = {
+            damage, source, skill, rate, onPursuit,
+            appliedRound: this.Manger.Round,
+            expiresRound: this.Manger.Round + rounds
+        };
+        this.Manger.Record.pushRecord(this, `${kind}效果已施加，持续${rounds}回合`, 1);
+        this.callHook('被施加持续伤害时', skill, source, damage, damageInfo, kind);
+        return true;
+    }
+
+    triggerContinuousDamage(onPursuit = false) {
+        for (const [kind, effect] of Object.entries(this.State.continuousDamage)) {
+            if (effect.expiresRound < this.Manger.Round) {
+                delete this.State.continuousDamage[kind];
+                continue;
+            }
+            if (effect.onPursuit !== onPursuit || (!onPursuit && effect.appliedRound >= this.Manger.Round) || this.Arms <= 0) continue;
+            this.beHurtByNum(effect.source, { type: 4, rate: effect.rate }, effect.skill, effect.damage);
+            this.Manger.Record.pushRecord(this, `受到${kind}效果，损失${effect.damage}兵力`, 1);
+        }
+    }
+
+    triggerPursuitCurses() {
+        this.triggerContinuousDamage(true);
     }
 
     //回合开始时清除一些效果

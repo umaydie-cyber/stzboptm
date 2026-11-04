@@ -1430,5 +1430,28 @@ export const __SKILLS__ = [
                 target.beHurt(self, { type: 1, rate: 100 }, this);
             }
         }
+    },
+    {
+        id: 1040,
+        name: "密谋定蜀",
+        desc: "有效距离：5；发动率：35%；使敌军群体进行攻击和策略攻击的伤害降低30.0%（受谋略属性影响），并陷入恐慌（伤害率143.0%，受谋略属性影响），每当其试图发动追击战法将额外受到妖术诅咒（伤害率133.0%，受谋略属性影响），持续2回合，每次发动后，自身造成的策略攻击伤害提升5%，可叠加，持续到战斗结束",
+        level: "S", type: 2, target: 2, target_type: "enemy", limit: 5, rate: 35, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const reduction = clacSkillAdditionRate(30, 30 / 120, self.Attrs.int);
+            const panicRate = clacSkillAdditionRate(143, 1.125, self.Attrs.int);
+            const curseRate = clacSkillAdditionRate(133, 1.225, self.Attrs.int);
+            self.getTarget(this.limit, this.target).forEach(target => {
+                target.addState('attackDamageSub', reduction, 2, this, self);
+                target.addState('inteDamageSub', reduction, 2, this, self);
+                target.applyContinuousDamage('恐慌', self, this, panicRate, 2);
+                target.applyContinuousDamage('妖术', self, this, curseRate, 2, true);
+            });
+            const bonus = clacSkillAdditionRate(5, 5 / 150, self.Attrs.int);
+            self.addState('inteDamageAdd', bonus, -1, this, self, true);
+            return true;
+        }
     }
 ]
+
