@@ -6,6 +6,11 @@ body {
 	height: 100vh;
 }
 
+@media (max-width: 900px) {
+	html, body, #app { width: 100%; min-height: 100%; height: auto; }
+	#app { min-height: 100dvh; overflow-x: hidden; justify-content: flex-start; }
+}
+
 @font-face {
 	font-family: "FZLanTingHei_L_GBK";
 	src: url(/assets/FZLanTingHei_L_GBK.TTF);
