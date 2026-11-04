@@ -1415,5 +1415,50 @@ const changeConfig = (type,act) => {
         }
     }
 }
+@media (max-width: 900px) {
+    .team-config-warp, .herolist-warp, .heroinfo-warp, .skilllist-warp {
+        width: 100%; height: 100dvh; overflow: auto;
+    }
+    .team-config-warp > .box {
+        width: 100%; height: 100dvh; overflow: auto;
+    }
+    .team-config-warp > .box > .header { min-height: 54px; height: 54px; }
+    .team-config-warp > .box > .header > .title { font-size: 22px; }
+    .team-config-warp > .box > .header > .close,
+    .herolist-warp > .herolist-header > .close,
+    .heroinfo-warp > .heroinfo-header > .close,
+    .skilllist-warp > .skilllist-header > .close { width: 44px; height: 44px; flex: none; transform: none; }
+    .team-config-warp > .box > .tabs { width: 180px; min-height: 50px; font-size: 17px; }
+    .team-config-warp > .box > .cards { height: auto; flex: 1; gap: 12px; padding: 12px 8px 24px 24px; box-sizing: border-box; }
+    .team-config-warp > .box > .cards > .card { width: 100%; height: 130px; min-height: 130px; }
+    .team-config-warp > .box > .cards > .card > .posname { font-size: 12px; width: 14px; left: -19px; }
+    .team-config-warp > .box > .cards > .card > .name { font-size: 13px; width: 15px; }
+    .team-config-warp > .box > .cards > .card > .image { width: 32%; }
+    .team-config-warp > .box > .cards > .card > .skills { flex: 1; }
+    .team-config-warp > .box > .cards > .card > .skills > .skill { width: 32%; }
+    .team-config-warp > .box > .cards > .card > .skills > .skill > .skill-name { font-size: 11px; text-align: center; }
+    .herolist-warp > .herolist-header, .heroinfo-warp > .heroinfo-header, .skilllist-warp > .skilllist-header { height: 58px; min-height: 58px; }
+    .herolist-warp > .herolist-header > .title, .heroinfo-warp > .heroinfo-header > .title, .skilllist-warp > .skilllist-header > .title { width: 70%; font-size: 22px; }
+    .herolist-warp > .herolist-box { width: 100%; height: auto; flex: 1; padding: 8px; box-sizing: border-box; justify-content: center; }
+    .herolist-warp > .herolist-box .card { width: calc((100vw - 40px) / 3); height: auto; aspect-ratio: 12 / 17; margin: 5px; }
+    .herolist-warp > .herolist-box .card .hero-name, .herolist-warp > .herolist-box .card > .level { font-size: 11px; }
+    .herolist-warp > .herolist-box .card .stars > .star { width: 9px; height: 9px; }
+    .herolist-warp > .herolist-box .card .range > span, .herolist-warp > .herolist-box .card .cost { font-size: 10px; }
+    .heroinfo-warp > .heroinfo-box { width: 100%; height: auto; overflow-y: auto; padding: 12px; box-sizing: border-box; justify-content: center; }
+    .heroinfo-warp > .heroinfo-box .card { width: 120px; height: 170px; margin: 0 auto 12px; }
+    .heroinfo-warp > .heroinfo-box .card .hero-name, .heroinfo-warp > .heroinfo-box .card > .level { font-size: 12px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo { width: 100%; height: auto; }
+    .heroinfo-warp > .heroinfo-box .heroinfo > div { min-height: 44px; padding: 6px 12px; margin: 3px 0; font-size: 14px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo input { width: 52px; height: 32px; font-size: 16px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .add-btn, .heroinfo-warp > .heroinfo-box .heroinfo .sub-btn { width: 30px; height: 30px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .attr-icon { width: 24px; height: 24px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .attr-num { width: 60px; height: 32px; font-size: 14px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .stars > .star { width: 16px; height: 16px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .stbtn { font-size: 16px; padding: 7px 12px; }
+    .skilllist-warp > .skilllist-box { width: 100%; height: auto; flex: 1; padding: 10px; box-sizing: border-box; }
+    .skilllist-warp > .skilllist-box > .skill-group > .title { font-size: 16px; margin-top: 12px; }
+    .skilllist-warp > .skilllist-box > .skill-group > .content > .skill { width: calc((100% - 24px) / 3); height: auto; aspect-ratio: 1; margin: 4px; }
+    .skilllist-warp > .skilllist-box > .skill-group > .content > .skill > .skill-container > .skill-name { font-size: 12px; text-align: center; }
+}
 </style>
 
