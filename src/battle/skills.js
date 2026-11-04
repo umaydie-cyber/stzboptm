@@ -1513,6 +1513,119 @@ export const __SKILLS__ = [
                 }, this, self, 'debuff');
             });
         }
+    },
+    {
+        id: 1045, name: "落雷",
+        desc: "对敌军单体发动策略攻击（伤害率148.0%，受谋略属性影响），并使其陷入混乱状态，持续1回合",
+        level: "A", type: 2, target: 1, target_type: "enemy", limit: 4, rate: 35, study: true,
+        callskill: function (self, currentRate, forced = false, range = this.limit) {
+            if (!forced && !getRandomBool(currentRate)) return false;
+            const target = self.getTarget(range, 1)[0];
+            if (!target) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            target.beHurt(self, { type: 2, rate: clacSkillAdditionRate(148, 1.35, self.Attrs.int) }, this);
+            if (target.Arms > 0 && !target.isConfusion()) {
+                target.State.confusion = { rounds: 1, from: { hero: self, skill: this } };
+                target.StateFlag.confusion = false;
+                self.Manger.Record.pushRecord(target, '陷入混乱，持续1回合', 1);
+            }
+            return true;
+        }
+    },
+    {
+        id: 1046, name: "落石",
+        desc: "对敌军群体发动策略攻击（伤害率92.2%，受谋略属性影响），并使其防御属性降低5.2（受谋略属性影响），持续1回合",
+        level: "B", type: 2, target: 2, target_type: "enemy", limit: 2, rate: 45, study: true,
+        callskill: function (self, currentRate, forced = false, range = this.limit) {
+            if (!forced && !getRandomBool(currentRate)) return false;
+            const targets = self.getTarget(range, 2);
+            if (!targets.length) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            targets.forEach(target => {
+                const damageRate = 92.2 * (1 + (self.Attrs.int - 80) / 150);
+                target.beHurt(self, { type: 2, rate: damageRate }, this);
+                if (target.Arms <= 0) return;
+                if (target.luoshiDefense && !target.luoshiDefense.restored) {
+                    target.Attrs.def += target.luoshiDefense.reduction;
+                    target.luoshiDefense.restored = true;
+                }
+                const reduction = 5.2 * (1 + (self.Attrs.int - 80) / 150);
+                target.Attrs.def -= reduction;
+                const expires = self.Manger.Round + 1;
+                const effect = { reduction, restored: false };
+                target.luoshiDefense = effect;
+                const tag = target.addHook('回合开始时', '落石防御恢复', () => {
+                    if (!effect.restored && self.Manger.Round >= expires) {
+                        target.Attrs.def += reduction;
+                        effect.restored = true;
+                        target.clearHook('回合开始时', tag);
+                    }
+                }, this, self);
+                self.Manger.Record.pushRecord(target, `防御降低${reduction}，持续1回合`, 1);
+            });
+            return true;
+        }
+    },
+    {
+        id: 1047, name: "绝水遏敌",
+        desc: "1回合准备，对敌军群体发动策略攻击（伤害率230.0%，受谋略属性影响），并使其无法恢复兵力，持续1回合",
+        level: "A", type: 2, target: 2, target_type: "enemy", limit: 4, rate: 50, study: true,
+        callskill: function (self, currentRate, forced = false, range = this.limit) {
+            if (!forced && !getRandomBool(currentRate)) return false;
+            const effect = () => {
+                self.getTarget(range, 2).forEach(target => {
+                    target.beHurt(self, { type: 2, rate: clacSkillAdditionRate(230, 2.25, self.Attrs.int) }, this);
+                    if (target.Arms > 0) {
+                        target.State.noRecoverUntil = Math.max(target.State.noRecoverUntil || 0, self.Manger.Round + 1);
+                        self.Manger.Record.pushRecord(target, '无法恢复兵力，持续1回合', 1);
+                    }
+                });
+            };
+            if (forced) {
+                self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+                effect();
+                return true;
+            }
+            return self.addReadySkill(this, 1, effect);
+        }
+    },
+    {
+        id: 1048, name: "光武中兴",
+        desc: "为我军兵力最低的单体恢复2次兵力（恢复率225.0%，受谋略属性影响），每次目标独立判定；随后随机发动落雷、落石、绝水遏敌之一，恢复时有30.0%几率额外发动；同回合三种均发动后敌军全体士气降低20.0",
+        level: "S", type: 2, target: 1, target_type: "team", limit: 5, rate: 45, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            if (self.guangwuRound !== self.Manger.Round) {
+                self.guangwuRound = self.Manger.Round;
+                self.guangwuUsed = new Set();
+                self.guangwuMoraleApplied = false;
+            }
+            const cast = () => {
+                const ids = [1045, 1046, 1047];
+                const id = ids[getRandomInt(0, 2)];
+                const skill = self.Skills[id] || __SKILLS__.find(item => item.id === id);
+                if (!skill || !skill.callskill(self, 100, true, 5)) return;
+                self.guangwuUsed.add(skill.id);
+                if (self.guangwuUsed.size === 3 && !self.guangwuMoraleApplied) {
+                    self.guangwuMoraleApplied = true;
+                    const enemies = self.BattleCamp === 'blue' ? self.Manger.RedTeam.hero : self.Manger.BlueTeam.hero;
+                    enemies.filter(target => target.Arms > 0).forEach(target => {
+                        target.Morale = Math.max(0, target.Morale - 20);
+                        self.Manger.Record.pushRecord(target, '士气降低20', 1);
+                    });
+                }
+            };
+            for (let i = 0; i < 2; i++) {
+                const target = self.getTarget(5, 3, 2).sort((a, b) => a.Arms - b.Arms)[0];
+                if (!target) break;
+                const before = target.Arms;
+                // 隐藏成长未测定；1.472 是待实现记录中基于单次回血观测的条件估计。
+                target.revocer(calcRecover(self, 225, 1.472, 2), self, this.name);
+                if (target.Arms > before && getRandomBool(self.getRealSkillRate(clacSkillAdditionRate(30, 0.07, self.Attrs.int)))) cast();
+            }
+            cast();
+            return true;
+        }
     }
 ]
-
