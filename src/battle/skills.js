@@ -1639,13 +1639,13 @@ export const __SKILLS__ = [
             // 单次战报只约束第2回合合计比例；按15:5同比例成长拆分各回合。
             const scale = Math.max(0, 1 + (self.Attrs.int - 80) * ((0.4031131555 / 0.20 - 1) / 300));
             team.forEach(ally => ally.addHook('造成伤害后', '其徐如林策略分兵', (attacker, target, damageInfo, sourceSkill, damage) => {
-                if (self.Manger.Round < 1 || self.Arms <= 0 || !damage || damageInfo?.type !== 2 || damageInfo.isStrategySplash) return;
+                if (self.Manger.Round < 1 || self.Arms <= 0 || !damage || ![2, 4].includes(damageInfo?.type) || damageInfo.isStrategySplash) return;
                 const index = enemies.indexOf(target);
                 if (index < 0) return;
                 const ratio = (15 + 5 * (self.Manger.Round - 1)) / 100 * scale;
                 for (const neighbor of [enemies[index - 1], enemies[index + 1]]) {
                     if (!neighbor || neighbor.Arms <= 0 || self.Manger.Over) continue;
-                    self.Manger.Record.pushActionRecord(attacker, neighbor, '的【其徐如林】对', '造成策略分兵伤害');
+                    self.Manger.Record.pushActionRecord(attacker, neighbor, `的【其徐如林】因【${sourceSkill?.name || '策略伤害'}】命中【${target.Name}】对`, '造成策略分兵伤害');
                     neighbor.beHurt(attacker, { type: 2, rate: damageInfo.rate * ratio, isStrategySplash: true }, this);
                 }
             }, this, self));

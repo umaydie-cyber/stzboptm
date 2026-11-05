@@ -4,6 +4,7 @@ import { createServer } from 'vite';
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
     const { BattleHero } = await vite.ssrLoadModule('/src/battle/battleHero.js');
+    const { __SKILLS__ } = await vite.ssrLoadModule('/src/battle/skills.js');
     const manager = {
         Round: 0, Over: false,
         Record: { pushRecord() {}, pushActionRecord() {} },
@@ -37,7 +38,16 @@ try {
     assert.deepEqual(events.slice(1).map(e => e.enemy), [enemies[0], enemies[2]]);
     assert.ok(events.slice(1).every(e => e.attacker === xunyu && e.skill.id === 1049 && e.info.isStrategySplash));
     assert.ok(events.slice(1).every(e => Math.abs(e.info.rate / 153 - 0.4031131555) < 1e-8));
-    console.log('Verified Jin Sima Yi, adjacent strategy splash, and no recursive splash');
+    const fireSkill = __SKILLS__.find(skill => skill.name === '火势风威');
+    enemies[1].beHurtByNum(xunyu, { type: 4, rate: 221 }, fireSkill, 300);
+    assert.equal(events.length, 6);
+    assert.ok(events.slice(4).every(e => e.info.isStrategySplash && Math.abs(e.info.rate / 221 - 0.4031131555) < 1e-8));
+    const before = events.length;
+    enemies[0].beHurt(xunyu, { type: 2, rate: 153 }, sourceSkill);
+    enemies[2].beHurt(xunyu, { type: 2, rate: 153 }, sourceSkill);
+    assert.equal(events.filter(e => e.enemy === enemies[1]).length, 4);
+    assert.equal(events.length, before + 4);
+    console.log('Verified direct and burning strategy splash, overlapping neighbors, and no recursive splash');
 } finally {
     await vite.close();
 }
