@@ -357,7 +357,7 @@ const simulate = async () => {
 			</div>
 		</div>
 		<div class="statistics" v-if="showStatistics">
-			<h2>战斗统计</h2>
+			<div class="statistics-header"><h2>战斗统计</h2><button type="button" @click="showStatistics = false" aria-label="关闭统计">关闭 ✕</button></div>
 			<p v-if="simulationError">{{ simulationError }}</p>
 			<p v-if="!battleinfo.BattleHeros && !simulation">请先点击“开始战斗”或“战斗模拟”。</p>
 			<template v-if="battleinfo.BattleHeros">
@@ -836,15 +836,35 @@ const simulate = async () => {
 		}
 	}
 	&>.statistics {
-		width: 96%;
+		position: fixed;
+		z-index: 100;
+		top: 5vh;
+		left: 50%;
+		transform: translateX(-50%);
+		width: min(1200px, calc(100vw - 32px));
+		height: 90vh;
+		height: 90dvh;
 		box-sizing: border-box;
-		padding: 18px 24px 30px;
+		padding: 0 24px 30px;
 		color: #f5e8c2;
-		background: rgba(15, 18, 24, .9);
-		font-size: clamp(13px, 1vw, 18px);
+		background: #171a20;
+		border: 2px solid #a89565;
+		box-shadow: 0 12px 60px rgba(0, 0, 0, .8);
+		font-size: clamp(15px, 1vw, 18px);
 		line-height: 1.7;
-		max-height: 70vh;
 		overflow: auto;
+		.statistics-header {
+			position: sticky;
+			top: 0;
+			z-index: 1;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			background: #171a20;
+			border-bottom: 1px solid #a89565;
+			padding: 10px 0;
+			button { background: #423b2d; color: #f5e8c2; border: 1px solid #a89565; padding: 8px 14px; cursor: pointer; font: inherit; }
+		}
 		h2, h3, h4 { margin: 8px 0; }
 		p { margin: 10px 0 3px; color: #d2c297; }
 	}
