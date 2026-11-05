@@ -913,6 +913,29 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1064,
+        name: "久战熟谋",
+        desc: "战斗中，使友军群体每造成一次策略伤害后，其策略伤害提高5.0%（受施加者谋略属性影响），最多叠加5次",
+        level: "A", type: 1, target: 2, target_type: "friend", limit: 3, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            // 80谋略为5%/层；402谋略为13%/层。施加时锁定数值。
+            const perLayer = clacSkillAdditionRate(5, 8 / 322, self.Attrs.int);
+            self.getTarget(this.limit, this.target, 3).forEach(ally => {
+                const tag = makeSkillTag(self, this, '策略增伤');
+                ally.Storage.jiuzhanBonuses ||= {};
+                const bonus = { layers: 0, perLayer };
+                ally.Storage.jiuzhanBonuses[tag] = bonus;
+                ally.addHook('造成伤害后', '久战熟谋叠层', (attacker, target, damageInfo, sourceSkill, damage) => {
+                    if (attacker !== ally || damage <= 0 || ![2, 4].includes(damageInfo.type) || bonus.layers >= 5) return;
+                    bonus.layers++;
+                    self.Manger.Record.pushRecord(ally, `【${this.name}】已叠加${bonus.layers}/5层，策略伤害提高${bonus.layers * perLayer}%`, 1);
+                }, this, self);
+            });
+        }
+    },
+
+    {
         id: 1052,
         name: "正始之变",
         desc: "有效距离：5；发动率：--；战斗开始后，敌军全体累计造成15次伤害后，下回合令敌军群体陷入犹豫状态，持续1回合；我军全体成功发动主动或追击战法后，必定再次发动（跳过准备），持续1回合。司马懿、司马师或司马昭发动时，犹豫生效后自身恢复一定兵力（恢复率300.0%）",

@@ -669,6 +669,11 @@ export class BattleHero {
         value += this.getState(name, 2);
         value += this.getState(name, 3);
         value += this.getState(name, 4);
+        if (name === 'inteDamageAdd') {
+            for (const bonus of Object.values(this.Storage.jiuzhanBonuses || {})) {
+                value += bonus.layers * bonus.perLayer;
+            }
+        }
         return value;
     }
 
