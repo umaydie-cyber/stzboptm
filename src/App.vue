@@ -138,9 +138,9 @@ const simulate = async () => {
 	simulation.value = null;
 	simulationError.value = '';
 	const battles = [];
-	const config = structuredClone(team.value);
 	const originalLog = console.log;
 	try {
+		const config = JSON.parse(JSON.stringify(team.value));
 		// Existing battle calculations log every hit; silence those logs during bulk runs.
 		for (let i = 0; i < 1000; i += 10) {
 			console.log = () => {};
