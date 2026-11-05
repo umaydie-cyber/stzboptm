@@ -6,10 +6,10 @@ import { keepTwoDecimal, roundEightNine } from "../uilts";
 
 // 计算物理伤害
 export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
-    let damageAddition = getDamageAddition(attacker, target, damageInfo.type, skill);
+    let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     if (damageAddition != 1) {
-        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${getDamageAddition(attacker, target, damageInfo.type, skill) > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(getDamageAddition(attacker, target, damageInfo.type, skill) * 100 - 100))}%`, 1)
+        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
     }
 
     let DamageRate = damageInfo.rate;
@@ -33,10 +33,10 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
 
 // 计算策略伤害
 export const clacInteDamage = (attacker, target, damageInfo, skill) => {
-    let damageAddition = getDamageAddition(attacker, target, damageInfo.type, skill);
+    let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     if (damageAddition != 1) {
-        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${getDamageAddition(attacker, target, damageInfo.type, skill) > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(getDamageAddition(attacker, target, damageInfo.type, skill) * 100 - 100))}%`, 1)
+        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
     }
     let DamageRate = damageInfo.rate;
     let inteEffect = calcInteEffect(target.Attrs.int);;
@@ -55,10 +55,10 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
 
 // 计算燃烧/恐慌/妖术伤害
 export const clacInte2Damage = (attacker, target, damageInfo, skill) => {
-    let damageAddition = getDamageAddition(attacker, target, damageInfo.type, skill);
+    let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     if (damageAddition != 1) {
-        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${getDamageAddition(attacker, target, damageInfo.type, skill) > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(getDamageAddition(attacker, target, damageInfo.type, skill) * 100 - 100))}%`, 1)
+        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
     }
     let DamageRate = damageInfo.rate;
     let inteEffect = calcInteEffect(target.Attrs.int);;
@@ -97,7 +97,8 @@ const getRandNum = () => {
 }
 
 // 计算伤害增减
-const getDamageAddition = (attacker, target, type, skill) => {
+const getDamageAddition = (attacker, target, damageInfo, skill) => {
+    const type = damageInfo.type;
     let value = 100;
     if (type == 1 || type == 3) {
         value += attacker.getDamageStateValue("attackDamageAdd"); //攻击者造成伤害提高
@@ -122,6 +123,9 @@ const getDamageAddition = (attacker, target, type, skill) => {
         value += target.getDamageStateValue("beActiveDamageAdd");
         value -= target.getDamageStateValue("beActiveDamageSub");
     }
+
+    if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) value -= 30;
+    if (type === 1 && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && attacker.Storage.henge) value += 50;
 
     if (value < 10) value = 10;
     return value / 100;

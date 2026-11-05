@@ -921,6 +921,30 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1067,
+        name: "横轭",
+        desc: "战斗中，我军仅由骑兵和步兵组成时，使我军骑兵谋略属性提高50，步兵发动普通攻击造成的伤害提高50%",
+        level: "B", type: 1, target: 3, target_type: "team", limit: 2, rate: "--", study: true,
+        callskill: function (self) {
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            if (!allies.every(ally => ally.BisicArm === 2 || ally.BisicArm === 3)) {
+                self.Manger.Record.pushRecord(self, `的【${this.name}】未生效：我军包含弓兵`, 1);
+                return;
+            }
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            for (const ally of allies) {
+                if (ally.BisicArm === 3) {
+                    ally.Attrs.int = keepTwoDecimal(ally.Attrs.int + 50);
+                    ally.OriginAttrs.int = keepTwoDecimal(ally.OriginAttrs.int + 50);
+                    self.Manger.Record.pushRecord(ally, `受【${this.name}】影响，谋略提高50（${ally.Attrs.int}）`, 1);
+                } else {
+                    ally.Storage.henge = true;
+                    self.Manger.Record.pushRecord(ally, `受【${this.name}】影响，普通攻击伤害提高50%`, 1);
+                }
+            }
+        }
+    },
+    {
         id: 1066,
         name: "除恶务尽",
         desc: "前三回合，我军全体处于怯战状态时受到的所有伤害降低30%；第四回合起，我军全体每回合有70%几率可以进行两次普通攻击，持续至战斗结束（概率受施加者士气影响）",

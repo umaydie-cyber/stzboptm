@@ -527,7 +527,8 @@ export class BattleHero {
         this.Manger.Record.pushActionRecord(this, target, '对', '发动普通攻击');
         target.beHurt(this, {
             type: 1,
-            rate: 100
+            rate: 100,
+            isBasicAttack: true
         });
         if (this.Manger.Over == true) return;
         this.performSplitAttack(splitTargets);
@@ -602,11 +603,6 @@ export class BattleHero {
                 //燃烧/恐慌/妖术伤害
                 damage = clacInte2Damage(attacker, this, damageInfo, skill);
             }
-        }
-
-        if (Number.isFinite(damage) && this.Storage.chuewujin && this.Manger.Round >= 1 && this.Manger.Round <= 3 && this.isAttackLimit()) {
-            damage = Math.round(damage * 0.7);
-            this.Manger.Record.pushRecord(this, `受【除恶务尽】保护，本次伤害降低30%`, 1);
         }
 
         if (damage >= this.Arms) {
