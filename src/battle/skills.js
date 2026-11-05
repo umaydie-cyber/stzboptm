@@ -823,6 +823,57 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1052,
+        name: "正始之变",
+        desc: "有效距离：5；发动率：--；战斗开始后，敌军全体累计造成15次伤害后，下回合令敌军群体陷入犹豫状态，持续1回合；我军全体成功发动主动或追击战法后，必定再次发动（跳过准备），持续1回合。司马懿、司马师或司马昭发动时，犹豫生效后自身恢复一定兵力（恢复率300.0%）",
+        level: "S", type: 1, target: 2, target_type: "enemy", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const enemies = self.BattleCamp === 'blue' ? self.Manger.RedTeam.hero : self.Manger.BlueTeam.hero;
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            let hits = 0;
+            let scheduledRound = null;
+            let effectRound = null;
+            for (const enemy of enemies) {
+                enemy.addHook('造成伤害后', '正始之变累计伤害', (attacker, target, info, sourceSkill, damage) => {
+                    if (scheduledRound !== null || !damage) return;
+                    if (++hits >= 15) {
+                        scheduledRound = self.Manger.Round + 1;
+                        self.Manger.Record.pushRecord(self, `的【${this.name}】将在第${scheduledRound}回合生效`, 1);
+                    }
+                }, this, self);
+            }
+            self.addHook('回合开始时', '正始之变生效', () => {
+                if (self.Manger.Round !== scheduledRound) return;
+                effectRound = scheduledRound;
+                let hesitationApplied = false;
+                self.getTarget(this.limit, this.target).forEach(enemy => {
+                    if (enemy.isActiveLimit()) return;
+                    enemy.State.activeLimit = { rounds: 1, from: { hero: self, skill: this } };
+                    hesitationApplied = true;
+                    self.Manger.Record.pushActionRecord(self, enemy, `的【${this.name}】使`, '陷入犹豫1回合', 1);
+                });
+                if (hesitationApplied && ['司马懿', '司马师', '司马昭'].includes(self.Name)) {
+                    self.revocer(calcRecover(self, 300, 0, 2), self, this.name);
+                }
+            }, this, self);
+            for (const ally of allies) {
+                ally.addHook('战法成功发动后', '正始之变再次发动', (skill, target) => {
+                    if (self.Manger.Round !== effectRound || ally.Storage.zhengshiRepeat || ally.Arms <= 0) return;
+                    ally.Storage.zhengshiRepeat = true;
+                    try {
+                        self.Manger.Record.pushRecord(ally, `的【${skill.name}】受【${this.name}】影响再次发动`, 1);
+                        if (skill.type === 3) skill.callskill(ally, target);
+                        else skill.callskill(ally, 100);
+                    } finally {
+                        ally.Storage.zhengshiRepeat = false;
+                    }
+                }, this, self);
+            }
+        },
+    },
+
+    {
         id: 1021,
         name: "白衣渡江",
         desc: "战斗开始后前2回合，使敌军群体无法进行普通攻击，在此效果结束后，将对敌军全体发动一次强力策略攻击（伤害率215.0%，受谋略属性影响），造成的伤害无视规避",

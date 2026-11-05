@@ -40,6 +40,7 @@ export class BattleHero {
             ON_DAMAGE: {}, //造成伤害时
             AFTER_DAMAGE: {}, //造成伤害后
             START_READY_SKILL: {},//开始准备战法时
+            AFTER_SKILL_ACTIVATED: {}, //主动或追击战法成功发动后
             ADD_CONTINUOUS_DAMAGE:{} //被施加持续伤害时
         }
 
@@ -373,6 +374,7 @@ export class BattleHero {
                         this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${currentRate}%`)
                         let ret = skill.callskill(this, currentRate);
                         if (ret !== true) this.Manger.Record.pushRecord(this, `的【${skill.name}】未发动`);
+                        else this.callHook("战法成功发动后", skill);
                     } else {
                         this.subReadySkillRound(skill);
                     }
@@ -392,6 +394,7 @@ export class BattleHero {
                 if (this.Arms <= 0) return;
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate))) {
                     skill.callskill(this, target);
+                    this.callHook("战法成功发动后", skill, target);
                 }
             }
         });
@@ -925,6 +928,9 @@ export class BattleHero {
             case "开始准备战法时":
                 obj = this.HOOKS.START_READY_SKILL;
                 break;
+            case "战法成功发动后":
+                obj = this.HOOKS.AFTER_SKILL_ACTIVATED;
+                break;
             case "被施加持续伤害时":
                 obj = this.HOOKS.ADD_CONTINUOUS_DAMAGE;
                 break;
@@ -1181,7 +1187,7 @@ export class BattleHero {
             if(this.READY_VAL[from.id]){
                 round += this.READY_VAL[from.id].skip;
             }
-            if(round <= 0){
+            if (this.Storage.zhengshiRepeat || round <= 0) {
                 this.Manger.Record.pushRecord(this, `发动【${from.name}】`);
                 func();
             }else{
@@ -1217,6 +1223,7 @@ export class BattleHero {
 
     //获取是否可添加准备战法 因为当同一战法正在准备中 不可再次进行准备
     canAddReadySkill(skill) {
+        if (this.Storage.zhengshiRepeat) return true;
         let ret = true;
         this.IN_READY_SKILL.forEach(e => {
             if (e.from == skill) ret = false;
