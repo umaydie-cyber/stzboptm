@@ -906,6 +906,43 @@ export class BattleHero {
         //TODO 后续添加 暴走 恐慌 妖术 燃烧 动摇 围困 时添加清除
     }
 
+    // 郝昭行动前净化自身有害效果，不按战法类型限制来源。
+    clearAllHarmfulEffects(skill) {
+        let removed = 0;
+        for (const name of ['confusion', 'rage', 'activeLimit', 'attackLimit']) {
+            if (this.State[name]?.rounds > 0) {
+                this.State[name] = { rounds: 0, from: { hero: null, skill: 0 } };
+                this.StateFlag[name] = false;
+                removed++;
+            }
+        }
+        for (const name of ['attackDamageSub', 'inteDamageSub', 'activeDamageSub',
+            'beAttackDamageAdd', 'beInteDamageAdd', 'beActiveDamageAdd']) {
+            for (const key of Object.keys(this.State[name])) {
+                if (this.State[name][key]) {
+                    this.State[name][key] = null;
+                    removed++;
+                }
+            }
+        }
+        removed += Object.keys(this.State.continuousDamage).length;
+        this.State.continuousDamage = {};
+        if (this.State.noRecoverUntil > this.Manger.Round) {
+            this.State.noRecoverUntil = 0;
+            removed++;
+        }
+        for (const hooks of Object.values(this.HOOKS)) {
+            for (const [tag, hook] of Object.entries(hooks)) {
+                if (hook.type !== 'debuff') continue;
+                hook.cleanup?.();
+                delete hooks[tag];
+                removed++;
+            }
+        }
+        this.Manger.Record.pushRecord(this, `的【${skill.name}】移除了${removed}项有害效果`, 1);
+        return removed;
+    }
+
     // 驱散主动、追击战法施加的有益效果；指挥与被动效果不受影响。
     clearActiveBuffs() {
         const beneficialStates = [
@@ -993,7 +1030,7 @@ export class BattleHero {
             debuff 负面效果
             other 其他 (用于在某个时机清除效果用)
     */
-    addHook(on, name, func, skill, hero, type = "buff", canClear = true) {
+    addHook(on, name, func, skill, hero, type = "buff", canClear = true, cleanup = null) {
         let obj = this.getHookObj(on);
 
         let tag = makeSkillTag(hero, skill, name)
@@ -1001,7 +1038,8 @@ export class BattleHero {
             call: func,
             type: type,
             skill: skill,
-            hero: hero
+            hero: hero,
+            cleanup
         }
         return tag;
     }

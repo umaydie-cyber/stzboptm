@@ -163,6 +163,7 @@ export class BattleManger {
                         if(this.Over)return;
                         e.Manger.Record.pushHeroRoundStart(e);
                         e.clearStateRounds();
+                        if (e.Storage.budongrushan) e.clearAllHarmfulEffects(e.Storage.budongrushan);
                         e.callHook("行动前");
                         // 本次行动仍受暴走影响；第三次行动前才会递减至零。
                         if (e.isRage()) e.StateFlag.rage = true;

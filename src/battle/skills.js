@@ -20,11 +20,17 @@ function reduceAttributesTemporarily(target, source, skill, values, rounds) {
     const expiresRound = target.Manger.Round + rounds;
     target.Storage.attributeReductionId = (target.Storage.attributeReductionId || 0) + 1;
     for (const [attribute, reduction] of Object.entries(values)) target.Attrs[attribute] -= reduction;
+    let restored = false;
+    const restore = () => {
+        if (restored) return;
+        restored = true;
+        for (const [attribute, reduction] of Object.entries(values)) target.Attrs[attribute] += reduction;
+    };
     const tag = target.addHook('回合开始时', `${skill.name}属性恢复${target.Storage.attributeReductionId}`, () => {
         if (target.Manger.Round < expiresRound) return;
-        for (const [attribute, reduction] of Object.entries(values)) target.Attrs[attribute] += reduction;
+        restore();
         target.clearHook('回合开始时', tag);
-    }, skill, source, 'debuff');
+    }, skill, source, 'debuff', true, restore);
 }
 
 const HENEI_DERIVED = [
@@ -920,6 +926,19 @@ export const __SKILLS__ = [
         }
     },
 
+    {
+        id: 1068,
+        name: "不动如山",
+        desc: "战斗中，行动时移除自身所有有害效果，同时防御属性提高100，谋略属性提高25",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: false,
+        callskill: function (self) {
+            self.Attrs.def = keepTwoDecimal(self.Attrs.def + 100);
+            self.Attrs.int = keepTwoDecimal(self.Attrs.int + 25);
+            self.OriginAttrs.int = keepTwoDecimal(self.OriginAttrs.int + 25);
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】，防御提高100，谋略提高25`);
+            self.Storage.budongrushan = this;
+        }
+    },
     {
         id: 1067,
         name: "横轭",
@@ -1822,13 +1841,17 @@ export const __SKILLS__ = [
                 const expires = self.Manger.Round + 1;
                 const effect = { reduction, restored: false };
                 target.luoshiDefense = effect;
+                const restore = () => {
+                    if (effect.restored) return;
+                    target.Attrs.def += reduction;
+                    effect.restored = true;
+                };
                 const tag = target.addHook('回合开始时', '落石防御恢复', () => {
                     if (!effect.restored && self.Manger.Round >= expires) {
-                        target.Attrs.def += reduction;
-                        effect.restored = true;
+                        restore();
                         target.clearHook('回合开始时', tag);
                     }
-                }, this, self);
+                }, this, self, 'debuff', true, restore);
                 self.Manger.Record.pushRecord(target, `防御降低${reduction}，持续1回合`, 1);
             });
             return true;
@@ -1952,14 +1975,20 @@ export const __SKILLS__ = [
                         target.Skills[id] = reduced;
                         skills.push([id, skill, reduced]);
                     }
-                    target.addHook('回合结束时', '锦车持节恢复距离', () => {
-                        if (target.Manger.Round !== round) return;
+                    let restored = false;
+                    const restore = () => {
+                        if (restored) return;
+                        restored = true;
                         target.Limit = originalLimit;
                         for (const [id, original, reduced] of skills) {
                             if (target.Skills[id] === reduced) target.Skills[id] = original;
                         }
-                        target.State.rage.rounds = 0;
-                    }, this, self, 'debuff');
+                        if (target.State.rage.from?.skill === this.id) target.State.rage.rounds = 0;
+                    };
+                    target.addHook('回合结束时', '锦车持节恢复距离', () => {
+                        if (target.Manger.Round !== round) return;
+                        restore();
+                    }, this, self, 'debuff', true, restore);
                 }
                 self.addHook('回合结束时', '锦车持节回合末恢复', () => {
                     if (self.Manger.Round !== round || self.Arms <= 0) return;
