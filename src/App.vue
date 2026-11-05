@@ -29,6 +29,7 @@ const simulation = ref(null);
 const simulationProgress = ref(0);
 const simulating = ref(false);
 const simulationError = ref('');
+const configuredArms = camp => team.value[camp].heros.reduce((sum, hero) => sum + (Number(hero.arms) || 10000), 0);
 const format = value => Number(value || 0).toFixed(1);
 const rowsFor = (stats, camp) => Object.values(stats?.[camp] || {});
 const heroRows = (stats, camp) => {
@@ -304,9 +305,9 @@ const simulate = async () => {
 				<div class="blue-team">
 					<div class="role-name">攻方队伍</div>
 					<div class="bar-box">
-						<div class="text"></div>
+						<div class="text">{{ configuredArms('blue') }}/<span>{{ team.blue.heros.length * 10000 }}</span></div>
 						<div class="bar">
-							<div class="current" :style="`width: 100%`"></div>
+							<div class="current" :style="`width: ${configuredArms('blue') / (team.blue.heros.length * 10000) * 100}%`"></div>
 						</div>
 					</div>
 					<div class="team-name">
@@ -318,9 +319,9 @@ const simulate = async () => {
 					<div class="role-name">守方队伍</div>
 					<div class="bar-box">
 						<div class="bar">
-							<div class="current" :style="`width: 100%`"></div>
+							<div class="current" :style="`width: ${configuredArms('red') / (team.red.heros.length * 10000) * 100}%`"></div>
 						</div>
-						<div class="text"></div>
+						<div class="text">{{ configuredArms('red') }}/<span>{{ team.red.heros.length * 10000 }}</span></div>
 					</div>
 					<div class="team-name">
 						🤡🤡🤡

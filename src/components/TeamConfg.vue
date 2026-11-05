@@ -116,7 +116,8 @@ const saveConfig = () =>{
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.int = HeroConfig.value.extraAttrsAlloc.int;
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
     team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
-    team.value[c_camp].heros[c_hindex].arms = Math.max(1, Math.min(10000, Math.floor(Number(HeroConfig.value.arms) || 10000)));
+    const arms = Number(HeroConfig.value.arms);
+    team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.min(10000, Math.floor(arms))) : 10000;
     team.value[c_camp].heros[c_hindex].animation = false;
     console.log(team.value[c_camp].heros[c_hindex],"save");
     console.log('team save',team.value);
@@ -290,7 +291,7 @@ const addAllPoints = type => {
                 </div>
                 <div class="level-box">
                     <div class="left">兵力</div>
-                    <div class="right"><input type="number" min="1" max="10000" step="1" v-model.number="HeroConfig.arms" aria-label="初始兵力"></div>
+                    <div class="right"><input class="troop-input" type="number" min="1" max="10000" step="1" :value="HeroConfig.arms" @input="HeroConfig.arms = $event.target.value" aria-label="初始兵力"></div>
                 </div>
                 <div class="atk-box">
                     <div class="left"><div class="attr-icon atk"></div>攻击</div>
@@ -1453,6 +1454,14 @@ const addAllPoints = type => {
 }
 .team-config-warp .replace-hero { margin: 0 8px; }
 .heroinfo-warp .add-all { margin-left: 8px; }
+.heroinfo-warp .troop-input {
+    width: 110px !important;
+    min-height: 34px;
+    border: 1px solid #bca36a !important;
+    border-radius: 3px;
+    background: #292622 !important;
+    user-select: text !important;
+}
 @media (max-width: 900px) {
     .team-config-warp, .herolist-warp, .heroinfo-warp, .skilllist-warp {
         width: 100%; height: 100dvh; overflow: auto;
