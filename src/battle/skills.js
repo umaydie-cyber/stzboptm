@@ -1650,5 +1650,55 @@ export const __SKILLS__ = [
                 }
             }, this, self));
         }
+    },
+    {
+        id: 1050, name: "锦车持节",
+        desc: "每回合开始前有50.0%几率使敌军单体本回合造成所有伤害大幅降低，或进入暴走状态且攻击距离与主动战法距离-2；触发后于回合结束时恢复我军兵力最低单体（恢复率150.0%，受谋略属性影响）",
+        level: "S", type: 1, target: 1, target_type: "enemy", limit: 5, rate: "--", study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('回合开始时', '锦车持节判定', () => {
+                if (self.Manger.Round < 1 || !getRandomBool(self.getRealSkillRate(50))) return;
+                const target = self.getTarget(this.limit, 1)[0];
+                if (!target) return;
+                const round = self.Manger.Round;
+                self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, '本回合陷入负面状态');
+                if (getRandomBool(50)) {
+                    // “大幅降低”未给具体数值，暂按造成伤害降低50%模拟。
+                    const attack = target.addState('attackDamageSub', 50, -1, this, self);
+                    const strategy = target.addState('inteDamageSub', 50, -1, this, self);
+                    target.addHook('回合结束时', '锦车持节清除降伤', () => {
+                        if (target.Manger.Round !== round) return;
+                        if (attack && target.State.attackDamageSub.command === attack) target.delState('attackDamageSub', this);
+                        if (strategy && target.State.inteDamageSub.command === strategy) target.delState('inteDamageSub', this);
+                    }, this, self, 'debuff');
+                } else {
+                    target.State.rage = { rounds: 1, from: { hero: self, skill: this.id } };
+                    target.StateFlag.rage = false;
+                    const originalLimit = target.Limit;
+                    target.Limit = Math.max(0, originalLimit - 2);
+                    const skills = [];
+                    for (const [id, skill] of Object.entries(target.Skills)) {
+                        if (skill.type !== 2) continue;
+                        const reduced = { ...skill, limit: Math.max(0, skill.limit - 2) };
+                        target.Skills[id] = reduced;
+                        skills.push([id, skill, reduced]);
+                    }
+                    target.addHook('回合结束时', '锦车持节恢复距离', () => {
+                        if (target.Manger.Round !== round) return;
+                        target.Limit = originalLimit;
+                        for (const [id, original, reduced] of skills) {
+                            if (target.Skills[id] === reduced) target.Skills[id] = original;
+                        }
+                        target.State.rage.rounds = 0;
+                    }, this, self, 'debuff');
+                }
+                self.addHook('回合结束时', '锦车持节回合末恢复', () => {
+                    if (self.Manger.Round !== round || self.Arms <= 0) return;
+                    const ally = self.getTarget(5, 3, 2).sort((a, b) => a.Arms - b.Arms)[0];
+                    if (ally) ally.revocer(calcRecover(self, 150, 1.472, 2), self, this.name);
+                }, this, self);
+            }, this, self);
+        }
     }
 ]

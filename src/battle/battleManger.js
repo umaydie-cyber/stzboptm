@@ -203,6 +203,9 @@ export class BattleManger {
             }
 
             if(this.Round >= 1){
+                this.BattleHeros.forEach(e => {
+                    if (e.Arms > 0) e.callHook('回合结束时');
+                });
                 this.BattleHeros.forEach(e => e.finishRound());
                 // 每个正式回合结束递减伤兵
                 this.BattleHeros.forEach(e => {
@@ -256,4 +259,3 @@ export class BattleManger {
         })
     }
 }
-

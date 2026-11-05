@@ -33,6 +33,7 @@ export class BattleHero {
             ON_ACTION: {}, //行动时
             BEFORE_ACTION: {}, //行动前
             ROUND_START: {}, //回合开始时
+            ROUND_END: {}, //回合结束时
             BEFORE_ROUND_SORT: {}, //回合速度排序前
             BEFORE_ATK: {}, //攻击前
             AFTER_ATK: {}, //攻击后
@@ -894,6 +895,9 @@ export class BattleHero {
                 break;
             case "回合开始时":
                 obj = this.HOOKS.ROUND_START;
+                break;
+            case "回合结束时":
+                obj = this.HOOKS.ROUND_END;
                 break;
             case "速度排序前":
                 obj = this.HOOKS.BEFORE_ROUND_SORT;

@@ -161,8 +161,8 @@ const battleStart = () => {
 			<div class="card-area">
 				<div class="card-box">
 					<div class="card" v-for="item in [...[...battleinfo.BlueTeam.hero].reverse()]">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
@@ -199,8 +199,8 @@ const battleStart = () => {
 				</div>
 				<div class="card-box">
 					<div class="card" v-for="item in [...[...battleinfo.RedTeam.hero].reverse()]">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${item.Camp}.png`">
@@ -306,7 +306,7 @@ const battleStart = () => {
 		<div class="record" v-if="showBattleRecord">
 			<div class="record-item" v-for="e in battleinfo.Record?.Records"
 				:class="{ 'round-title': e.roundTitle == 1, 'hero-round-start': e.heroRoundStart == 1 }"
-				:style="{ 'background-image': (e.heroRoundStart == 1 ? `url(/stzboptm/assets/card/${e.hero1.Id}${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(e.hero1.Id) ? '.png' : '_long.jpg'})` : '') }">
+				:style="{ 'background-image': (e.heroRoundStart == 1 ? `url(/stzboptm/assets/card/${e.hero1.Id}${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(e.hero1.Id) ? '.png' : '_long.jpg'})` : '') }">
 
 				<div class="sub" v-if="e.level == 1"></div>
 				<span v-if="e.hero1"
