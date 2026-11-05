@@ -867,11 +867,19 @@ export const __SKILLS__ = [
         level: "S", type: 1, target: 1, target_type: "enemy", limit: 5, rate: "--", study: true,
         callskill: function (self) {
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
-            self.addHook("尝试发动战法前", "众谋不懈策略攻击", () => {
-                if (!getRandomBool(self.getRealSkillRate(40))) return;
+            self.addHook("尝试发动战法前", "众谋不懈策略攻击", (sourceSkill) => {
+                const rate = self.getRealSkillRate(40);
+                const source = `【${sourceSkill.name}】`;
+                if (!getRandomBool(rate)) {
+                    self.Manger.Record.pushRecord(self, `因尝试发动${source}，判定【${this.name}】（${rate}%）：未触发`, 1);
+                    return;
+                }
                 const target = self.getTarget(this.limit, this.target)[0];
-                if (!target) return;
-                self.Manger.Record.pushRecord(self, `的【${this.name}】触发`, 1);
+                if (!target) {
+                    self.Manger.Record.pushRecord(self, `因尝试发动${source}，判定【${this.name}】（${rate}%）：触发但无可攻击目标`, 1);
+                    return;
+                }
+                self.Manger.Record.pushRecord(self, `因尝试发动${source}，判定【${this.name}】（${rate}%）：触发，对【${target.Name}】发动策略攻击`, 1);
                 target.beHurt(self, {
                     type: 2,
                     rate: clacSkillAdditionRate(194, 1.925, self.Attrs.int)
