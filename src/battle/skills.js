@@ -802,6 +802,27 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1051,
+        name: "桃源问津",
+        desc: "战斗开始后前3回合，使我军群体每回合各自有100.0%几率受到的前2次策略攻击伤害大幅降低；战斗开始后前3回合，使我军群体受到的攻击伤害降低40.2%（受谋略属性影响）",
+        level: "S",
+        type: 1,
+        target: 2,
+        target_type: "team",
+        limit: 2,
+        rate: "--",
+        study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const reduction = clacSkillAdditionRate(40.2, 0.15, self.Attrs.int);
+            self.getTarget(this.limit, this.target, 2).forEach(ally => {
+                ally.addState("beAttackDamageSub", reduction, 3, this, self);
+                ally.Storage.taoyuanStrategyReduction = { round: 0, remaining: 2 };
+            });
+        },
+    },
+
+    {
         id: 1021,
         name: "白衣渡江",
         desc: "战斗开始后前2回合，使敌军群体无法进行普通攻击，在此效果结束后，将对敌军全体发动一次强力策略攻击（伤害率215.0%，受谋略属性影响），造成的伤害无视规避",

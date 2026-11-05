@@ -569,6 +569,11 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        const taoyuan = this.Storage.taoyuanStrategyReduction;
+        if (taoyuan && this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.round !== this.Manger.Round) {
+            taoyuan.round = this.Manger.Round;
+            taoyuan.remaining = 2;
+        }
         attacker.callHook("攻击前");
         let realDamage = 0;
         let damage;
@@ -598,6 +603,10 @@ export class BattleHero {
             if (damageInfo.type == 2) this.State.nextInteDamageSub = null;
             realDamage = damage;
             this.Arms -= damage;
+        }
+
+        if (damageInfo.type == 2 && taoyuan && this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.remaining > 0) {
+            taoyuan.remaining--;
         }
 
         if(record){

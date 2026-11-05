@@ -109,7 +109,11 @@ const getDamageAddition = (attacker, target, type, skill) => {
         value -= attacker.getDamageStateValue("inteDamageSub");
         value += target.getDamageStateValue("beInteDamageAdd");
         value -= target.getDamageStateValue("beInteDamageSub");
-        if (type == 2) value -= target.State.nextInteDamageSub?.value || 0;
+        if (type == 2) {
+            value -= target.State.nextInteDamageSub?.value || 0;
+            const taoyuan = target.Storage.taoyuanStrategyReduction;
+            if (taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) value -= 9999;
+        }
     }
 
     if (skill && skill.type == 2){
@@ -202,5 +206,4 @@ export function getRandomBool(probability) {
 export function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
 
