@@ -274,7 +274,7 @@ export class BattleHero {
         this.Animation = config?.animation == true;
         // this.Camp = ['蜀', '魏', '吴', '汉', '群','晋'][hero.camp-1]
         this.Camp = hero.camp;
-        this.BisicArm = hero.arm;
+        this.BisicArm = hero.army;
         this.Skill = hero.skill;
         this.Level = level;
         this.Arms = 5000 + level * 100 + config.up * 200;

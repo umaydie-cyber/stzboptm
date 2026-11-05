@@ -881,6 +881,38 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1063,
+        name: "鼎足江东",
+        desc: "恢复我军群体兵力（恢复率75.0%，受谋略属性影响），并使其休整1回合，每回合恢复兵力（恢复率75.0%，受谋略属性影响）；同时使其攻击与策略攻击伤害提高17.0%（受谋略属性影响），持续2回合。若我军3名武将兵种相同，休整改为立即恢复",
+        level: "S", type: 2, target: 2, target_type: "team", limit: 2, rate: 35, study: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const team = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            const sameArmy = team.length === 3 && team.every(ally => ally.BisicArm === team[0].BisicArm);
+            const damageBonus = clacSkillAdditionRate(17, 0.17, self.Attrs.int);
+            const recovery = calcRecover(self, 75, 0.75, 2);
+            self.getTarget(this.limit, this.target, 2).forEach(ally => {
+                ally.revocer(recovery, self, this.name);
+                ally.addState('attackDamageAdd', damageBonus, 2, this, self);
+                ally.addState('inteDamageAdd', damageBonus, 2, this, self);
+                if (sameArmy) {
+                    ally.revocer(recovery, self, this.name);
+                } else {
+                    ally.Storage.dingzuoRestId = (ally.Storage.dingzuoRestId || 0) + 1;
+                    const nextRound = self.Manger.Round + 1;
+                    const tag = ally.addHook('回合开始时', `鼎足江东休整${ally.Storage.dingzuoRestId}`, () => {
+                        if (ally.Manger.Round < nextRound) return;
+                        ally.revocer(recovery, self, this.name);
+                        ally.clearHook('回合开始时', tag);
+                    }, this, self);
+                }
+            });
+            return true;
+        }
+    },
+
+    {
         id: 1052,
         name: "正始之变",
         desc: "有效距离：5；发动率：--；战斗开始后，敌军全体累计造成15次伤害后，下回合令敌军群体陷入犹豫状态，持续1回合；我军全体成功发动主动或追击战法后，必定再次发动（跳过准备），持续1回合。司马懿、司马师或司马昭发动时，犹豫生效后自身恢复一定兵力（恢复率300.0%）",
