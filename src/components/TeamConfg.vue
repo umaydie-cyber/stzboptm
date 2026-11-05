@@ -166,7 +166,7 @@ const changeConfig = (type,act) => {
                     <div class="posname">{{ posname[index] }}</div>
                     <div class="name" :class="heroCampclass[HEROS[hero.id].camp - 1]">{{ HEROS[hero.id].name }}</div>
                     <div class="image" @click="selectHero(camp, index)">
-                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                     </div>
                     <div class="skills">
                         <div class="skill" v-for="(skill, skillIndex) in [HEROS[hero.id].skill, ...hero.equipskill]"
@@ -194,7 +194,7 @@ const changeConfig = (type,act) => {
         </div>
         <div class="herolist-box">
             <div class="card" v-for="hero in [...__HEROS__]" @click="ConfigHeroInfo(hero.id)">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -227,7 +227,7 @@ const changeConfig = (type,act) => {
         </div>
         <div class="heroinfo-box">
             <div class="card" v-for="hero in [HEROS[HeroConfig.id]]">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -1461,4 +1461,3 @@ const changeConfig = (type,act) => {
     .skilllist-warp > .skilllist-box > .skill-group > .content > .skill > .skill-container > .skill-name { font-size: 12px; text-align: center; }
 }
 </style>
-

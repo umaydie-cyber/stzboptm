@@ -1627,5 +1627,28 @@ export const __SKILLS__ = [
             cast();
             return true;
         }
+    },
+    {
+        id: 1049, name: "其徐如林",
+        desc: "我军全体在正式回合施加的策略伤害，对目标相邻敌军额外造成策略伤害（伤害率为原伤害率的15.0%，受谋略影响）；此比例每回合结束后提升5.0%，可叠加至战斗结束",
+        level: "S", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const team = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            const enemies = self.BattleCamp === 'blue' ? self.Manger.RedTeam.hero : self.Manger.BlueTeam.hero;
+            // 单次战报只约束第2回合合计比例；按15:5同比例成长拆分各回合。
+            const scale = Math.max(0, 1 + (self.Attrs.int - 80) * ((0.4031131555 / 0.20 - 1) / 300));
+            team.forEach(ally => ally.addHook('造成伤害后', '其徐如林策略分兵', (attacker, target, damageInfo, sourceSkill, damage) => {
+                if (self.Manger.Round < 1 || self.Arms <= 0 || !damage || damageInfo?.type !== 2 || damageInfo.isStrategySplash) return;
+                const index = enemies.indexOf(target);
+                if (index < 0) return;
+                const ratio = (15 + 5 * (self.Manger.Round - 1)) / 100 * scale;
+                for (const neighbor of [enemies[index - 1], enemies[index + 1]]) {
+                    if (!neighbor || neighbor.Arms <= 0 || self.Manger.Over) continue;
+                    self.Manger.Record.pushActionRecord(attacker, neighbor, '的【其徐如林】对', '造成策略分兵伤害');
+                    neighbor.beHurt(attacker, { type: 2, rate: damageInfo.rate * ratio, isStrategySplash: true }, this);
+                }
+            }, this, self));
+        }
     }
 ]

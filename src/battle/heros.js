@@ -386,9 +386,14 @@ export const __HEROS__ = [
         attrs: { atk: 71, def: 98, int: 91, spd: 42, des: 20 },
         attrs_grow: { atk: 1.35, def: 2.15, int: 1.83, spd: 0.61, des: 1.74 }
     },
-    {
+    { 
         id: 1021, name: "刘秀", camp: 4, star: 5, cost: 35, army: 3, limit: 3, skill: 1048,
         attrs: { atk: 89, def: 80, int: 95, spd: 92, des: 6 },
         attrs_grow: { atk: 1.65, def: 1.87, int: 2.35, spd: 1.38, des: 0.40 }
+    },
+    {
+        id: 1022, name: "司马懿", camp: 6, star: 5, cost: 35, army: 2, limit: 2, skill: 1049,
+        attrs: { atk: 85, def: 92, int: 108, spd: 37, des: 17 },
+        attrs_grow: { atk: 1.01, def: 1.94, int: 2.87, spd: 0.54, des: 1.42 }
     }
 ]

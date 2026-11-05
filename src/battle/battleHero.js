@@ -606,7 +606,7 @@ export class BattleHero {
         }
         if (this.Posname == '大营' && this.Arms <= 0) this.Manger.Over = true;
         attacker.callHook("攻击后", attacker, this);
-        attacker.callHook("造成伤害后", attacker, this);
+        attacker.callHook("造成伤害后", attacker, this, damageInfo, skill, realDamage);
 
         // 受到伤害后 获得此次伤害95%的伤兵
         this.HurtArms += Math.floor(realDamage * 0.95);
@@ -1293,4 +1293,3 @@ export class BattleHero {
         
     } */
 }
-
