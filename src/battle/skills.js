@@ -1664,9 +1664,9 @@ export const __SKILLS__ = [
                 const round = self.Manger.Round;
                 self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, '本回合陷入负面状态');
                 if (getRandomBool(50)) {
-                    // “大幅降低”未给具体数值，暂按造成伤害降低50%模拟。
-                    const attack = target.addState('attackDamageSub', 50, -1, this, self);
-                    const strategy = target.addState('inteDamageSub', 50, -1, this, self);
+                    // 战法施加-9999%；伤害计算会把最终增伤乘子钳制到0.1。
+                    const attack = target.addState('attackDamageSub', 9999, -1, this, self);
+                    const strategy = target.addState('inteDamageSub', 9999, -1, this, self);
                     target.addHook('回合结束时', '锦车持节清除降伤', () => {
                         if (target.Manger.Round !== round) return;
                         if (attack && target.State.attackDamageSub.command === attack) target.delState('attackDamageSub', this);
