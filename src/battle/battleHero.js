@@ -277,7 +277,7 @@ export class BattleHero {
         this.BisicArm = hero.army;
         this.Skill = hero.skill;
         this.Level = level;
-        this.Arms = 5000 + level * 100 + config.up * 200;
+        this.Arms = Math.max(1, Math.min(10000, Math.floor(Number(config.arms) || 10000)));
         this.HurtArms = 0;
         this.Limit = hero.limit;
 

@@ -14,6 +14,16 @@ __HEROS__.forEach(e => {
 const record = ref([]);
 const battleinfo = ref({});
 const showTeamConfig = ref(false);
+const teamConfigRef = ref(null);
+const editTeamHero = (camp, index) => {
+	showTeamConfig.value = true;
+	teamConfigRef.value?.editHero(camp, index);
+};
+const teamChanged = () => {
+	battleinfo.value = {};
+	simulation.value = null;
+	showStatistics.value = false;
+};
 const showBattleRecord = ref(false);
 const showStatistics = ref(false);
 const simulation = ref(null);
@@ -168,7 +178,7 @@ const simulate = async () => {
 </script>
 
 <template>
-	<TeamConfig v-model:show="showTeamConfig" v-model:team="team" />
+	<TeamConfig ref="teamConfigRef" v-model:show="showTeamConfig" v-model:team="team" @saved="teamChanged" />
 	<div class="main">
 		<div class="battle" v-if="battleinfo.BattleHeros != undefined">
 			<div class="header-area">
@@ -212,7 +222,7 @@ const simulate = async () => {
 			</div>
 			<div class="card-area">
 				<div class="card-box">
-					<div class="card" v-for="item in [...[...battleinfo.BlueTeam.hero].reverse()]">
+					<div class="card" v-for="(item, index) in [...battleinfo.BlueTeam.hero].reverse()" @click="editTeamHero('blue', team.blue.heros.length - 1 - index)">
 						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
 						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 
@@ -250,7 +260,7 @@ const simulate = async () => {
 					</div>
 				</div>
 				<div class="card-box">
-					<div class="card" v-for="item in [...[...battleinfo.RedTeam.hero].reverse()]">
+					<div class="card" v-for="(item, index) in [...battleinfo.RedTeam.hero].reverse()" @click="editTeamHero('red', team.red.heros.length - 1 - index)">
 						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
 						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 						<img src="/assets/ui/card.png" class="card-border">
@@ -319,27 +329,22 @@ const simulate = async () => {
 				</div>
 			</div>
 			<div class="card-area">
-				<div class="card-box" v-for="e in 2">
-					<div class="card" v-for="item in 3">
-						<img :src="`/stzboptm/assets/card/0.jpg`" class="card-img">
+				<div class="card-box" v-for="camp in ['blue', 'red']" :key="camp">
+					<div class="card" v-for="(item, index) in [...team[camp].heros].reverse()" :key="index" @click="editTeamHero(camp, team[camp].heros.length - 1 - index)">
+						<img :src="`/stzboptm/assets/card/${item.id}.${[1015,1016,1017,1018,1019,1020,1021,1022,1023].includes(item.id) ? 'png' : item.animation ? 'webp' : 'jpg'}`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
-							<img :src="`/stzboptm/assets/ui/camp5.png`">
+							<img :src="`/stzboptm/assets/ui/camp${HEROS[item.id].camp}.png`">
 						</div>
+						<div class="hero-name">{{ HEROS[item.id].name }}</div>
 						<div class="level">
-							Lv<span>.1</span>
+							Lv<span>.{{ item.level }}</span>
 						</div>
 						<div class="juexing"></div>
+						<div class="arms">{{ item.arms ?? 10000 }}</div>
+						<div class="stars"><div class="star" :class="{ up: item.up >= i }" v-for="i in HEROS[item.id].star" :key="i"></div></div>
 						<div class="skills">
-							<div class="skill">
-								{{ ' - ' }}
-							</div>
-							<div class="skill">
-								{{ ' - ' }}
-							</div>
-							<div class="skill">
-								{{ ' - ' }}
-							</div>
+							<div class="skill" v-for="skill in [HEROS[item.id].skill, ...item.equipskill]" :key="skill">{{ SKILLS.find(s => s.id === skill)?.name || ' - ' }}</div>
 						</div>
 					</div>
 				</div>
@@ -868,6 +873,7 @@ const simulate = async () => {
 		h2, h3, h4 { margin: 8px 0; }
 		p { margin: 10px 0 3px; color: #d2c297; }
 	}
+	.card-area .card { cursor: pointer; }
 
 	&>.stbtn-box {
 		position: relative;

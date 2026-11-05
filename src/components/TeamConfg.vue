@@ -23,7 +23,7 @@ __HEROS__.forEach(e => {
 });
 
 const props = defineProps(['show', 'team']);
-const emit = defineEmits(['update:show', 'update:team']);
+const emit = defineEmits(['update:show', 'update:team', 'saved']);
 
 const { show, team } = toRefs(props);
 const camp = ref('blue');
@@ -61,6 +61,7 @@ const selectSkill = (camp, hindex, sindex) => {
 const saveSkill = (id) => {
     team.value[s_camp].heros[s_hindex].equipskill[s_sindex - 1] = id;
     showSkillList.value = false;
+    emit('saved');
     console.log('team save',team.value);
 }
 
@@ -69,6 +70,19 @@ const selectHero = (camp, hindex) => {
     c_camp = camp;
     c_hindex = hindex;
 }
+
+const editHero = (selectedCamp, index) => {
+    c_camp = selectedCamp;
+    c_hindex = index;
+    const current = team.value[selectedCamp].heros[index];
+    HeroConfig.value = {
+        ...current,
+        arms: current.arms ?? 10000,
+        extraAttrsAlloc: { ...current.extraAttrsAlloc }
+    };
+    showHeroInfo.value = true;
+};
+defineExpose({ editHero });
 
 const ConfigHeroId = ref(0);
 const HeroConfig = ref({})
@@ -88,7 +102,8 @@ const ConfigHeroInfo = (id) => {
             int: 0,
             spd: 0
         },
-        up: 5
+        up: 5,
+        arms: 10000
     }
 }
 
@@ -101,12 +116,14 @@ const saveConfig = () =>{
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.int = HeroConfig.value.extraAttrsAlloc.int;
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
     team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
+    team.value[c_camp].heros[c_hindex].arms = Math.max(1, Math.min(10000, Math.floor(Number(HeroConfig.value.arms) || 10000)));
     team.value[c_camp].heros[c_hindex].animation = false;
     console.log(team.value[c_camp].heros[c_hindex],"save");
     console.log('team save',team.value);
     // alert("保存成功");
     showHeroInfo.value = false;
     showHeroList.value = false;
+    emit('saved');
 }
 
 var IntervalInst = {};
@@ -146,6 +163,9 @@ const changeConfig = (type,act) => {
         }
     }
 }
+const addAllPoints = type => {
+    if (attrnum.value > 0) HeroConfig.value.extraAttrsAlloc[type] += attrnum.value;
+};
 </script>
 
 <template>
@@ -165,9 +185,10 @@ const changeConfig = (type,act) => {
                 <div class="card" v-for="(hero, index) in team[camp].heros">
                     <div class="posname">{{ posname[index] }}</div>
                     <div class="name" :class="heroCampclass[HEROS[hero.id].camp - 1]">{{ HEROS[hero.id].name }}</div>
-                    <div class="image" @click="selectHero(camp, index)">
+                    <div class="image" @click="editHero(camp, index)" title="编辑武将属性">
                         <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                     </div>
+                    <button class="replace-hero" type="button" @click="selectHero(camp, index)">更换武将</button>
                     <div class="skills">
                         <div class="skill" v-for="(skill, skillIndex) in [HEROS[hero.id].skill, ...hero.equipskill]"
                             @click="selectSkill(camp, index, skillIndex)">
@@ -267,15 +288,19 @@ const changeConfig = (type,act) => {
                         <div class="add-btn" @click="changeConfig('level',1)"></div>
                     </div>
                 </div>
+                <div class="level-box">
+                    <div class="left">兵力</div>
+                    <div class="right"><input type="number" min="1" max="10000" step="1" v-model.number="HeroConfig.arms" aria-label="初始兵力"></div>
+                </div>
                 <div class="atk-box">
                     <div class="left"><div class="attr-icon atk"></div>攻击</div>
                     <div class="right">
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
-                        <div class="sub-btn" @mousedown="addAttrChange('atk',2)" @mouseup="clearAttrChange('atk')" @touchstart="addAttrChange('atk',2)" @touchend="clearAttrChange('atk')"></div>
+                        <div class="sub-btn" @click="changeConfig('atk',2)"></div>
                         <div class="attr-num">
                             {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.atk + HEROS[HeroConfig.id].attrs_grow.atk * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.atk }}
                         </div>
-                        <div class="add-btn" @mousedown="addAttrChange('atk',1)" @mouseup="clearAttrChange('atk')" @touchstart="addAttrChange('atk',1)" @touchend="clearAttrChange('atk')"></div>
+                        <div class="add-btn" @click="changeConfig('atk',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('atk')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
                     </div>
                 </div>
@@ -283,11 +308,11 @@ const changeConfig = (type,act) => {
                     <div class="left"><div class="attr-icon def"></div>防御</div>
                     <div class="right">
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
-                        <div class="sub-btn" @mousedown="addAttrChange('def',2)" @mouseup="clearAttrChange('def')" @touchstart="addAttrChange('def',2)" @touchend="clearAttrChange('def')"></div>
+                        <div class="sub-btn" @click="changeConfig('def',2)"></div>
                         <div class="attr-num">
                             {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.def + HEROS[HeroConfig.id].attrs_grow.def * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.def }}
                         </div>
-                        <div class="add-btn" @mousedown="addAttrChange('def',1)" @mouseup="clearAttrChange('def')" @touchstart="addAttrChange('def',1)" @touchend="clearAttrChange('def')"></div>
+                        <div class="add-btn" @click="changeConfig('def',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('def')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
                     </div>
                 </div>
@@ -295,11 +320,11 @@ const changeConfig = (type,act) => {
                     <div class="left"><div class="attr-icon int"></div>谋略</div>
                     <div class="right">
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
-                        <div class="sub-btn" @mousedown="addAttrChange('int',2)" @mouseup="clearAttrChange('int')" @touchstart="addAttrChange('int',2)" @touchend="clearAttrChange('int')"></div>
+                        <div class="sub-btn" @click="changeConfig('int',2)"></div>
                         <div class="attr-num">
                             {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.int + HEROS[HeroConfig.id].attrs_grow.int * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.int }}
                         </div>
-                        <div class="add-btn" @mousedown="addAttrChange('int',1)" @mouseup="clearAttrChange('int')" @touchstart="addAttrChange('int',1)" @touchend="clearAttrChange('int')"></div>
+                        <div class="add-btn" @click="changeConfig('int',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('int')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
                     </div>
                 </div>
@@ -307,11 +332,11 @@ const changeConfig = (type,act) => {
                     <div class="left"><div class="attr-icon spd"></div>速度</div>
                     <div class="right">
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
-                        <div class="sub-btn" @mousedown="addAttrChange('spd',2)" @mouseup="clearAttrChange('spd')" @touchstart="addAttrChange('spd',2)" @touchend="clearAttrChange('spd')"></div>
+                        <div class="sub-btn" @click="changeConfig('spd',2)"></div>
                         <div class="attr-num">
                             {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.spd + HEROS[HeroConfig.id].attrs_grow.spd * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.spd }}
                         </div>
-                        <div class="add-btn" @mousedown="addAttrChange('spd',1)" @mouseup="clearAttrChange('spd')" @touchstart="addAttrChange('spd',1)" @touchend="clearAttrChange('spd')"></div>
+                        <div class="add-btn" @click="changeConfig('spd',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('spd')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
                     </div>
                 </div>
@@ -1415,6 +1440,19 @@ const changeConfig = (type,act) => {
         }
     }
 }
+.team-config-warp .replace-hero, .heroinfo-warp .add-all {
+    align-self: center;
+    flex-shrink: 0;
+    padding: 5px 8px;
+    color: #f3e4ad;
+    background: #493a28;
+    border: 1px solid #bca36a;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: clamp(11px, .9vw, 16px);
+}
+.team-config-warp .replace-hero { margin: 0 8px; }
+.heroinfo-warp .add-all { margin-left: 8px; }
 @media (max-width: 900px) {
     .team-config-warp, .herolist-warp, .heroinfo-warp, .skilllist-warp {
         width: 100%; height: 100dvh; overflow: auto;
