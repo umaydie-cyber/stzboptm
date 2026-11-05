@@ -16,7 +16,6 @@ const battleinfo = ref({});
 const showTeamConfig = ref(false);
 const teamConfigRef = ref(null);
 const editTeamHero = (camp, index) => {
-	showTeamConfig.value = true;
 	teamConfigRef.value?.editHero(camp, index);
 };
 const teamChanged = () => {
