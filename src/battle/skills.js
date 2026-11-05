@@ -921,6 +921,32 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1065,
+        name: "心战为上",
+        desc: "战斗中，我军全体每对敌军造成一次伤害，使目标士气降低5点，全队合计最多触发9次；我军全体造成攻击伤害后，按伤害值的一定比例恢复兵力（受马谡谋略影响）",
+        level: "A", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: false,
+        callskill: function (self) {
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            // 截图中的回兵表：200谋略为73%，240为82%，330为100%。
+            const recoveryRate = Math.max(0, 73 + Math.floor((self.Attrs.int - 200) / 5) + (self.Attrs.int >= 240 ? 1 : 0));
+            let moraleTriggers = 0;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】，攻击伤害后恢复率${recoveryRate}%，降低士气最多触发9次`);
+            for (const ally of allies) {
+                ally.addHook('造成伤害后', '心战为上伤害效果', (attacker, target, info, sourceSkill, damage) => {
+                    if (attacker !== ally || !damage || attacker.BattleCamp === target.BattleCamp) return;
+                    if (moraleTriggers < 9) {
+                        moraleTriggers++;
+                        target.Morale = Math.max(0, target.Morale - 5);
+                        self.Manger.Record.pushActionRecord(attacker, target, `受【${this.name}】影响，使`, `士气降低5点（${moraleTriggers}/9，当前${target.Morale}）`, 1);
+                    }
+                    if (info.type === 1 && attacker.Arms > 0) {
+                        attacker.revocer(Math.floor(damage * recoveryRate / 100), self, this.name);
+                    }
+                }, this, self);
+            }
+        }
+    },
+    {
         id: 1064,
         name: "久战熟谋",
         desc: "战斗中，使友军群体每造成一次策略伤害后，其策略伤害提高5.0%（受施加者谋略属性影响），最多叠加5次",

@@ -155,8 +155,8 @@ const simulate = async () => {
 			<div class="card-area">
 				<div class="card-box">
 					<div class="card" v-for="(item, index) in [...battleinfo.BlueTeam.hero].reverse()" @click="editTeamHero('blue', team.blue.heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
@@ -193,8 +193,8 @@ const simulate = async () => {
 				</div>
 				<div class="card-box">
 					<div class="card" v-for="(item, index) in [...battleinfo.RedTeam.hero].reverse()" @click="editTeamHero('red', team.red.heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${item.Camp}.png`">
@@ -263,7 +263,7 @@ const simulate = async () => {
 			<div class="card-area">
 				<div class="card-box" v-for="camp in ['blue', 'red']" :key="camp">
 					<div class="card" v-for="(item, index) in [...team[camp].heros].reverse()" :key="index" @click="editTeamHero(camp, team[camp].heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.id}.${[1015,1016,1017,1018,1019,1020,1021,1022,1023].includes(item.id) ? 'png' : item.animation ? 'webp' : 'jpg'}`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+						<img :src="`/stzboptm/assets/card/${item.id}.${[1015,1016,1017,1018,1019,1020,1021,1022,1023,1024].includes(item.id) ? 'png' : item.animation ? 'webp' : 'jpg'}`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${HEROS[item.id].camp}.png`">
@@ -318,7 +318,7 @@ const simulate = async () => {
 		<div class="record" v-if="showBattleRecord">
 			<div class="record-item" v-for="e in battleinfo.Record?.Records"
 				:class="{ 'round-title': e.roundTitle == 1, 'hero-round-start': e.heroRoundStart == 1 }"
-				:style="{ 'background-image': (e.heroRoundStart == 1 ? `url(/stzboptm/assets/card/${e.hero1.Id}${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023].includes(e.hero1.Id) ? '.png' : '_long.jpg'})` : '') }">
+				:style="{ 'background-image': (e.heroRoundStart == 1 ? `url(/stzboptm/assets/card/${e.hero1.Id}${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024].includes(e.hero1.Id) ? '.png' : '_long.jpg'})` : '') }">
 
 				<div class="sub" v-if="e.level == 1"></div>
 				<span v-if="e.hero1"
