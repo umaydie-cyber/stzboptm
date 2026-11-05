@@ -15,6 +15,7 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     let DamageRate = damageInfo.rate;
     // 兵力基础伤害
     let armsDamage = (attacker.Arms * 373) / (7700 + attacker.Arms);
+    damageInfo.troopBaseDamage = armsDamage;
     //攻击基础伤害
     let basicDamage = attacker.Attrs.atk * getRandNum() * (DamageRate / 100) * damageAddition;
     //主要伤害
@@ -43,6 +44,7 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
 
     //兵力基础伤害
     let armsDamage = (attacker.Arms * 178) / (6459 + attacker.Arms);
+    damageInfo.troopBaseDamage = armsDamage;
     //策略基础伤害
     let basicDamage = attacker.Attrs.int * 0.5 * damageAddition * inteEffect;
     //主要伤害
@@ -66,6 +68,7 @@ export const clacInte2Damage = (attacker, target, damageInfo, skill) => {
     //兵力基础伤害
     let armsDamage = (attacker.Arms * 178) / (6459 + attacker.Arms);
     armsDamage = armsDamage * (1 / 3);
+    damageInfo.troopBaseDamage = armsDamage;
     //策略基础伤害
     let basicDamage = attacker.Attrs.int * 0.25 * damageAddition * inteEffect;
     //主要伤害
@@ -97,7 +100,7 @@ const getRandNum = () => {
 }
 
 // 计算伤害增减
-const getDamageAddition = (attacker, target, damageInfo, skill) => {
+export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     const type = damageInfo.type;
     let value = 100;
     if (type == 1 || type == 3) {
@@ -125,6 +128,7 @@ const getDamageAddition = (attacker, target, damageInfo, skill) => {
     }
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) value -= 30;
+    if (damageInfo.jianzuReduction) value -= 50;
     if (type === 1 && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && attacker.Storage.henge) value += 50;
 
     if (value < 10) value = 10;

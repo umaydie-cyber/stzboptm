@@ -6,7 +6,7 @@ import { __HEROS__ } from "./heros";
 import { __ARMS__ as ARMS } from "./armys";
 import { __SKILLS__ } from "./skills"
 import { keepTwoDecimal, makeSkillTag, roundEightNine } from "../uilts"
-import { clacAttackDamage, getRandomBool, clacInteDamage, clacInte2Damage } from "./battleCalcFunc"
+import { clacAttackDamage, getRandomBool, clacInteDamage, clacInte2Damage, getDamageAddition } from "./battleCalcFunc"
 
 const CanAddAttrsKey = ['atk', 'def', 'int', 'spd'];
 export class BattleHero {
@@ -580,6 +580,13 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        // 健卒不殆每次受伤独立判定；士气使用受伤者当前值。
+        const jianzu = this.Storage.jianzuBudai;
+        const reductionRate = jianzu ? this.getRealSkillRate(50) : 0;
+        const reduceThisHit = jianzu && getRandomBool(reductionRate);
+        const resolvedInfo = reduceThisHit ? { ...damageInfo, jianzuReduction: true } : damageInfo;
+        if (jianzu) this.Manger.Record.pushRecord(this,
+            `的【健卒不殆】减伤判定（${reductionRate}%）：${reduceThisHit ? '成功，本次伤害降低50%' : '未触发'}`, 1);
         const taoyuan = this.Storage.taoyuanStrategyReduction;
         if (taoyuan && this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.round !== this.Manger.Round) {
             taoyuan.round = this.Manger.Round;
@@ -590,18 +597,27 @@ export class BattleHero {
         let damage;
         if (num != null) {
             damage = num;
+            if (reduceThisHit && [1, 2, 4].includes(damageInfo.type)) {
+                // 指挥和持续伤害可能预先算好数值；只折减非兵力基础部分。
+                const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
+                    ? attacker.Arms * 373 / (7700 + attacker.Arms)
+                    : attacker.Arms * 178 / (6459 + attacker.Arms) / (damageInfo.type === 4 ? 3 : 1));
+                const before = getDamageAddition(attacker, this, damageInfo, skill);
+                const after = getDamageAddition(attacker, this, resolvedInfo, skill);
+                damage = Math.min(num, Math.round(base + Math.max(0, num - base) * after / before));
+            }
         } else {
             if (damageInfo.type == 1) {
                 //物理伤害
-                damage = clacAttackDamage(attacker, this, damageInfo, skill);
+                damage = clacAttackDamage(attacker, this, resolvedInfo, skill);
             } else if (damageInfo.type == 2) {
                 //策略/火攻伤害
-                damage = clacInteDamage(attacker, this, damageInfo, skill);
+                damage = clacInteDamage(attacker, this, resolvedInfo, skill);
             } else if (damageInfo.type == 3){
                 //动摇伤害
             } else if (damageInfo.type == 4){
                 //燃烧/恐慌/妖术伤害
-                damage = clacInte2Damage(attacker, this, damageInfo, skill);
+                damage = clacInte2Damage(attacker, this, resolvedInfo, skill);
             }
         }
 
@@ -640,7 +656,20 @@ export class BattleHero {
             this.HurtArms = Math.floor(this.HurtArms * 0.6);
         }
 
-        this.callHook('受伤时', attacker, damageInfo, skill, realDamage);
+        // 反击是普通攻击类型伤害，但不再次触发受击事件或反击链。
+        if (!damageInfo.isCounterattack) this.callHook('受伤时', attacker, damageInfo, skill, realDamage);
+        if (this.Storage.jianzuBudai && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && !damageInfo.isCounterattack &&
+            this.Arms > 0 && attacker.Arms > 0 && !this.Manger.Over &&
+            this.State.confusion.rounds <= 0 && this.State.attackLimit.rounds <= 0 &&
+            attacker.BattleCamp !== this.BattleCamp) {
+            const line = [...this.Manger.BlueTeam.hero, ...[...this.Manger.RedTeam.hero].reverse()].filter(hero => hero.Arms > 0);
+            if (Math.abs(line.indexOf(this) - line.indexOf(attacker)) <= this.Limit) {
+                this.Manger.Record.pushActionRecord(this, attacker, '对', '发动【健卒不殆】反击');
+                attacker.beHurt(this, { type: 1, rate: 40, isCounterattack: true }, this.Storage.jianzuBudai);
+            } else {
+                this.Manger.Record.pushRecord(this, '的【健卒不殆】因攻击距离不足未能反击', 1);
+            }
+        }
     }
 
     //受到伤害,不计算伤害,使用传入的值作为伤害值。 给类似【白衣渡江】这种指挥阶段就确定伤害的战法使用

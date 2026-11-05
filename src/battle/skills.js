@@ -927,6 +927,16 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1069,
+        name: "健卒不殆",
+        desc: "受到普通攻击后反击（伤害率40%）；每次受到伤害时有50%几率使本次伤害降低50%（概率受自身士气影响）",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
+        callskill: function (self) {
+            self.Storage.jianzuBudai = this;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】，获得反击与受伤减伤效果`);
+        }
+    },
+    {
         id: 1068,
         name: "不动如山",
         desc: "战斗中，行动时移除自身所有有害效果，同时防御属性提高100，谋略属性提高25",
