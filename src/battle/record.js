@@ -18,7 +18,7 @@ export class Record {
             msg
         }
 
-        if(this.Manager.Over == false)this.Records.push(record);
+        if(this.Manager.Over == false && this.Manager.CollectRecords)this.Records.push(record);
     }
 
     // 加入一条普通记录
@@ -29,7 +29,7 @@ export class Record {
             level
         }
 
-        if(this.Manager.Over == false)this.Records.push(record);
+        if(this.Manager.Over == false && this.Manager.CollectRecords)this.Records.push(record);
     }
 
     // 加入一套系统记录
@@ -39,7 +39,7 @@ export class Record {
             level
         }
 
-        if(this.Manager.Over == false)this.Records.push(record);
+        if(this.Manager.Over == false && this.Manager.CollectRecords)this.Records.push(record);
     }
 
     pushRoundRecord(msg){
@@ -49,7 +49,7 @@ export class Record {
             roundTitle: 1
         }
 
-        if(this.Manager.Over == false)this.Records.push(record);
+        if(this.Manager.Over == false && this.Manager.CollectRecords)this.Records.push(record);
     }
 
     pushHeroRoundStart(hero1){
@@ -61,6 +61,6 @@ export class Record {
             arms: hero1.Arms
         }
 
-        if(this.Manager.Over == false)this.Records.push(record);
+        if(this.Manager.Over == false && this.Manager.CollectRecords)this.Records.push(record);
     }
 }

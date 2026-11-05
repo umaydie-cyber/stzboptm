@@ -8,7 +8,9 @@ import { Record } from './record';
 const BattleRound = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 export class BattleManger {
-    constructor(heroBattleTeam){
+    constructor(heroBattleTeam, options = {}){
+        this.Stats = { blue: {}, red: {} };
+        this.CollectRecords = options.records !== false;
         this.BattleHeros = [];
         //战报详情
         this.Record = new Record(this);
@@ -228,6 +230,17 @@ export class BattleManger {
             this.RedTeam.arms += e.Arms;
             this.RedTeam.hurtArms += e.HurtArms;
         });
+    }
+
+    addStat(hero, skill, damage = 0, recovery = 0) {
+        if (!hero || (!damage && !recovery)) return;
+        const camp = this.Stats[hero.BattleCamp];
+        const key = `${hero.Index}:${skill?.id ?? 'basic'}`;
+        const item = camp[key] ||= {
+            hero: hero.Name, skill: skill?.name || '普通攻击', damage: 0, recovery: 0
+        };
+        item.damage += damage;
+        item.recovery += recovery;
     }
 
     pushRecord(msg,sub=[]){

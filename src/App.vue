@@ -4,6 +4,7 @@ import { __SKILLS__ as SKILLS } from './battle/skills';
 import { __HEROS__ } from './battle/heros';
 import { ref } from 'vue'
 import TeamConfig from './components/TeamConfg.vue';
+import { summarizeBattles, ratio } from './battle/statistics';
 
 let HEROS = {};
 __HEROS__.forEach(e => {
@@ -14,6 +15,22 @@ const record = ref([]);
 const battleinfo = ref({});
 const showTeamConfig = ref(false);
 const showBattleRecord = ref(false);
+const showStatistics = ref(false);
+const simulation = ref(null);
+const simulationProgress = ref(0);
+const simulating = ref(false);
+const simulationError = ref('');
+const format = value => Number(value || 0).toFixed(1);
+const rowsFor = (stats, camp) => Object.values(stats?.[camp] || {});
+const heroRows = (stats, camp) => {
+    const rows = {};
+    for (const item of rowsFor(stats, camp)) {
+        const row = rows[item.hero] ||= { hero: item.hero, damage: 0, recovery: 0 };
+        row.damage += item.damage;
+        row.recovery += item.recovery;
+    }
+    return Object.values(rows);
+};
 
 const team = ref({
 	blue: {
@@ -111,8 +128,43 @@ const battleStart = () => {
 	const bm = new BattleManger(team.value);
 	// record.value = bm.Record.Records;
 	battleinfo.value = bm;
-	console.log(bm);
+	showStatistics.value = false;
 }
+
+const simulate = async () => {
+	if (simulating.value) return;
+	simulating.value = true;
+	simulationProgress.value = 0;
+	simulation.value = null;
+	simulationError.value = '';
+	const battles = [];
+	const config = structuredClone(team.value);
+	const originalLog = console.log;
+	try {
+		// Existing battle calculations log every hit; silence those logs during bulk runs.
+		for (let i = 0; i < 1000; i += 10) {
+			console.log = () => {};
+			try {
+				for (let j = 0; j < 10; j++) {
+					const battle = new BattleManger(config, { records: false });
+					battles.push({ BlueTeam: { arms: battle.BlueTeam.arms, hurtArms: battle.BlueTeam.hurtArms, total: battle.BlueTeam.total }, RedTeam: { arms: battle.RedTeam.arms, hurtArms: battle.RedTeam.hurtArms, total: battle.RedTeam.total }, Stats: battle.Stats });
+				}
+			} finally {
+				console.log = originalLog;
+			}
+			simulationProgress.value = i + 10;
+			await new Promise(resolve => setTimeout(resolve, 0));
+		}
+		simulation.value = summarizeBattles(battles);
+		showStatistics.value = true;
+	} catch (error) {
+		simulationError.value = `模拟失败：${error.message}`;
+		showStatistics.value = true;
+	} finally {
+		console.log = originalLog;
+		simulating.value = false;
+	}
+};
 </script>
 
 <template>
@@ -298,10 +350,33 @@ const battleStart = () => {
 			<!-- <button @click="testfunc">Debug</button> -->
 			<!-- <div class="stbtn-1" @click="testfunc">DeBug</div> -->
 			<div class="stbtn-1" @click="battleStart">开始战斗</div>
-			<div class="stbtn-1">统计</div>
+			<div class="stbtn-1" @click="simulate">{{ simulating ? `模拟中 ${simulationProgress}/1000` : '战斗模拟' }}</div>
+			<div class="stbtn-1" @click="showStatistics = !showStatistics">统计</div>
 			<div class="stbtn-1" @click="showTeamConfig = true">配置队伍</div>
 			<div class="stbtn-1" @click="showBattleRecord = !showBattleRecord">{{ showBattleRecord ? '隐藏战报' : '显示战报' }}
 			</div>
+		</div>
+		<div class="statistics" v-if="showStatistics">
+			<h2>战斗统计</h2>
+			<p v-if="simulationError">{{ simulationError }}</p>
+			<p v-if="!battleinfo.BattleHeros && !simulation">请先点击“开始战斗”或“战斗模拟”。</p>
+			<template v-if="battleinfo.BattleHeros">
+				<h3>上一次战斗</h3>
+				<div v-for="camp in ['blue', 'red']" :key="camp">
+					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).hurtArms }}，死亡 {{ (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).total - (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).arms - (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).hurtArms }}</h4>
+					<p>武将伤害 / 恢复</p><div v-for="row in heroRows(battleinfo.Stats, camp)" :key="row.hero">{{ row.hero }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
+					<p>战法伤害 / 恢复</p><div v-for="row in rowsFor(battleinfo.Stats, camp)" :key="row.hero + row.skill">{{ row.hero }} · {{ row.skill }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
+				</div>
+			</template>
+			<template v-if="simulation">
+				<h3>1000 局模拟（每局平均）</h3>
+				<p>武勋比（攻方造成伤兵＋死亡 / 守方造成伤兵＋死亡）：{{ ratio(simulation.red.wounded + simulation.red.dead, simulation.blue.wounded + simulation.blue.dead) }}；战损比（攻方造成死亡 / 守方造成死亡）：{{ ratio(simulation.red.dead, simulation.blue.dead) }}</p>
+				<div v-for="camp in ['blue', 'red']" :key="camp">
+					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ format(simulation[camp].wounded) }} ± {{ format(simulation[camp].woundedStd) }}；死亡 {{ format(simulation[camp].dead) }} ± {{ format(simulation[camp].deadStd) }}</h4>
+					<p>武将平均伤害 / 恢复</p><div v-for="row in heroRows({ [camp]: simulation[camp].skills }, camp)" :key="row.hero">{{ row.hero }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
+					<p>战法平均伤害 / 恢复</p><div v-for="row in simulation[camp].skills" :key="row.hero + row.skill">{{ row.hero }} · {{ row.skill }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
+				</div>
+			</template>
 		</div>
 		<div class="record" v-if="showBattleRecord">
 			<div class="record-item" v-for="e in battleinfo.Record?.Records"
@@ -759,6 +834,19 @@ const battleStart = () => {
 				height: 1vw;
 			}
 		}
+	}
+	&>.statistics {
+		width: 96%;
+		box-sizing: border-box;
+		padding: 18px 24px 30px;
+		color: #f5e8c2;
+		background: rgba(15, 18, 24, .9);
+		font-size: clamp(13px, 1vw, 18px);
+		line-height: 1.7;
+		max-height: 70vh;
+		overflow: auto;
+		h2, h3, h4 { margin: 8px 0; }
+		p { margin: 10px 0 3px; color: #d2c297; }
 	}
 
 	&>.stbtn-box {

@@ -615,6 +615,8 @@ export class BattleHero {
             this.Arms -= damage;
         }
 
+        this.Manger.addStat(attacker, skill, realDamage, 0);
+
         if (damageInfo.type == 2 && taoyuan && this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.remaining > 0) {
             taoyuan.remaining--;
         }
@@ -660,6 +662,8 @@ export class BattleHero {
             this.HurtArms -= recoverNum;
         }
         this.Arms += recoverNum;
+        const skill = Object.values(source?.Skills || {}).find(e => e?.name === name);
+        this.Manger.addStat(source, skill || { id: name, name }, 0, recoverNum);
         this.Manger.Record.pushActionRecord(source, this, `【${name}】的效果使`, `恢复了${recoverNum}兵力(${this.Arms})`, 1);
     }
 
