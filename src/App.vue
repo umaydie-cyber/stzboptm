@@ -27,6 +27,7 @@ const showBattleRecord = ref(false);
 const showStatistics = ref(false);
 const simulation = ref(null);
 const simulationProgress = ref(0);
+const simulationCount = 10000;
 const simulating = ref(false);
 const simulationError = ref('');
 const configuredArms = camp => team.value[camp].heros.reduce((sum, hero) => sum + (Number(hero.arms) || 10000), 0);
@@ -83,17 +84,17 @@ const simulate = async () => {
 	try {
 		const config = JSON.parse(JSON.stringify(team.value));
 		// Existing battle calculations log every hit; silence those logs during bulk runs.
-		for (let i = 0; i < 1000; i += 10) {
+		for (let i = 0; i < simulationCount; i += 25) {
 			console.log = () => {};
 			try {
-				for (let j = 0; j < 10; j++) {
+				for (let j = 0; j < Math.min(25, simulationCount - i); j++) {
 					const battle = new BattleManger(config, { records: false });
 					battles.push({ BlueTeam: { arms: battle.BlueTeam.arms, hurtArms: battle.BlueTeam.hurtArms, total: battle.BlueTeam.total }, RedTeam: { arms: battle.RedTeam.arms, hurtArms: battle.RedTeam.hurtArms, total: battle.RedTeam.total }, Stats: battle.Stats });
 				}
 			} finally {
 				console.log = originalLog;
 			}
-			simulationProgress.value = i + 10;
+			simulationProgress.value = Math.min(i + 25, simulationCount);
 			await new Promise(resolve => setTimeout(resolve, 0));
 		}
 		simulation.value = summarizeBattles(battles);
@@ -286,7 +287,7 @@ const simulate = async () => {
 			<!-- <button @click="testfunc">Debug</button> -->
 			<!-- <div class="stbtn-1" @click="testfunc">DeBug</div> -->
 			<div class="stbtn-1" @click="battleStart">开始战斗</div>
-			<div class="stbtn-1" @click="simulate">{{ simulating ? `模拟中 ${simulationProgress}/1000` : '战斗模拟' }}</div>
+			<div class="stbtn-1" @click="simulate">{{ simulating ? `模拟中 ${simulationProgress}/${simulationCount}` : '战斗模拟' }}</div>
 			<div class="stbtn-1" @click="showStatistics = !showStatistics">统计</div>
 			<div class="stbtn-1" @click="showTeamConfig = true">配置队伍</div>
 			<div class="stbtn-1" @click="showBattleRecord = !showBattleRecord">{{ showBattleRecord ? '隐藏战报' : '显示战报' }}
@@ -305,7 +306,7 @@ const simulate = async () => {
 				</div>
 			</template>
 			<template v-if="simulation">
-				<h3>1000 局模拟（每局平均）</h3>
+				<h3>{{ simulationCount }} 局模拟（每局平均）</h3>
 				<p>武勋比（攻方造成伤兵＋死亡 / 守方造成伤兵＋死亡）：{{ ratio(simulation.red.wounded + simulation.red.dead, simulation.blue.wounded + simulation.blue.dead) }}；战损比（攻方造成死亡 / 守方造成死亡）：{{ ratio(simulation.red.dead, simulation.blue.dead) }}</p>
 				<div v-for="camp in ['blue', 'red']" :key="camp">
 					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ format(simulation[camp].wounded) }} ± {{ format(simulation[camp].woundedStd) }}；死亡 {{ format(simulation[camp].dead) }} ± {{ format(simulation[camp].deadStd) }}</h4>
