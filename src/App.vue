@@ -43,97 +43,27 @@ const heroRows = (stats, camp) => {
     return Object.values(rows);
 };
 
-const team = ref({
-	blue: {
-		morale: 120,
-		heros: [
-			{
-				id: 1013,//武将Id
-				level: 40,//武将等级
-				extraAttrsAlloc: {//属性分配
-					atk: 0,
-					def: 0,
-					int: 90,
-					spd: 0
-				},
-				up: 5,
-				animation: true,
-				equipskill: [1032, 1031]
-			},
-			{
-				id: 1008,//武将Id
-				level: 40,//武将等级
-				extraAttrsAlloc: {//属性分配
-					atk: 0,
-					def: 0,
-					int: 90,
-					spd: 0
-				},
-				up: 5,
-				animation: true,
-				equipskill: [1013, 1019]
-			},
-			{
-				id: 1014,//武将Id
-				level: 40,//武将等级
-				extraAttrsAlloc: {//属性分配
-					atk: 0,
-					def: 0,
-					int: 90,
-					spd: 0
-				},
-				up: 5,
-				animation: true,
-				equipskill: [1014, 1015]
-			}
-		]
-	},
-
-	red: {
-		morale: 120,
-		heros:[
-			{
-				id: 1010,//武将Id
-				level: 40,//武将等级
-				extraAttrsAlloc: {//属性分配
-					atk: 90,
-					def: 0,
-					int: 0,
-					spd: 0
-				},
-				up: 5,
-				animation: true,
-				equipskill: [1012, 1026]
-			},
-			{
-				id: 1009,//武将Id
-				level: 40,//武将等级
-				extraAttrsAlloc: {//属性分配
-					atk: 0,
-					def: 0,
-					int: 90,
-					spd: 0
-				},
-				up: 5,
-				animation: true,
-				equipskill: [1023, 1024]
-			},
-			{
-				id: 1008,//武将Id
-				level: 40,//武将等级
-				extraAttrsAlloc: {//属性分配
-					atk: 0,
-					def: 0,
-					int: 90,
-					spd: 0
-				},
-				up: 5,
-				animation: true,
-				equipskill: [1018, 1017]
-			},
-		]
+const defaultHero = (id, equipskill, allocation = null) => ({
+	id, level: 40, up: 5, arms: 10000, animation: true, equipskill,
+	extraAttrsAlloc: {
+		atk: allocation === 'atk' ? 90 : 0,
+		def: 0,
+		int: allocation === 'int' ? 90 : 0,
+		spd: allocation === 'spd' ? 90 : 0
 	}
-})
+});
+const team = ref({
+	blue: { morale: 120, heros: [
+		defaultHero(1002, [1039, 1043], 'atk'), // 马超：大营
+		defaultHero(1004, [1044, 1014], 'spd'), // 张辽：中军
+		defaultHero(1012, [1023, 1041], 'int')  // 曹操：前锋
+	] },
+	red: { morale: 120, heros: [
+		defaultHero(1021, [1062, 1054], 'int'), // 刘秀：大营
+		defaultHero(1022, [1020, 1019]),        // 司马懿：中军
+		defaultHero(1023, [1015, 1014], 'int')  // 冯嫽：前锋（垒实迎击）
+	] }
+});
 
 const battleStart = () => {
 	const bm = new BattleManger(team.value);
