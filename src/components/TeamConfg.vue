@@ -117,7 +117,7 @@ const saveConfig = () =>{
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
     team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
     const arms = Number(HeroConfig.value.arms);
-    team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.min(10000, Math.floor(arms))) : 10000;
+    team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.floor(arms)) : 10000;
     team.value[c_camp].heros[c_hindex].animation = false;
     console.log(team.value[c_camp].heros[c_hindex],"save");
     console.log('team save',team.value);
@@ -291,7 +291,7 @@ const addAllPoints = type => {
                 </div>
                 <div class="level-box">
                     <div class="left">兵力</div>
-                    <div class="right"><input class="troop-input" type="number" min="1" max="10000" step="1" :value="HeroConfig.arms" @input="HeroConfig.arms = $event.target.value" aria-label="初始兵力"></div>
+                    <div class="right"><input class="troop-input" type="number" min="1" step="1" :value="HeroConfig.arms" @input="HeroConfig.arms = $event.target.value" aria-label="初始兵力"></div>
                 </div>
                 <div class="atk-box">
                     <div class="left"><div class="attr-icon atk"></div>攻击</div>
