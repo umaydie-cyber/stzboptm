@@ -921,6 +921,31 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1066,
+        name: "除恶务尽",
+        desc: "前三回合，我军全体处于怯战状态时受到的所有伤害降低30%；第四回合起，我军全体每回合有70%几率可以进行两次普通攻击，持续至战斗结束（概率受施加者士气影响）",
+        level: "S", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            for (const ally of allies) {
+                ally.Storage.chuewujin = true;
+                ally.addHook('行动前', '除恶务尽连击判定', () => {
+                    if (self.Manger.Round < 4) return;
+                    const rate = self.getRealSkillRate(70);
+                    if (getRandomBool(rate)) {
+                        if (ally.State.doubleAttack.rounds <= 0) {
+                            ally.State.doubleAttack = { rounds: 1, from: { hero: self, skill: this } };
+                        }
+                        self.Manger.Record.pushRecord(ally, `的【${this.name}】连击判定（${rate}%）：成功`, 1);
+                    } else {
+                        self.Manger.Record.pushRecord(ally, `的【${this.name}】连击判定（${rate}%）：未触发`, 1);
+                    }
+                }, this, self);
+            }
+        }
+    },
+    {
         id: 1065,
         name: "心战为上",
         desc: "战斗中，我军全体每对敌军造成一次伤害，使目标士气降低5点，全队合计最多触发9次；我军全体造成攻击伤害后，按伤害值的一定比例恢复兵力（受马谡谋略影响）",

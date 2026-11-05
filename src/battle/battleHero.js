@@ -604,6 +604,11 @@ export class BattleHero {
             }
         }
 
+        if (Number.isFinite(damage) && this.Storage.chuewujin && this.Manger.Round >= 1 && this.Manger.Round <= 3 && this.isAttackLimit()) {
+            damage = Math.round(damage * 0.7);
+            this.Manger.Record.pushRecord(this, `受【除恶务尽】保护，本次伤害降低30%`, 1);
+        }
+
         if (damage >= this.Arms) {
             if (damageInfo.type == 2) this.State.nextInteDamageSub = null;
             // 如果伤害大于剩余的兵力 将兵力改为0
