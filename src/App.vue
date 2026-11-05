@@ -44,7 +44,7 @@ const heroRows = (stats, camp) => {
 };
 
 const defaultHero = (id, equipskill, allocation = null) => ({
-	id, level: 40, up: 5, arms: 10000, animation: true, equipskill,
+	id, level: 40, up: 5, arms: 10000, animation: ![1004, 1012].includes(id), equipskill,
 	extraAttrsAlloc: {
 		atk: allocation === 'atk' ? 90 : 0,
 		def: 0,
