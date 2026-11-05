@@ -40,6 +40,7 @@ export class BattleHero {
             ON_DAMAGE: {}, //造成伤害时
             AFTER_DAMAGE: {}, //造成伤害后
             START_READY_SKILL: {},//开始准备战法时
+            BEFORE_SKILL_ATTEMPT: {}, //尝试发动主动或追击战法前
             AFTER_SKILL_ACTIVATED: {}, //主动或追击战法成功发动后
             ADD_CONTINUOUS_DAMAGE:{} //被施加持续伤害时
         }
@@ -371,6 +372,8 @@ export class BattleHero {
                     let currentRate = this.getRealSkillRate(skill.rate) + (this.RATE_VAL[skill.id] ? this.RATE_VAL[skill.id].value : 0);
                     console.log(this.canAddReadySkill(skill));
                     if (this.canAddReadySkill(skill)) {
+                        this.callHook("尝试发动战法前", skill);
+                        if (this.Manger.Over || this.Arms <= 0) return;
                         this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${currentRate}%`)
                         let ret = skill.callskill(this, currentRate);
                         if (ret !== true) this.Manger.Record.pushRecord(this, `的【${skill.name}】未发动`);
@@ -392,6 +395,10 @@ export class BattleHero {
             if (skill.type == 3) {
                 this.triggerPursuitCurses();
                 if (this.Arms <= 0) return;
+                if (target.Arms != 0 || skill.randomTargets) {
+                    this.callHook("尝试发动战法前", skill);
+                    if (this.Manger.Over || this.Arms <= 0) return;
+                }
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate))) {
                     skill.callskill(this, target);
                     this.callHook("战法成功发动后", skill, target);
@@ -956,6 +963,9 @@ export class BattleHero {
                 break;
             case "开始准备战法时":
                 obj = this.HOOKS.START_READY_SKILL;
+                break;
+            case "尝试发动战法前":
+                obj = this.HOOKS.BEFORE_SKILL_ATTEMPT;
                 break;
             case "战法成功发动后":
                 obj = this.HOOKS.AFTER_SKILL_ACTIVATED;

@@ -861,6 +861,26 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1062,
+        name: "众谋不懈",
+        desc: "战斗中，每当自身试图发动主动及追击战法前，有40.0%的几率对距离5以内的敌军单体发动一次策略攻击（伤害率194.0%，受谋略属性影响）",
+        level: "S", type: 1, target: 1, target_type: "enemy", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook("尝试发动战法前", "众谋不懈策略攻击", () => {
+                if (!getRandomBool(self.getRealSkillRate(40))) return;
+                const target = self.getTarget(this.limit, this.target)[0];
+                if (!target) return;
+                self.Manger.Record.pushRecord(self, `的【${this.name}】触发`, 1);
+                target.beHurt(self, {
+                    type: 2,
+                    rate: clacSkillAdditionRate(194, 1.925, self.Attrs.int)
+                }, this);
+            }, this, self);
+        }
+    },
+
+    {
         id: 1052,
         name: "正始之变",
         desc: "有效距离：5；发动率：--；战斗开始后，敌军全体累计造成15次伤害后，下回合令敌军群体陷入犹豫状态，持续1回合；我军全体成功发动主动或追击战法后，必定再次发动（跳过准备），持续1回合。司马懿、司马师或司马昭发动时，犹豫生效后自身恢复一定兵力（恢复率300.0%）",

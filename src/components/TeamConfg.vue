@@ -335,7 +335,7 @@ const changeConfig = (type,act) => {
                 <div class="content">
                     <div class="skill" v-for="s in SKILL_LIST[g]" @click="saveSkill(s.id)">
                         <div class="skill-container">
-                            <img :src="`/stzboptm/assets/ui/skill_${s.level.toLowerCase()}.png`" alt="" class="skill-border">
+                            <img :src="`/stzboptm/assets/ui/skill_${s.level === 'C' ? 'b' : s.level.toLowerCase()}.png`" alt="" class="skill-border">
                             <img :src="`/stzboptm/assets/ui/skill_${skilltypeclass[s.type - 1]}.png`" alt="" class="skill-type">
                             <div :class="`skill-name ${s.level.toLowerCase()}`">
                                 {{ s.name }}
@@ -620,7 +620,7 @@ const changeConfig = (type,act) => {
                                 }
                             }
 
-                            &.B {
+                            &.B, &.C {
                                 background-image: url(/assets/ui/skill_b.png);
 
                                 &~.skill-name {
@@ -1404,7 +1404,7 @@ const changeConfig = (type,act) => {
                                 background-image: url(/assets/ui/skill_a_b.png);
                             }
 
-                            &.b{
+                            &.b, &.c{
                                 background-image: url(/assets/ui/skill_b_b.png);
                             }
                         }
