@@ -16,6 +16,27 @@ import { clacAttackDamage, getRandomBool, calcRecover, getRandomInt, clacSkillAd
 import { keepTwoDecimal, makeSkillTag } from "../uilts";
 import { BattleHero } from "./battleHero";
 
+function reduceAttributesTemporarily(target, source, skill, values, rounds) {
+    const expiresRound = target.Manger.Round + rounds;
+    target.Storage.attributeReductionId = (target.Storage.attributeReductionId || 0) + 1;
+    for (const [attribute, reduction] of Object.entries(values)) target.Attrs[attribute] -= reduction;
+    const tag = target.addHook('回合开始时', `${skill.name}属性恢复${target.Storage.attributeReductionId}`, () => {
+        if (target.Manger.Round < expiresRound) return;
+        for (const [attribute, reduction] of Object.entries(values)) target.Attrs[attribute] += reduction;
+        target.clearHook('回合开始时', tag);
+    }, skill, source, 'debuff');
+}
+
+const HENEI_DERIVED = [
+    { id: 1055, name: '迷阵', rate: 35, base: 155, grow: 1.5, targets: 1, effect: 'rage', desc: '对敌军单体发动策略攻击（伤害率155.0%，受谋略属性影响），并使其陷入暴走状态，持续1回合' },
+    { id: 1056, name: '溃堤', rate: 45, base: 79.8, grow: 0.785, targets: 2, effect: 'attackDown', desc: '对敌军群体发动策略攻击（伤害率79.8%，受谋略属性影响），并使其攻击属性降低10.0（受谋略属性影响），持续2回合' },
+    { id: 1057, name: '夹攻', rate: 45, base: 89.6, grow: 0.945, targets: 2, desc: '对敌军群体发动策略攻击（伤害率89.6%，受谋略属性影响）' },
+    { id: 1058, name: '伐谋', rate: 40, base: 209, grow: 2.175, targets: 1, effect: 'attackIntelDown', desc: '对敌军单体发动策略攻击（伤害率209.0%，受谋略属性影响），并使其攻击、谋略属性降低45.0（受谋略属性影响），持续2回合' },
+    { id: 1059, name: '雀伏', rate: 45, base: 165, grow: 1.75, targets: 1, desc: '对敌军单体发动策略攻击（伤害率165.0%，受谋略属性影响）' },
+    { id: 1060, name: '火辎', rate: 50, base: 75, grow: 0.75, targets: 2, effect: 'burn', ready: true, desc: '1回合准备，对敌军群体发动策略攻击（伤害率75.0%，受谋略属性影响），并施加燃烧（伤害率75.0%，受谋略属性影响），持续1回合' },
+    { id: 1061, name: '毒泉', rate: 50, base: 85, grow: 0.875, targets: 2, effect: 'panic', ready: true, desc: '1回合准备，使敌军群体陷入恐慌，每回合损失兵力（伤害率85.0%，受谋略属性影响），持续2回合' },
+];
+
 
 export const __SKILLS__ = [
     {
@@ -1789,5 +1810,59 @@ export const __SKILLS__ = [
                 }, this, self);
             }, this, self);
         }
-    }
+    },
+    {
+        id: 1054, name: '河内世泽',
+        desc: '随机发动落雷、迷阵、溃堤、夹攻中的一种，并再次随机发动伐谋、雀伏、火辎、毒泉中的一种。发动的战法有效距离为4，跳过准备回合，效果与原战法同等级相同',
+        level: 'S', type: 2, target: [1, 2], target_type: 'enemy', limit: 4, rate: 35, study: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const groups = [[1045, 1055, 1056, 1057], [1058, 1059, 1060, 1061]];
+            for (const group of groups) {
+                if (self.Manger.Over || self.Arms <= 0) break;
+                const id = group[getRandomInt(0, group.length - 1)];
+                const derived = __SKILLS__.find(skill => skill.id === id);
+                derived.callskill(self, 100, true, 4);
+            }
+            return true;
+        }
+    },
+    ...HENEI_DERIVED.map(config => ({
+        id: config.id, name: config.name,
+        desc: config.desc,
+        level: 'A', type: 2, target: config.targets, target_type: 'enemy',
+        limit: config.name === '伐谋' || config.name === '溃堤' ? 3 : config.name === '毒泉' ? 5 : 4,
+        rate: config.rate, study: true,
+        callskill: function (self, currentRate, forced = false, range = this.limit) {
+            if (!forced && !getRandomBool(currentRate)) return false;
+            const execute = () => {
+                const targets = self.getTarget(range, config.targets);
+                const damageRate = clacSkillAdditionRate(config.base, config.grow, self.Attrs.int);
+                for (const target of targets) {
+                    if (config.effect !== 'panic') target.beHurt(self, { type: 2, rate: damageRate }, this);
+                    if (target.Arms <= 0) continue;
+                    if (config.effect === 'rage' && !target.isRage()) {
+                        target.State.rage = { rounds: 1, from: { hero: self, skill: this } };
+                        target.StateFlag.rage = false;
+                    } else if (config.effect === 'attackDown' || config.effect === 'attackIntelDown') {
+                        const base = config.effect === 'attackDown' ? 10 : 45;
+                        const reduction = clacSkillAdditionRate(base, base / 150, self.Attrs.int);
+                        reduceAttributesTemporarily(target, self, this,
+                            config.effect === 'attackDown' ? { atk: reduction } : { atk: reduction, int: reduction }, 2);
+                    } else if (config.effect === 'burn') {
+                        target.applyContinuousDamage('燃烧', self, this, damageRate, 1);
+                    } else if (config.effect === 'panic') {
+                        target.applyContinuousDamage('恐慌', self, this, damageRate, 2);
+                    }
+                }
+            };
+            if (forced || !config.ready) {
+                self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+                execute();
+                return true;
+            }
+            return self.addReadySkill(this, 1, execute);
+        }
+    }))
 ]
