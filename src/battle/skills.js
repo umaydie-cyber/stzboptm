@@ -823,6 +823,23 @@ export const __SKILLS__ = [
     },
 
     {
+        id: 1053,
+        name: "了如指掌",
+        desc: "移除敌军群体的有益效果，并使其无法恢复兵力，持续1回合",
+        level: "C", type: 2, target: 2, target_type: "enemy", limit: 4, rate: 35, study: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.getTarget(this.limit, this.target).forEach(enemy => {
+                enemy.clearActiveBuffs();
+                enemy.State.noRecoverUntil = Math.max(enemy.State.noRecoverUntil || 0, self.Manger.Round + 1);
+                self.Manger.Record.pushActionRecord(self, enemy, `的【${this.name}】使`, '无法恢复兵力，持续1回合', 1);
+            });
+            return true;
+        }
+    },
+
+    {
         id: 1052,
         name: "正始之变",
         desc: "有效距离：5；发动率：--；战斗开始后，敌军全体累计造成15次伤害后，下回合令敌军群体陷入犹豫状态，持续1回合；我军全体成功发动主动或追击战法后，必定再次发动（跳过准备），持续1回合。司马懿、司马师或司马昭发动时，犹豫生效后自身恢复一定兵力（恢复率300.0%）",

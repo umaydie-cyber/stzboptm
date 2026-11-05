@@ -889,6 +889,35 @@ export class BattleHero {
         //TODO 后续添加 暴走 恐慌 妖术 燃烧 动摇 围困 时添加清除
     }
 
+    // 驱散主动、追击战法施加的有益效果；指挥与被动效果不受影响。
+    clearActiveBuffs() {
+        const beneficialStates = [
+            'attackDamageAdd', 'inteDamageAdd', 'beAttackDamageSub',
+            'beInteDamageSub', 'activeDamageAdd', 'beActiveDamageSub'
+        ];
+        for (const name of beneficialStates) {
+            for (const [key, state] of Object.entries(this.State[name])) {
+                if (state?.from && [2, 3].includes(state.from.type)) {
+                    this.delState(name, state.from);
+                }
+            }
+        }
+        for (const name of ['firstAction', 'doubleAttack']) {
+            const state = this.State[name];
+            if (state?.rounds > 0 && [2, 3].includes(state.from?.skill?.type)) {
+                state.rounds = 0;
+                state.from = { hero: null, skill: 0 };
+            }
+        }
+        if ([2, 3].includes(this.State.splitAttack?.skill?.type)) this.State.splitAttack = null;
+        if ([2, 3].includes(this.State.nextInteDamageSub?.from?.type)) this.State.nextInteDamageSub = null;
+        for (const hooks of Object.values(this.HOOKS)) {
+            for (const [tag, hook] of Object.entries(hooks)) {
+                if (hook.type === 'buff' && [2, 3].includes(hook.skill?.type)) delete hooks[tag];
+            }
+        }
+    }
+
     //获取效果对象
     getHookObj(on) {
         let obj;
