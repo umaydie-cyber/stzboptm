@@ -928,6 +928,8 @@ export const __SKILLS__ = [
             self.getTarget(this.limit, this.target, 2).forEach(ally => {
                 ally.addState("beAttackDamageSub", reduction, 3, this, self);
                 ally.Storage.taoyuanStrategyReduction = { round: 0, remaining: 2 };
+                self.Manger.Record.pushActionRecord(self, ally, `的【${this.name}】使`,
+                    '前3回合每回合受到的前2次策略伤害大幅降低（-9999%）', 1);
             });
         },
     },

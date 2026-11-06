@@ -667,18 +667,23 @@ export class BattleHero {
             taoyuan.round = this.Manger.Round;
             taoyuan.remaining = 2;
         }
+        const taoyuanActive = damageInfo.type === 2 && taoyuan &&
+            this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.remaining > 0;
+        const taoyuanInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '桃源问津');
+        const applyTaoyuanToSnapshot = num != null && taoyuanActive && !taoyuanInSnapshot;
         attacker.callHook("攻击前");
         if (num != null && !resolvedInfo.damageModifiers) getDamageAddition(attacker, this, resolvedInfo, skill);
         let realDamage = 0;
         let damage;
         if (num != null) {
             damage = num;
-            if ((reduceThisHit || applyQiqinToSnapshot) && [1, 2, 4].includes(damageInfo.type)) {
+            if ((reduceThisHit || applyQiqinToSnapshot || applyTaoyuanToSnapshot) && [1, 2, 4].includes(damageInfo.type)) {
                 // 指挥和持续伤害可能预先算好数值；只折减非兵力基础部分。
                 const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
                     ? attacker.Arms * 373 / (7700 + attacker.Arms)
                     : attacker.Arms * 178 / (6459 + attacker.Arms) / (damageInfo.type === 4 ? 3 : 1));
-                const beforeInfo = { ...damageInfo, ignoreQiqin: applyQiqinToSnapshot, jianzuReduction: false };
+                const beforeInfo = { ...damageInfo, ignoreQiqin: applyQiqinToSnapshot,
+                    ignoreTaoyuan: applyTaoyuanToSnapshot, jianzuReduction: false };
                 const before = getDamageAddition(attacker, this, beforeInfo, skill);
                 const after = getDamageAddition(attacker, this, resolvedInfo, skill);
                 damage = Math.min(num, Math.round(base + Math.max(0, num - base) * after / before));

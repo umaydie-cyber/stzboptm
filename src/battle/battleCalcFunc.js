@@ -145,7 +145,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (type == 2) {
             if (target.State.nextInteDamageSub?.value) special(target.State.nextInteDamageSub.from?.name || '下一次策略减伤', -target.State.nextInteDamageSub.value, target);
             const taoyuan = target.Storage.taoyuanStrategyReduction;
-            if (taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) special('桃园结义', -9999, target);
+            if (!damageInfo.ignoreTaoyuan && taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) special('桃源问津', -9999, target);
         }
     }
 
