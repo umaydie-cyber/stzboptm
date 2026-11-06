@@ -24,7 +24,7 @@ const teamChanged = () => {
 	showStatistics.value = false;
 };
 const showBattleRecord = ref(false);
-const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027]);
+const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028]);
 const isPortraitCard = id => portraitCardIds.has(Number(id));
 const recordCardImage = hero => hero
 	? `/stzboptm/assets/card/${hero.Id}${isPortraitCard(hero.Id) ? '.png' : '_long.jpg'}`
@@ -161,8 +161,8 @@ const simulate = async () => {
 			<div class="card-area">
 				<div class="card-box">
 					<div class="card" v-for="(item, index) in [...battleinfo.BlueTeam.hero].reverse()" @click="editTeamHero('blue', team.blue.heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
@@ -199,8 +199,8 @@ const simulate = async () => {
 				</div>
 				<div class="card-box">
 					<div class="card" v-for="(item, index) in [...battleinfo.RedTeam.hero].reverse()" @click="editTeamHero('red', team.red.heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="`/stzboptm/assets/card/${item.Id}.${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028].includes(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${item.Camp}.png`">
@@ -269,7 +269,7 @@ const simulate = async () => {
 			<div class="card-area">
 				<div class="card-box" v-for="camp in ['blue', 'red']" :key="camp">
 					<div class="card" v-for="(item, index) in [...team[camp].heros].reverse()" :key="index" @click="editTeamHero(camp, team[camp].heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.id}.${[1015,1016,1017,1018,1019,1020,1021,1022,1023,1024, 1025, 1026, 1027].includes(item.id) ? 'png' : item.animation ? 'webp' : 'jpg'}`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+						<img :src="`/stzboptm/assets/card/${item.id}.${[1015,1016,1017,1018,1019,1020,1021,1022,1023,1024, 1025, 1026, 1027, 1028].includes(item.id) ? 'png' : item.animation ? 'webp' : 'jpg'}`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${HEROS[item.id].camp}.png`">

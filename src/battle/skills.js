@@ -46,6 +46,37 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1074,
+        name: "赐剑长驱",
+        desc: "自身无法释放主动战法或进行普通攻击；友军全体每回合首次成功释放主动战法后，有40%几率（受刘禅谋略及当前士气影响）再次发动，跳过所有准备回合，造成原战法50%的伤害和恢复效果",
+        level: "A", type: 1, target: 3, target_type: "team", limit: 3, rate: "--", study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.Storage.cijianDisabled = true;
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            for (const ally of allies) {
+                let lastRound = -1;
+                ally.addHook('战法成功发动后', '赐剑长驱再次发动', (skill) => {
+                    if (skill.type !== 2 || self.Manger.Round < 1 || lastRound === self.Manger.Round ||
+                        ally.Storage.cijianRepeat || ally.Arms <= 0) return;
+                    lastRound = self.Manger.Round;
+                    const baseRate = 40 + (self.Attrs.int - 80) * 43 / 303;
+                    const rate = self.getRealSkillRate(Math.max(0, Math.min(100, baseRate)));
+                    const success = getRandomBool(rate);
+                    self.Manger.Record.pushRecord(ally, `的【${this.name}】判定（${rate}%）：${success ? '成功' : '未触发'}`, 1);
+                    if (!success) return;
+                    ally.Storage.cijianRepeat = { skill, multiplier: 0.5 };
+                    try {
+                        self.Manger.Record.pushRecord(ally, `的【${skill.name}】再次发动（跳过准备，伤害和恢复效果为50%）`, 1);
+                        skill.callskill(ally, 100);
+                    } finally {
+                        ally.Storage.cijianRepeat = null;
+                    }
+                }, this, self);
+            }
+        }
+    },
+    {
         id: 1073,
         name: "七擒七纵",
         desc: "正式回合后，我军群体受到的前7次伤害或控制，每次有50%几率规避或抵御；7次结束后有50%几率使累计伤害最高的敌军下回合造成所有伤害大幅降低（概率受施加者士气影响）",
