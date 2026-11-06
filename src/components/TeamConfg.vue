@@ -207,7 +207,7 @@ const addAllPoints = type => {
                             </div>
                         </div>
                         <div class="treasure-slot" aria-label="宝物栏位：可授予" title="宝物栏位">
-                            <div class="treasure-emblem" aria-hidden="true">十</div>
+                            <div class="treasure-emblem" aria-hidden="true">+</div>
                             <div class="treasure-label">可授予</div>
                         </div>
                     </div>
@@ -1501,7 +1501,7 @@ const addAllPoints = type => {
     background: radial-gradient(circle at 40% 30%, #393b3d, #292b2e 65%, #202225);
     box-shadow: inset 0 0 0 1px #242629;
     color: #b7aa82;
-    font-family: serif;
+    font-family: Arial, sans-serif;
     font-size: clamp(30px, 5vw, 80px);
     line-height: 1;
     transform: rotate(-8deg);
