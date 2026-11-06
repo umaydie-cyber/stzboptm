@@ -149,7 +149,13 @@ export class BattleManger {
                 }
             });
 
-            this.SortSpdHeros.forEach((e) => {
+            // 司马懿的指挥优先特性只改变准备回合的指挥结算顺序；
+            // 同优先级武将继续沿用速度顺序。
+            const actingHeros = this.Round == 0
+                ? [...this.SortSpdHeros].sort((a, b) => b.CommandPriority - a.CommandPriority)
+                : this.SortSpdHeros;
+
+            actingHeros.forEach((e) => {
                 // 清除已攻击次数
                 e.State.attackNum = 0;
                 if(e.Arms > 0){
@@ -158,6 +164,9 @@ export class BattleManger {
                         e.callPassiveSkill();
                     }else if(this.Round == '0'){
                         // 执行指挥
+                        if (e.CommandPriority > 0 && e.SkillsOrder.some(id => e.Skills[id]?.type === 1)) {
+                            this.Record.pushRecord(e, '的指挥优先特性生效，本指挥阶段所有指挥战法最先执行');
+                        }
                         e.callCommandSkill()
                     }else{
                         if(this.Over)return;

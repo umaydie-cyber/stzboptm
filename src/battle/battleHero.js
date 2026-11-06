@@ -276,6 +276,7 @@ export class BattleHero {
         this.Camp = hero.camp;
         this.BisicArm = hero.army;
         this.Skill = hero.skill;
+        this.CommandPriority = hero.commandPriority || 0;
         this.Level = level;
         this.Arms = Math.max(1, Math.floor(Number(config.arms) || 10000));
         this.HurtArms = 0;
