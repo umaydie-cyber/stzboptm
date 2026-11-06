@@ -187,7 +187,9 @@ const addAllPoints = type => {
                     <div class="posname">{{ posname[index] }}</div>
                     <div class="name" :class="heroCampclass[HEROS[hero.id].camp - 1]">{{ HEROS[hero.id].name }}</div>
                     <div class="image" @click="editHero(camp, index)" title="编辑武将属性">
-                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
+                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025].includes(hero.id) }"
+                            @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                     </div>
                     <button class="replace-hero" type="button" @click="selectHero(camp, index)">更换武将</button>
                     <div class="skills">
@@ -547,7 +549,11 @@ const addAllPoints = type => {
                         width: 100%;
                         height: 100%;
                         object-fit: cover;
-                        /* object-position: 0 -5vh; */
+                        object-position: center;
+
+                        &.portrait-card-art {
+                            object-position: center 20%;
+                        }
                     }
                 }
 

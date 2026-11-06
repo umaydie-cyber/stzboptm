@@ -24,6 +24,11 @@ const teamChanged = () => {
 	showStatistics.value = false;
 };
 const showBattleRecord = ref(false);
+const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025]);
+const isPortraitCard = id => portraitCardIds.has(Number(id));
+const recordCardImage = hero => hero
+	? `/stzboptm/assets/card/${hero.Id}${isPortraitCard(hero.Id) ? '.png' : '_long.jpg'}`
+	: '';
 const showStatistics = ref(false);
 const simulation = ref(null);
 const simulationProgress = ref(0);
@@ -317,8 +322,10 @@ const simulate = async () => {
 		</div>
 		<div class="record" v-if="showBattleRecord">
 			<div class="record-item" v-for="e in battleinfo.Record?.Records"
-				:class="{ 'round-title': e.roundTitle == 1, 'hero-round-start': e.heroRoundStart == 1 }"
-				:style="{ 'background-image': (e.heroRoundStart == 1 ? `url(/stzboptm/assets/card/${e.hero1.Id}${[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025].includes(e.hero1.Id) ? '.png' : '_long.jpg'})` : '') }">
+				:class="{ 'round-title': e.roundTitle == 1, 'hero-round-start': e.heroRoundStart == 1 }">
+				<div v-if="e.heroRoundStart == 1 && e.hero1" class="record-hero-art"
+					:class="{ 'portrait-card-art': isPortraitCard(e.hero1.Id) }"
+					:style="{ backgroundImage: `url(${recordCardImage(e.hero1)})` }"></div>
 
 				<div class="sub" v-if="e.level == 1"></div>
 				<span v-if="e.hero1"
@@ -357,8 +364,8 @@ const simulate = async () => {
 .main {
 	// width: calc((100vh - 4vh) / 0.5625);
 	// height: calc(100vh - 4vh);
-	width: calc((100vh) / 0.5625);
-	height: calc(100vh);
+	width: min(100vw, calc(100vh / 0.5625));
+	height: min(100vh, calc(100vw * 0.5625));
 	// background-image: url(assets/ui/bg.png);
 	background-position: right;
 	background-repeat: no-repeat;
@@ -740,7 +747,7 @@ const simulate = async () => {
 
 		.record-item {
 			display: flex;
-
+			position: relative;
 			padding: 0 7.2vw;
 
 			&.round-title {
@@ -760,9 +767,21 @@ const simulate = async () => {
 				padding-bottom: 0.6vw;
 				margin: .3vw 0;
 				color: #e4dd9e;
+				overflow: hidden;
+			}
+
+			.record-hero-art {
+				position: absolute;
+				inset: 0 auto 0 0;
+				width: 6.8vw;
 				background-repeat: no-repeat;
-				// background-position: left 20%;
-				background-size: contain;
+				background-size: cover;
+				background-position: center;
+				border-right: 1px solid rgba(240, 221, 167, .25);
+
+				&.portrait-card-art {
+					background-position: center 20%;
+				}
 			}
 
 
@@ -927,7 +946,8 @@ const simulate = async () => {
 			line-height: 1.6;
 			.record-item { padding: 5px 8px; flex-wrap: wrap; }
 			.record-item.round-title { font-size: 15px; padding: 8px; margin: 8px 0; }
-			.record-item.hero-round-start { padding: 8px; margin: 8px 0; }
+			.record-item.hero-round-start { min-height: 64px; padding: 8px 8px 8px 104px; margin: 8px 0; align-items: center; }
+			.record-item .record-hero-art { width: 96px; }
 			.record-item .sub { width: 8px; height: 8px; }
 		}
 	}
