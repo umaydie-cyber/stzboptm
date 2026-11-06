@@ -17,6 +17,7 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     let basicDamage = attacker.Attrs.atk * getRandNum() * (DamageRate / 100) * damageAddition;
     //主要伤害
     let targetDef = target.Attrs.def;
+    if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
     if (skill && skill.id == 1011) {
         targetDef = 0;
     }
@@ -157,6 +158,16 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         add(target, "beActiveDamageSub", -1);
     }
     if (skill?.type === 3 && attacker.Storage.shiwuPursuitBonus) special('势无虚动', attacker.Storage.shiwuPursuitBonus);
+    if (attacker.Treasure) {
+        if (skill && [2, 3].includes(skill.type)) special('彤素·亢厉', attacker.Treasure.kangli);
+        if (type === 1) {
+            const count = attacker.Manger.BlueTeam.hero.length + attacker.Manger.RedTeam.hero.length + 1;
+            const position = hero => hero.BattleCamp === 'blue' ? hero.Index : count + hero.Index;
+            special('彤素·奇袭', Math.abs(position(attacker) - position(target)) * 3);
+        }
+        if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('彤素·至策', attacker.Treasure.forgeValue);
+    }
+    if (skill?.type === 2 && target.Treasure?.forge === 'jianren') special('彤素·坚忍', -target.Treasure.forgeValue, target);
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
     const qiqin = attacker.Storage.qiqinAllDamageSub;

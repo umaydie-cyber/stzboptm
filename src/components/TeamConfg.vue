@@ -38,6 +38,48 @@ const testt = ref({
 const showHeroList = ref(false);
 const showSkillList = ref(false);
 const showHeroInfo = ref(false);
+const showTreasure = ref(false);
+const treasureHero = ref(0);
+const treasureDraft = ref(null);
+const forgeOptions = [
+    { id: 'xiaorui', name: '骁锐', min: 5, max: 15, desc: '基础攻击属性提高' },
+    { id: 'zhice', name: '至策', min: 10, max: 20, desc: '主动战法伤害提高' },
+    { id: 'podi', name: '破敌', min: 10, max: 20, desc: '攻击伤害无视目标防御' },
+    { id: 'yingyong', name: '英勇', min: 5, max: 15, desc: '攻击型主战法发动率提高' },
+    { id: 'shanmou', name: '善谋', min: 10, max: 30, desc: '第4、6回合攻击型主战法发动率提高' },
+    { id: 'jianren', name: '坚忍', min: 10, max: 20, desc: '受到的主动战法伤害降低' }
+];
+const remainingTreasurePoints = computed(() => treasureDraft.value
+    ? 12 - Number(treasureDraft.value.xiaorui) - Number(treasureDraft.value.kangli) : 10);
+const openTreasure = index => {
+    treasureHero.value = index;
+    treasureDraft.value = { id: 'tongsu', xiaorui: 1, kangli: 1, forge: '', forgeValue: 0,
+        ...team.value[camp.value].heros[index].treasure };
+    showTreasure.value = true;
+};
+const changeTreasurePoint = (key, delta) => {
+    const draft = treasureDraft.value;
+    if (delta > 0 && remainingTreasurePoints.value <= 0) return;
+    draft[key] = Math.max(1, Math.min(11, Number(draft[key]) + delta));
+};
+const selectForge = option => {
+    treasureDraft.value.forge = option.id;
+    treasureDraft.value.forgeValue = option.min;
+};
+const saveTreasure = () => {
+    const draft = treasureDraft.value;
+    if (!draft.forge || remainingTreasurePoints.value < 0) return;
+    const option = forgeOptions.find(item => item.id === draft.forge);
+    draft.forgeValue = Math.max(option.min, Math.min(option.max, Math.round(Number(draft.forgeValue) || option.min)));
+    team.value[camp.value].heros[treasureHero.value].treasure = { ...draft };
+    showTreasure.value = false;
+    emit('saved');
+};
+const removeTreasure = () => {
+    delete team.value[camp.value].heros[treasureHero.value].treasure;
+    showTreasure.value = false;
+    emit('saved');
+};
 console.log(team.value[camp.value][0]);
 
 const heroCampclass = ['shu', 'wei', 'wu', 'han', 'qun', 'jin'];
@@ -206,11 +248,40 @@ const addAllPoints = type => {
                                 <div class="skill-type"></div>
                             </div>
                         </div>
-                        <div class="treasure-slot" aria-label="宝物栏位：可授予" title="宝物栏位">
-                            <div class="treasure-emblem" aria-hidden="true">+</div>
-                            <div class="treasure-label">可授予</div>
+                        <div class="treasure-slot" role="button" tabindex="0" :aria-label="hero.treasure ? '编辑彤素宝物' : '选择宝物'"
+                            @click="openTreasure(index)" @keydown.enter="openTreasure(index)" @keydown.space.prevent="openTreasure(index)">
+                            <img v-if="hero.treasure" src="/assets/treasure/tongsu.png" alt="彤素" class="equipped-treasure">
+                            <template v-else>
+                                <div class="treasure-emblem" aria-hidden="true">+</div>
+                                <div class="treasure-label">可授予</div>
+                            </template>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div v-if="showTreasure" class="treasure-dialog" role="dialog" aria-modal="true" aria-label="选择宝物">
+        <div class="treasure-panel">
+            <div class="treasure-header"><span>宝物 · 彤素</span><button type="button" @click="showTreasure = false" aria-label="关闭">×</button></div>
+            <div class="treasure-body">
+                <img src="/assets/treasure/tongsu.png" alt="彤素宝物卡" class="treasure-card">
+                <div class="treasure-settings">
+                    <h3>宝物效果</h3>
+                    <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
+                    <div class="treasure-point"><strong>骁锐</strong><span>攻击 +{{ (treasureDraft.xiaorui * 2.5).toFixed(1) }}</span><button type="button" @click="changeTreasurePoint('xiaorui', -1)">−</button><span>{{ treasureDraft.xiaorui }}</span><button type="button" @click="changeTreasurePoint('xiaorui', 1)">+</button></div>
+                    <div class="treasure-point"><strong>亢厉</strong><span>主动、追击伤害 +{{ treasureDraft.kangli }}%</span><button type="button" @click="changeTreasurePoint('kangli', -1)">−</button><span>{{ treasureDraft.kangli }}</span><button type="button" @click="changeTreasurePoint('kangli', 1)">+</button></div>
+                    <div class="treasure-fixed"><strong>奇袭</strong><span>造成攻击伤害时，与目标距离每提高 1，伤害提高 3%</span></div>
+                    <h3>锻造词条（选择一条）</h3>
+                    <div class="forge-options">
+                        <button v-for="option in forgeOptions" :key="option.id" type="button" :class="{ selected: treasureDraft.forge === option.id }" @click="selectForge(option)">{{ option.name }}</button>
+                    </div>
+                    <div v-if="treasureDraft.forge" class="forge-value">
+                        <span>{{ forgeOptions.find(item => item.id === treasureDraft.forge).desc }}</span>
+                        <input v-model.number="treasureDraft.forgeValue" type="number" :min="forgeOptions.find(item => item.id === treasureDraft.forge).min" :max="forgeOptions.find(item => item.id === treasureDraft.forge).max" step="1">%
+                        <small>可选 {{ forgeOptions.find(item => item.id === treasureDraft.forge).min }}–{{ forgeOptions.find(item => item.id === treasureDraft.forge).max }} 的整数</small>
+                    </div>
+                    <div class="treasure-actions"><button type="button" @click="removeTreasure">卸下</button><button type="button" :disabled="!treasureDraft.forge" @click="saveTreasure">装备彤素</button></div>
                 </div>
             </div>
         </div>
@@ -1478,7 +1549,32 @@ const addAllPoints = type => {
     outline-offset: -5px;
     background: linear-gradient(145deg, #303236, #1b1d20);
     font-family: "FZLBJW_B";
+    cursor: pointer;
 }
+.team-config-warp .treasure-slot:focus-visible { outline: 2px solid #e8ce82; outline-offset: -3px; }
+.team-config-warp .equipped-treasure { width: 100%; height: 100%; object-fit: fill; }
+.treasure-dialog { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: #000b; box-sizing: border-box; color: #eee9d9; }
+.treasure-panel { width: min(960px, 100%); max-height: 94dvh; overflow: auto; background: linear-gradient(145deg, #3d4045, #25272a); border: 2px solid #968562; box-shadow: 0 15px 50px #000b; }
+.treasure-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #796e5c; color: #ead6a0; font-size: 24px; }
+.treasure-header button { border: 0; background: none; color: inherit; font-size: 32px; cursor: pointer; }
+.treasure-body { display: flex; gap: 24px; padding: 20px; }
+.treasure-card { width: 230px; max-width: 30%; object-fit: contain; align-self: flex-start; }
+.treasure-settings { flex: 1; min-width: 0; }
+.treasure-settings h3 { margin: 8px 0 12px; color: #ead6a0; border-bottom: 1px solid #777; font-size: 20px; }
+.treasure-settings p { margin: 8px 0; color: #60d8aa; }
+.treasure-point, .treasure-fixed { display: flex; align-items: center; gap: 10px; margin: 10px 0; min-height: 34px; }
+.treasure-point strong, .treasure-fixed strong { flex: none; padding: 4px 10px; color: #fff; background: #426083; }
+.treasure-point > span:first-of-type { flex: 1; }
+.treasure-point button, .forge-options button, .treasure-actions button { cursor: pointer; border: 1px solid #a88956; background: #4c402e; color: #f5e7ba; padding: 5px 12px; }
+.treasure-point button { font-size: 20px; min-width: 34px; }
+.forge-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.forge-options button.selected { background: #966b31; border-color: #f6d486; }
+.forge-value { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 14px; }
+.forge-value input { width: 64px; padding: 5px; color: white; background: #242629; border: 1px solid #b8a16c; }
+.forge-value small { width: 100%; color: #c8c4ba; }
+.treasure-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.treasure-actions button:disabled { opacity: .5; cursor: default; }
+@media (max-width: 650px) { .treasure-body { gap: 12px; padding: 12px; } .treasure-card { width: 100px; } .treasure-header { font-size: 19px; } .treasure-settings h3 { font-size: 16px; } .treasure-point, .treasure-fixed { flex-wrap: wrap; font-size: 12px; } .forge-options { grid-template-columns: repeat(2, 1fr); } }
 .team-config-warp .treasure-slot::before,
 .team-config-warp .treasure-slot::after {
     content: "";
@@ -1546,7 +1642,7 @@ const addAllPoints = type => {
     .team-config-warp > .box > .cards > .card > .name { font-size: 13px; width: 15px; }
     .team-config-warp > .box > .cards > .card > .image { width: 32%; }
     .team-config-warp > .box > .cards > .card > .skills { flex: 1; }
-    .team-config-warp > .box > .cards > .card > .skills > .skill { width: 32%; }
+    .team-config-warp > .box > .cards > .card > .skills > .skill { width: 24%; }
     .team-config-warp > .box > .cards > .card > .skills > .skill > .skill-name { font-size: 11px; text-align: center; }
     .team-config-warp .treasure-slot { width: 25%; outline-offset: -3px; }
     .team-config-warp .treasure-emblem { font-size: clamp(23px, 7vw, 46px); }

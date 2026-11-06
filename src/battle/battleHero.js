@@ -233,6 +233,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
+        this.Treasure = config.treasure?.id === 'tongsu' ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -304,11 +305,15 @@ export class BattleHero {
         for (const key in config.extraAttrsAlloc) {
             this.Attrs[key] = keepTwoDecimal(this.Attrs[key] + config.extraAttrsAlloc[key]);
         }
+        if (this.Treasure?.forge === 'xiaorui') {
+            this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.forgeValue / 100));
+        }
 
         // 四大营
         CanAddAttrsKey.forEach((key) => {
             this.Attrs[key] = keepTwoDecimal(this.Attrs[key] + 20);
         })
+        if (this.Treasure) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -372,6 +377,12 @@ export class BattleHero {
             }
         });
     }
+    getTreasureMainRateBonus(skill) {
+        if (skill.id !== this.Skill || !/造成.*攻击|发动.*攻击|攻击伤害/.test(skill.desc || '')) return 0;
+        if (this.Treasure?.forge === 'yingyong') return this.Treasure.forgeValue;
+        if (this.Treasure?.forge === 'shanmou' && [4, 6].includes(this.Manger.Round)) return this.Treasure.forgeValue;
+        return 0;
+    }
     //执行主动技能
     callActiveSkill() {
         if (this.Storage.cijianDisabled) return;
@@ -382,6 +393,7 @@ export class BattleHero {
                 if (skill.type == 2) {
                     console.log(this.RATE_VAL);
                     let currentRate = this.getRealSkillRate(skill.rate) + (this.RATE_VAL[skill.id] ? this.RATE_VAL[skill.id].value : 0);
+                    currentRate += this.getTreasureMainRateBonus(skill);
                     console.log(this.canAddReadySkill(skill));
                     if (this.canAddReadySkill(skill)) {
                         this.callHook("尝试发动战法前", skill);
@@ -412,7 +424,7 @@ export class BattleHero {
                     this.callHook("尝试发动战法前", skill);
                     if (this.Manger.Over || this.Arms <= 0) return;
                 }
-                if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate))) {
+                if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate) + this.getTreasureMainRateBonus(skill))) {
                     const stacks = this.Storage.shiwuStacks || 0;
                     if (stacks) {
                         this.Storage.shiwuPursuitBonus = stacks * 40;
