@@ -38,6 +38,7 @@ const simulationError = ref('');
 const configuredArms = camp => team.value[camp].heros.reduce((sum, hero) => sum + (Number(hero.arms) || 10000), 0);
 const previewScale = camp => Math.max(team.value[camp].heros.length * 10000, configuredArms(camp));
 const format = value => Number(value || 0).toFixed(1);
+const formatModifier = value => `${value >= 0 ? '+' : ''}${Number(value.toFixed(2))}%`;
 const rowsFor = (stats, camp) => Object.values(stats?.[camp] || {});
 const heroRows = (stats, camp) => {
     const rows = {};
@@ -337,6 +338,13 @@ const simulate = async () => {
 					:style="{ 'color': (e.hero2?.BattleCamp == 'blue' ? 'rgb(154,213,137)' : 'rgb(255,72,71)') }">【{{
 		e.hero2?.Name }}】</span>
 				{{ e.msg }}
+				<details v-if="e.damageModifiers" class="damage-modifiers">
+					<summary>增减伤 {{ formatModifier(e.damageModifiers.total) }}</summary>
+					<div v-if="!e.damageModifiers.entries.length">无额外增减伤</div>
+					<div v-for="(item, index) in e.damageModifiers.entries" :key="index">
+						{{ item.hero ? `${item.hero} · ` : '' }}{{ item.name }}：{{ formatModifier(item.value) }}
+					</div>
+				</details>
 				<span v-if="e.heroRoundStart == 1" style="flex-grow: 2;text-align: right;">兵力 {{ e.arms }}</span>
 			</div>
 		</div>
@@ -750,6 +758,12 @@ const simulate = async () => {
 			display: flex;
 			position: relative;
 			padding: 0 7.2vw;
+			.damage-modifiers {
+				margin-left: 0.6em;
+				color: #e4dd9e;
+				summary { cursor: pointer; }
+				div { padding-left: 1em; color: #d8d2c4; }
+			}
 
 			&.round-title {
 				font-family: "FZLBJW_B";

@@ -8,9 +8,6 @@ import { keepTwoDecimal, roundEightNine } from "../uilts";
 export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
-    if (damageAddition != 1) {
-        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
-    }
 
     let DamageRate = damageInfo.rate;
     // 兵力基础伤害
@@ -36,9 +33,6 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
 export const clacInteDamage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
-    if (damageAddition != 1) {
-        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
-    }
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
     let inteEffect = calcInteEffect(target.Attrs.int);;
 
@@ -59,9 +53,6 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
 export const clacInte2Damage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
-    if (damageAddition != 1) {
-        attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
-    }
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
     let inteEffect = calcInteEffect(target.Attrs.int);;
 
@@ -118,41 +109,61 @@ const getLianweiWave = (attacker) => {
 export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     const type = damageInfo.type;
     let value = 100;
+    const entries = [];
+    const addStateEntries = (hero, name, sign) => {
+        for (const state of Object.values(hero.State?.[name] || {})) {
+            if (!state || !Number.isFinite(state.value)) continue;
+            entries.push({ name: state.from?.name || name, hero: state.hero?.Name || hero.Name, value: sign * state.value });
+        }
+    };
+    const add = (hero, name, sign) => {
+        value += sign * hero.getDamageStateValue(name);
+        addStateEntries(hero, name, sign);
+    };
+    const special = (name, amount, hero = attacker) => {
+        value += amount;
+        entries.push({ name, hero: hero.Name, value: amount });
+    };
     if (type == 1 || type == 3) {
-        value += attacker.getDamageStateValue("attackDamageAdd"); //攻击者造成伤害提高
-        value -= attacker.getDamageStateValue("attackDamageSub"); //攻击者造成伤害降低
-        value += target.getDamageStateValue("beAttackDamageAdd"); //目标受到伤害提高
-        value -= target.getDamageStateValue("beAttackDamageSub"); //目标受到伤害降低
+        add(attacker, "attackDamageAdd", 1);
+        add(attacker, "attackDamageSub", -1);
+        add(target, "beAttackDamageAdd", 1);
+        add(target, "beAttackDamageSub", -1);
     } else if (type == 2 || type == 4) {
-        value += attacker.getDamageStateValue("inteDamageAdd");
+        add(attacker, "inteDamageAdd", 1);
+        for (const bonus of Object.values(attacker.Storage.jiuzhanBonuses || {})) {
+            entries.push({ name: '久战熟谋', hero: attacker.Name, value: bonus.layers * bonus.perLayer });
+        }
         const lianwei = attacker.Storage.lianweiQiongji;
         if (lianwei) {
             const elapsed = Math.min(6, Math.max(0, (attacker.Manger.Round || 1) - 1));
-            value += lianwei.bonus * (1 - elapsed / 6);
+            special('敛微穷极', lianwei.bonus * (1 - elapsed / 6), lianwei.source);
         }
-        value -= attacker.getDamageStateValue("inteDamageSub");
-        value += target.getDamageStateValue("beInteDamageAdd");
-        value -= target.getDamageStateValue("beInteDamageSub");
+        add(attacker, "inteDamageSub", -1);
+        add(target, "beInteDamageAdd", 1);
+        add(target, "beInteDamageSub", -1);
         if (type == 2) {
-            value -= target.State.nextInteDamageSub?.value || 0;
+            if (target.State.nextInteDamageSub?.value) special(target.State.nextInteDamageSub.from?.name || '下一次策略减伤', -target.State.nextInteDamageSub.value, target);
             const taoyuan = target.Storage.taoyuanStrategyReduction;
-            if (taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) value -= 9999;
+            if (taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) special('桃园结义', -9999, target);
         }
     }
 
     if (skill && skill.type == 2){
-        value += attacker.getDamageStateValue("activeDamageAdd");
-        value -= attacker.getDamageStateValue("activeDamageSub");
-        value += target.getDamageStateValue("beActiveDamageAdd");
-        value -= target.getDamageStateValue("beActiveDamageSub");
+        add(attacker, "activeDamageAdd", 1);
+        add(attacker, "activeDamageSub", -1);
+        add(target, "beActiveDamageAdd", 1);
+        add(target, "beActiveDamageSub", -1);
     }
-    if (skill?.type === 3) value += attacker.Storage.shiwuPursuitBonus || 0;
+    if (skill?.type === 3 && attacker.Storage.shiwuPursuitBonus) special('势无虚动', attacker.Storage.shiwuPursuitBonus);
 
-    if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) value -= 30;
-    if (damageInfo.jianzuReduction) value -= 50;
-    if (type === 1 && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && attacker.Storage.henge) value += 50;
+    if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
+    if (damageInfo.jianzuReduction) special('健卒不殆', -50, target);
+    if (type === 1 && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && attacker.Storage.henge) special('横轭', 50);
 
+    if (value < 10) entries.push({ name: '增减伤下限', hero: '', value: 10 - value });
     if (value < 10) value = 10;
+    damageInfo.damageModifiers = { total: Number((value - 100).toFixed(2)), entries };
     return value / 100;
 }
 

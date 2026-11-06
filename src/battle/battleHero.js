@@ -616,6 +616,7 @@ export class BattleHero {
             taoyuan.remaining = 2;
         }
         attacker.callHook("攻击前");
+        if (num != null && !resolvedInfo.damageModifiers) getDamageAddition(attacker, this, resolvedInfo, skill);
         let realDamage = 0;
         let damage;
         if (num != null) {
@@ -661,10 +662,15 @@ export class BattleHero {
             taoyuan.remaining--;
         }
 
+        const recordStart = this.Manger.Record.Records.length;
         if(record){
             record(realDamage);
         }else{
             this.Manger.Record.pushRecord(this, `损失 ${realDamage} 兵力(${this.Arms})`, 1)
+        }
+        if (this.Manger.Record.Records.length > recordStart) {
+            const modifiers = resolvedInfo.damageModifiers || (getDamageAddition(attacker, this, resolvedInfo, skill), resolvedInfo.damageModifiers);
+            this.Manger.Record.Records.at(-1).damageModifiers = modifiers;
         }
         if (this.Posname == '大营' && this.Arms <= 0) this.Manger.Over = true;
         attacker.callHook("攻击后", attacker, this);
@@ -745,6 +751,8 @@ export class BattleHero {
         }
         this.State.continuousDamage[kind] = {
             damage, source, skill, rate, onPursuit,
+            damageModifiers: damageInfo.damageModifiers,
+            troopBaseDamage: damageInfo.troopBaseDamage,
             appliedRound: this.Manger.Round,
             expiresRound: this.Manger.Round + rounds
         };
@@ -762,7 +770,7 @@ export class BattleHero {
             if (effect.onPursuit !== onPursuit || (!onPursuit && effect.appliedRound >= this.Manger.Round) || this.Arms <= 0) continue;
             this.beHurtByNum(
                 effect.source,
-                { type: 4, rate: effect.rate },
+                { type: 4, rate: effect.rate, damageModifiers: effect.damageModifiers, troopBaseDamage: effect.troopBaseDamage },
                 effect.skill,
                 effect.damage,
                 (realDamage) => this.Manger.Record.pushRecord(
