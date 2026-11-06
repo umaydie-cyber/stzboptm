@@ -1978,7 +1978,7 @@ export const __SKILLS__ = [
     },
     {
         id: 1048, name: "光武中兴",
-        desc: "为我军兵力最低的单体恢复2次兵力（恢复率225.0%，受谋略属性影响），每次目标独立判定；随后随机发动落雷、落石、绝水遏敌之一，恢复时有30.0%几率额外发动；同回合三种均发动后敌军全体士气降低20.0",
+        desc: "为我军兵力最低的单体恢复2次兵力（恢复率225.0%，受谋略属性影响），每次重新选目标并在恢复后独立判定30.0%几率额外随机发动落雷、落石、绝水遏敌之一；两次判定后固定随机发动其中之一；同回合三种均发动后敌军全体士气降低20.0",
         level: "S", type: 2, target: 1, target_type: "team", limit: 5, rate: 45, study: false,
         callskill: function (self, currentRate) {
             if (!getRandomBool(currentRate)) return false;
@@ -2006,11 +2006,12 @@ export const __SKILLS__ = [
             for (let i = 0; i < 2; i++) {
                 const target = self.getTarget(5, 3, 2).sort((a, b) => a.Arms - b.Arms)[0];
                 if (!target) break;
-                const before = target.Arms;
                 // 隐藏成长未测定；1.472 是待实现记录中基于单次回血观测的条件估计。
                 target.revocer(calcRecover(self, 225, 1.472, 2), self, this.name);
-                if (target.Arms > before && getRandomBool(self.getRealSkillRate(clacSkillAdditionRate(30, 0.07, self.Attrs.int)))) cast();
+                // 两次恢复各自判定一次，判定紧跟对应的恢复；不依赖实际恢复兵力。
+                if (getRandomBool(self.getRealSkillRate(clacSkillAdditionRate(30, 0.07, self.Attrs.int)))) cast();
             }
+            // 固定的三选一在两次恢复及其额外判定之后结算。
             cast();
             return true;
         }

@@ -7,8 +7,8 @@ try {
     const { __SKILLS__ } = await vite.ssrLoadModule('/src/battle/skills.js');
     const records = [];
     const manager = {
-        Round: 1, Over: false,
-        Record: { pushRecord: (...args) => records.push(args), pushActionRecord: (...args) => records.push(args) },
+        Round: 1, Over: false, addStat: () => {},
+        Record: { Records: records, pushRecord: (...args) => records.push(args), pushActionRecord: (...args) => records.push(args) },
         BlueTeam: { hero: [] }, RedTeam: { hero: [] }
     };
     const config = id => ({ id, level: 50, up: 0, extraAttrsAlloc: {}, equipskill: [] });
@@ -50,6 +50,22 @@ try {
     skill(1048).callskill(liuxiu, 100);
     assert.ok(ally.Arms > 0);
     assert.ok(records.some(row => row.some(value => String(value).includes('光武中兴'))));
+    // 额外三选一必须紧跟各自的恢复，即使某次恢复实际增加了 0 兵力。
+    const order = [];
+    const first = { Arms: 1000, revocer: () => { order.push('恢复一'); first.Arms = 3000; } };
+    const second = { Arms: 2000, revocer: () => { order.push('恢复二'); } };
+    liuxiu.getTarget = () => [first, second];
+    liuxiu.getRealSkillRate = () => 100;
+    liuxiu.Skills[1045] = { id: 1045, callskill: () => { order.push('三选一'); return true; } };
+    const originalRandom = Math.random;
+    Math.random = () => 0;
+    try {
+        manager.Round = 4;
+        skill(1048).callskill(liuxiu, 100);
+    } finally {
+        Math.random = originalRandom;
+    }
+    assert.deepEqual(order, ['恢复一', '三选一', '恢复二', '三选一', '三选一']);
     console.log('Verified Liu Xiu and three linked skills');
 } finally {
     await vite.close();
