@@ -155,6 +155,14 @@ export class BattleManger {
                 ? [...this.SortSpdHeros].sort((a, b) => b.CommandPriority - a.CommandPriority)
                 : this.SortSpdHeros;
 
+            if (this.Round === 0) {
+                for (const hero of this.BattleHeros) {
+                    if (hero.Treasure?.id === 'yuanrong' && hero.Treasure.forge === 'tianzi') {
+                        this.Record.pushRecord(hero, `的【元戎·天资】使基础谋略提高${hero.Treasure.forgeValue}%（${hero.Attrs.int}）`, 1);
+                    }
+                }
+            }
+
             actingHeros.forEach((e) => {
                 // 清除已攻击次数
                 e.State.attackNum = 0;

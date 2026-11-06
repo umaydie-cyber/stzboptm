@@ -158,14 +158,28 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         add(target, "beActiveDamageSub", -1);
     }
     if (skill?.type === 3 && attacker.Storage.shiwuPursuitBonus) special('势无虚动', attacker.Storage.shiwuPursuitBonus);
-    if (attacker.Treasure) {
+    if (attacker.Treasure?.id === 'tongsu') {
         if (skill && [2, 3].includes(skill.type)) special('彤素·亢厉', attacker.Treasure.kangli);
         if (type === 1) {
             special('彤素·奇袭', Math.abs(attacker.Index - target.Index) * 3);
         }
         if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('彤素·至策', attacker.Treasure.forgeValue);
     }
-    if (skill?.type === 2 && target.Treasure?.forge === 'jianren') special('彤素·坚忍', -target.Treasure.forgeValue, target);
+    if (skill?.type === 2 && target.Treasure?.id === 'tongsu' && target.Treasure.forge === 'jianren') special('彤素·坚忍', -target.Treasure.forgeValue, target);
+    if (attacker.Treasure?.id === 'yuanrong') {
+        // 分兵的 damageInfo.isBasicAttack 为 true，因此也享受陷阵的普通攻击增伤。
+        if (type === 1 && damageInfo.isBasicAttack) special('元戎·陷阵', attacker.Treasure.xianzhen);
+        if (skill?.type === 3) {
+            special('元戎·无畏', attacker.Treasure.wuwei * 2);
+            if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
+                special('元戎·蓄锐', attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
+            }
+        }
+        if ([2, 4].includes(type) && attacker.Treasure.forge === 'xuanfeng' && attacker.Storage.yuanrongXuanfengReady) {
+            special('元戎·选锋', attacker.Treasure.forgeValue);
+            damageInfo.yuanrongXuanfengApplied = true;
+        }
+    }
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
     const qiqin = attacker.Storage.qiqinAllDamageSub;

@@ -1877,6 +1877,7 @@ export const __SKILLS__ = [
                 return;
             }
             target.State.confusion = { rounds: 1, from: { hero: self, skill: this } };
+            if (target.State.confusion.rounds <= 0) return;
             target.StateFlag.confusion = false;
             self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, '陷入混乱1回合', 1);
         }
@@ -2148,8 +2149,9 @@ export const __SKILLS__ = [
                         if (attack && target.State.attackDamageSub.command === attack) target.delState('attackDamageSub', this);
                         if (strategy && target.State.inteDamageSub.command === strategy) target.delState('inteDamageSub', this);
                     }, this, self, 'debuff');
-                } else {
+                } else rageEffect: {
                     target.State.rage = { rounds: 1, from: { hero: self, skill: this.id } };
+                    if (target.State.rage.rounds <= 0) break rageEffect;
                     target.StateFlag.rage = false;
                     const originalLimit = target.Limit;
                     target.Limit = Math.max(0, originalLimit - 2);

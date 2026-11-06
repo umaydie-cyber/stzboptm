@@ -41,7 +41,7 @@ const showHeroInfo = ref(false);
 const showTreasure = ref(false);
 const treasureHero = ref(0);
 const treasureDraft = ref(null);
-const forgeOptions = [
+const tongsuForgeOptions = [
     { id: 'xiaorui', name: '骁锐', min: 5, max: 15, desc: '基础攻击属性提高' },
     { id: 'zhice', name: '至策', min: 10, max: 20, desc: '主动战法伤害提高' },
     { id: 'podi', name: '破敌', min: 10, max: 20, desc: '攻击伤害无视目标防御' },
@@ -49,13 +49,33 @@ const forgeOptions = [
     { id: 'shanmou', name: '善谋', min: 10, max: 30, desc: '第4、6回合攻击型主战法发动率提高' },
     { id: 'jianren', name: '坚忍', min: 10, max: 20, desc: '受到的主动战法伤害降低' }
 ];
+const yuanrongForgeOptions = [
+    tongsuForgeOptions[0],
+    { id: 'tianzi', name: '天资', min: 5, max: 15, desc: '基础谋略属性提高' },
+    { id: 'benxi', name: '奔袭', min: 3, max: 9, desc: '所有追击战法发动率提高' },
+    { id: 'jianyi', name: '坚毅', min: 2, max: 6, unit: '回合', desc: '前几回合免疫暴走和混乱' },
+    { id: 'xuanfeng', name: '选锋', min: 10, max: 30, desc: '普通攻击后下一次策略伤害提高' },
+    { id: 'xurui', name: '蓄锐', min: 5, max: 15, desc: '每两次普攻，追击伤害叠加提高' }
+];
+const treasureSpecs = {
+    tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
+        fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
+    yuanrong: { name: '元戎', first: 'xianzhen', second: 'wuwei', firstName: '陷阵', secondName: '无畏', fixedName: '迸发',
+        fixedDesc: '首次发动追击类主战法时，攻击距离内额外选取 1 个目标', forgeOptions: yuanrongForgeOptions }
+};
+const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
+const forgeOptions = computed(() => treasureSpec.value?.forgeOptions || []);
 const remainingTreasurePoints = computed(() => treasureDraft.value
-    ? 12 - Number(treasureDraft.value.xiaorui) - Number(treasureDraft.value.kangli) : 10);
+    ? 12 - Number(treasureDraft.value[treasureSpec.value.first]) - Number(treasureDraft.value[treasureSpec.value.second]) : 10);
 const openTreasure = index => {
     treasureHero.value = index;
-    treasureDraft.value = { id: 'tongsu', xiaorui: 1, kangli: 1, forge: '', forgeValue: 0,
-        ...team.value[camp.value].heros[index].treasure };
+    treasureDraft.value = team.value[camp.value].heros[index].treasure
+        ? { ...team.value[camp.value].heros[index].treasure } : null;
     showTreasure.value = true;
+};
+const chooseTreasure = id => {
+    const spec = treasureSpecs[id];
+    treasureDraft.value = { id, [spec.first]: 1, [spec.second]: 1, forge: '', forgeValue: 0 };
 };
 const changeTreasurePoint = (key, delta) => {
     const draft = treasureDraft.value;
@@ -69,7 +89,7 @@ const selectForge = option => {
 const saveTreasure = () => {
     const draft = treasureDraft.value;
     if (!draft.forge || remainingTreasurePoints.value < 0) return;
-    const option = forgeOptions.find(item => item.id === draft.forge);
+    const option = forgeOptions.value.find(item => item.id === draft.forge);
     draft.forgeValue = Math.max(option.min, Math.min(option.max, Math.round(Number(draft.forgeValue) || option.min)));
     team.value[camp.value].heros[treasureHero.value].treasure = { ...draft };
     showTreasure.value = false;
@@ -248,9 +268,9 @@ const addAllPoints = type => {
                                 <div class="skill-type"></div>
                             </div>
                         </div>
-                        <div class="treasure-slot" role="button" tabindex="0" :aria-label="hero.treasure ? '编辑彤素宝物' : '选择宝物'"
+                        <div class="treasure-slot" role="button" tabindex="0" :aria-label="hero.treasure ? `编辑${treasureSpecs[hero.treasure.id]?.name || '宝物'}` : '选择宝物'"
                             @click="openTreasure(index)" @keydown.enter="openTreasure(index)" @keydown.space.prevent="openTreasure(index)">
-                            <img v-if="hero.treasure" src="/assets/treasure/tongsu.png" alt="彤素" class="equipped-treasure">
+                            <img v-if="hero.treasure" :src="`/stzboptm/assets/treasure/${hero.treasure.id}.png`" :alt="treasureSpecs[hero.treasure.id]?.name" class="equipped-treasure">
                             <template v-else>
                                 <div class="treasure-emblem" aria-hidden="true">+</div>
                                 <div class="treasure-label">可授予</div>
@@ -263,25 +283,30 @@ const addAllPoints = type => {
     </div>
     <div v-if="showTreasure" class="treasure-dialog" role="dialog" aria-modal="true" aria-label="选择宝物">
         <div class="treasure-panel">
-            <div class="treasure-header"><span>宝物 · 彤素</span><button type="button" @click="showTreasure = false" aria-label="关闭">×</button></div>
-            <div class="treasure-body">
-                <img src="/assets/treasure/tongsu.png" alt="彤素宝物卡" class="treasure-card">
+            <div class="treasure-header"><span>宝物{{ treasureSpec ? ` · ${treasureSpec.name}` : '' }}</span><button type="button" @click="showTreasure = false" aria-label="关闭">×</button></div>
+            <div v-if="!treasureDraft" class="treasure-choices">
+                <button v-for="(spec, id) in treasureSpecs" :key="id" type="button" @click="chooseTreasure(id)">
+                    <img :src="`/stzboptm/assets/treasure/${id}.png`" :alt="spec.name"><span>{{ spec.name }}</span>
+                </button>
+            </div>
+            <div v-else class="treasure-body">
+                <img :src="`/stzboptm/assets/treasure/${treasureDraft.id}.png`" :alt="`${treasureSpec.name}宝物卡`" class="treasure-card">
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>骁锐</strong><span>攻击 +{{ (treasureDraft.xiaorui * 2.5).toFixed(1) }}</span><button type="button" @click="changeTreasurePoint('xiaorui', -1)">−</button><span>{{ treasureDraft.xiaorui }}</span><button type="button" @click="changeTreasurePoint('xiaorui', 1)">+</button></div>
-                    <div class="treasure-point"><strong>亢厉</strong><span>主动、追击伤害 +{{ treasureDraft.kangli }}%</span><button type="button" @click="changeTreasurePoint('kangli', -1)">−</button><span>{{ treasureDraft.kangli }}</span><button type="button" @click="changeTreasurePoint('kangli', 1)">+</button></div>
-                    <div class="treasure-fixed"><strong>奇袭</strong><span>造成攻击伤害时，与目标距离每提高 1，伤害提高 3%</span></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` : `普通攻击伤害 +${treasureDraft.xianzhen}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : `追击伤害 +${treasureDraft.wuwei * 2}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">
                         <button v-for="option in forgeOptions" :key="option.id" type="button" :class="{ selected: treasureDraft.forge === option.id }" @click="selectForge(option)">{{ option.name }}</button>
                     </div>
                     <div v-if="treasureDraft.forge" class="forge-value">
                         <span>{{ forgeOptions.find(item => item.id === treasureDraft.forge).desc }}</span>
-                        <input v-model.number="treasureDraft.forgeValue" type="number" :min="forgeOptions.find(item => item.id === treasureDraft.forge).min" :max="forgeOptions.find(item => item.id === treasureDraft.forge).max" step="1">%
+                        <input v-model.number="treasureDraft.forgeValue" type="number" :min="forgeOptions.find(item => item.id === treasureDraft.forge).min" :max="forgeOptions.find(item => item.id === treasureDraft.forge).max" step="1">{{ forgeOptions.find(item => item.id === treasureDraft.forge).unit || '%' }}
                         <small>可选 {{ forgeOptions.find(item => item.id === treasureDraft.forge).min }}–{{ forgeOptions.find(item => item.id === treasureDraft.forge).max }} 的整数</small>
                     </div>
-                    <div class="treasure-actions"><button type="button" @click="removeTreasure">卸下</button><button type="button" :disabled="!treasureDraft.forge" @click="saveTreasure">装备彤素</button></div>
+                    <div class="treasure-actions"><button type="button" @click="treasureDraft = null">选择其他宝物</button><button type="button" @click="removeTreasure">卸下</button><button type="button" :disabled="!treasureDraft.forge" @click="saveTreasure">装备{{ treasureSpec.name }}</button></div>
                 </div>
             </div>
         </div>
@@ -1562,6 +1587,11 @@ const addAllPoints = type => {
 .treasure-panel { width: min(960px, 100%); max-height: 94dvh; overflow: auto; background: linear-gradient(145deg, #3d4045, #25272a); border: 2px solid #968562; box-shadow: 0 15px 50px #000b; }
 .treasure-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #796e5c; color: #ead6a0; font-size: 24px; }
 .treasure-header button { border: 0; background: none; color: inherit; font-size: 32px; cursor: pointer; }
+.treasure-choices { display: flex; flex-wrap: wrap; gap: 18px; padding: 24px; }
+.treasure-choices button { width: 170px; padding: 0; border: 2px solid #9f8b65; background: #252323; color: #ead6a0; cursor: pointer; font-size: 18px; }
+.treasure-choices button:hover, .treasure-choices button:focus-visible { border-color: #f2d591; }
+.treasure-choices img { display: block; width: 100%; aspect-ratio: .68; object-fit: fill; }
+.treasure-choices span { display: block; padding: 7px; }
 .treasure-body { display: flex; gap: 24px; padding: 20px; }
 .treasure-card { width: 230px; max-width: 30%; object-fit: contain; align-self: flex-start; }
 .treasure-settings { flex: 1; min-width: 0; }
