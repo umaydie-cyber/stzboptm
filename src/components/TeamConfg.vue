@@ -206,6 +206,10 @@ const addAllPoints = type => {
                                 <div class="skill-type"></div>
                             </div>
                         </div>
+                        <div class="treasure-slot" aria-label="宝物栏位：可授予" title="宝物栏位">
+                            <div class="treasure-emblem" aria-hidden="true">十</div>
+                            <div class="treasure-label">可授予</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1459,6 +1463,60 @@ const addAllPoints = type => {
     font-size: clamp(11px, .9vw, 16px);
 }
 .team-config-warp .replace-hero { margin: 0 8px; }
+.team-config-warp .treasure-slot {
+    box-sizing: border-box;
+    position: relative;
+    width: 25%;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #17191b;
+    outline: 1px solid #606266;
+    outline-offset: -5px;
+    background: linear-gradient(145deg, #303236, #1b1d20);
+    font-family: "FZLBJW_B";
+}
+.team-config-warp .treasure-slot::before,
+.team-config-warp .treasure-slot::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-color: #57595c;
+    border-style: solid;
+    pointer-events: none;
+}
+.team-config-warp .treasure-slot::before { top: 3px; left: 3px; border-width: 2px 0 0 2px; }
+.team-config-warp .treasure-slot::after { right: 3px; bottom: 3px; border-width: 0 2px 2px 0; }
+.team-config-warp .treasure-emblem {
+    width: 78%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 40% 30%, #393b3d, #292b2e 65%, #202225);
+    box-shadow: inset 0 0 0 1px #242629;
+    color: #b7aa82;
+    font-family: serif;
+    font-size: clamp(30px, 5vw, 80px);
+    line-height: 1;
+    transform: rotate(-8deg);
+    text-shadow: 1px 2px 2px #121313;
+}
+.team-config-warp .treasure-label {
+    width: 100%;
+    padding: 3px 0;
+    text-align: center;
+    color: #43dda0;
+    background: #161819;
+    font-size: clamp(12px, 1.4vw, 25px);
+    white-space: nowrap;
+    text-shadow: 0 2px 2px #000;
+}
 .heroinfo-warp .add-all { margin-left: 8px; }
 .heroinfo-warp .troop-input {
     width: 110px !important;
@@ -1490,6 +1548,9 @@ const addAllPoints = type => {
     .team-config-warp > .box > .cards > .card > .skills { flex: 1; }
     .team-config-warp > .box > .cards > .card > .skills > .skill { width: 32%; }
     .team-config-warp > .box > .cards > .card > .skills > .skill > .skill-name { font-size: 11px; text-align: center; }
+    .team-config-warp .treasure-slot { width: 25%; outline-offset: -3px; }
+    .team-config-warp .treasure-emblem { font-size: clamp(23px, 7vw, 46px); }
+    .team-config-warp .treasure-label { font-size: clamp(9px, 2.4vw, 13px); }
     .herolist-warp > .herolist-header, .heroinfo-warp > .heroinfo-header, .skilllist-warp > .skilllist-header { height: 58px; min-height: 58px; }
     .herolist-warp > .herolist-header > .title, .heroinfo-warp > .heroinfo-header > .title, .skilllist-warp > .skilllist-header > .title { width: 70%; font-size: 22px; }
     .herolist-warp > .herolist-box { width: 100%; height: auto; flex: 1; padding: 8px; box-sizing: border-box; justify-content: center; }
