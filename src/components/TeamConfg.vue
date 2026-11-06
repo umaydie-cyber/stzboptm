@@ -553,19 +553,22 @@ const addAllPoints = type => {
 
         &>.cards {
             width: 100%;
-            height: 100%;
+            flex: 1;
+            min-height: 0;
             /* background-color: blue; */
             display: flex;
             flex-direction: column;
             justify-content: space-evenly;
             align-items: center;
             padding: 1vw 0 1vw 1vw;
+            box-sizing: border-box;
 
             &>.card {
                 position: relative;
                 display: flex;
                 background-color: rgba(0, 0, 0, .3);
                 height: 30%;
+                min-height: 0;
                 width: 90%;
                 font-family: "FZLBJW_B";
 
@@ -635,7 +638,8 @@ const addAllPoints = type => {
                 &>.skills {
                     position: relative;
                     display: flex;
-                    width: 45%;
+                    flex: 1;
+                    min-width: 0;
                     /* background-color: aqua; */
                     justify-content: space-evenly;
                     /* align-items: center; */
@@ -1537,8 +1541,9 @@ const addAllPoints = type => {
 .team-config-warp .treasure-slot {
     box-sizing: border-box;
     position: relative;
-    width: 25%;
+    width: auto;
     height: 100%;
+    aspect-ratio: .68;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -1644,7 +1649,8 @@ const addAllPoints = type => {
     .team-config-warp > .box > .cards > .card > .skills { flex: 1; }
     .team-config-warp > .box > .cards > .card > .skills > .skill { width: 24%; }
     .team-config-warp > .box > .cards > .card > .skills > .skill > .skill-name { font-size: 11px; text-align: center; }
-    .team-config-warp .treasure-slot { width: 25%; outline-offset: -3px; }
+    .team-config-warp .treasure-slot { width: 25%; aspect-ratio: auto; outline-offset: -3px; }
+    .team-config-warp .equipped-treasure { object-fit: contain; background: #171819; }
     .team-config-warp .treasure-emblem { font-size: clamp(23px, 7vw, 46px); }
     .team-config-warp .treasure-label { font-size: clamp(9px, 2.4vw, 13px); }
     .herolist-warp > .herolist-header, .heroinfo-warp > .heroinfo-header, .skilllist-warp > .skilllist-header { height: 58px; min-height: 58px; }
