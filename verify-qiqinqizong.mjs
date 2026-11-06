@@ -28,7 +28,7 @@ try {
   assert(protectedAllies.length >= 2);
   const effect = protectedAllies[0].Storage.qiqinQizong;
   assert(protectedAllies.every(unit => unit.Storage.qiqinQizong === effect));
-  assert.equal(caster.getRealSkillRate(25), 28);
+  assert.equal(caster.getRealSkillRate(50), 56);
   assert.equal(caster.getRealSkillRate(50), 56);
   Math.random = () => 0;
   for (let i = 0; i < 7; i++) {
@@ -57,7 +57,7 @@ try {
   assert.equal(fresh.count, 1);
   assert.equal(ally.State.confusion.rounds, 0, '控制被抵御');
   console.log = originalLog;
-  console.log('七擒七纵共享七次判定、士气概率、控制抵御和-9999%下回合减伤通过');
+  console.log('七擒七纵共享七次判定、满级50%士气概率、控制抵御和-9999%下回合减伤通过');
 } finally {
   console.log = originalLog;
   Math.random = originalRandom;

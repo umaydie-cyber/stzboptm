@@ -48,7 +48,7 @@ export const __SKILLS__ = [
     {
         id: 1073,
         name: "七擒七纵",
-        desc: "正式回合后，我军群体受到的前7次伤害或控制，每次有25%几率规避或抵御；7次结束后有50%几率使累计伤害最高的敌军下回合造成所有伤害大幅降低（概率受施加者士气影响）",
+        desc: "正式回合后，我军群体受到的前7次伤害或控制，每次有50%几率规避或抵御；7次结束后有50%几率使累计伤害最高的敌军下回合造成所有伤害大幅降低（概率受施加者士气影响）",
         level: "S", type: 1, target: [2, 3], target_type: "team", limit: 5, rate: "--", study: true,
         callskill: function (self) {
             const allies = self.getTarget(5, getRandomInt(2, 3), 2);

@@ -598,7 +598,7 @@ export class BattleHero {
         const effect = this.Storage.qiqinQizong;
         if (!effect || effect.completed || this.Manger.Round < 1 || !attacker) return false;
         effect.count++;
-        const chance = effect.source.getRealSkillRate(25);
+        const chance = effect.source.getRealSkillRate(50);
         const blocked = getRandomBool(chance);
         this.Manger.Record.pushRecord(this,
             `的【七擒七纵】第${effect.count}/7次${kind}判定（${chance}%）：${blocked ? (kind === '伤害' ? '规避' : '抵御') : '未触发'}`, 1);
