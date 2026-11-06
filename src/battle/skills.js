@@ -46,6 +46,18 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1073,
+        name: "七擒七纵",
+        desc: "正式回合后，我军群体受到的前7次伤害或控制，每次有25%几率规避或抵御；7次结束后有50%几率使累计伤害最高的敌军下回合造成所有伤害大幅降低（概率受施加者士气影响）",
+        level: "S", type: 1, target: [2, 3], target_type: "team", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            const allies = self.getTarget(5, getRandomInt(2, 3), 2);
+            const effect = { source: self, skill: this, count: 0, completed: false };
+            for (const ally of allies) ally.Storage.qiqinQizong = effect;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】，保护${allies.map(ally => ally.Name).join('、')}，共享前7次伤害或控制判定`);
+        }
+    },
+    {
         id: 1072,
         name: "势无虚动",
         desc: "每次试图发动追击战法时，下一次造成伤害无视规避，且下一次发动追击战法造成的伤害提高40%，最多叠加3次",

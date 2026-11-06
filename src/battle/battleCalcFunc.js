@@ -158,6 +158,8 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (skill?.type === 3 && attacker.Storage.shiwuPursuitBonus) special('势无虚动', attacker.Storage.shiwuPursuitBonus);
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
+    const qiqin = attacker.Storage.qiqinAllDamageSub;
+    if (!damageInfo.ignoreQiqin && qiqin?.round === attacker.Manger.Round) special('七擒七纵', -qiqin.value, qiqin.source);
     if (damageInfo.jianzuReduction) special('健卒不殆', -50, target);
     if (type === 1 && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && attacker.Storage.henge) special('横轭', 50);
 

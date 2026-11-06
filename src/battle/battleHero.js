@@ -233,6 +233,16 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
+        // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
+        this.State = new Proxy(this.State, {
+            set: (states, name, value) => {
+                if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) &&
+                    value?.rounds > 0 && value.from?.hero?.BattleCamp !== undefined &&
+                    this.tryQiqinDefense('控制', value.from.hero)) return true;
+                states[name] = value;
+                return true;
+            }
+        });
 
         //初始化属性值
         this.initAttrs(config);
@@ -584,6 +594,44 @@ export class BattleHero {
         }
     }
 
+    tryQiqinDefense(kind, attacker) {
+        const effect = this.Storage.qiqinQizong;
+        if (!effect || effect.completed || this.Manger.Round < 1 || !attacker) return false;
+        effect.count++;
+        const chance = effect.source.getRealSkillRate(25);
+        const blocked = getRandomBool(chance);
+        this.Manger.Record.pushRecord(this,
+            `的【七擒七纵】第${effect.count}/7次${kind}判定（${chance}%）：${blocked ? (kind === '伤害' ? '规避' : '抵御') : '未触发'}`, 1);
+        if (effect.count === 7) {
+            effect.completed = true;
+            effect.pending = true;
+            if (blocked || kind !== '伤害') this.resolveQiqinQizong();
+        }
+        return blocked;
+    }
+
+    resolveQiqinQizong() {
+        const effect = this.Storage.qiqinQizong;
+        if (!effect?.pending) return;
+        effect.pending = false;
+        const chance = effect.source.getRealSkillRate(50);
+        if (!getRandomBool(chance)) {
+            this.Manger.Record.pushRecord(effect.source, `的【七擒七纵】最终判定（${chance}%）：未触发`, 1);
+            return;
+        }
+        const enemies = effect.source.BattleCamp === 'blue' ? this.Manger.RedTeam.hero : this.Manger.BlueTeam.hero;
+        const living = enemies.filter(hero => hero.Arms > 0);
+        const damage = hero => Object.entries(this.Manger.Stats[hero.BattleCamp] || {})
+            .filter(([key]) => key.startsWith(`${hero.Index}:`))
+            .reduce((sum, [, entry]) => sum + entry.damage, 0);
+        const target = living.sort((a, b) => damage(b) - damage(a))[0];
+        if (!target) return;
+        const round = this.Manger.Round + 1;
+        target.Storage.qiqinAllDamageSub = { round, value: 9999, source: effect.source };
+        this.Manger.Record.pushActionRecord(effect.source, target, '的【七擒七纵】使',
+            `下回合造成所有伤害降低9999%（${chance}%判定成功）`, 1);
+    }
+
     //受到伤害
     /*
         damageInfo {
@@ -593,6 +641,7 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (this.tryQiqinDefense('伤害', attacker)) return;
         if (attacker.Storage.shiwuIgnoreNextDamage) {
             damageInfo = { ...damageInfo, ignoreEvasion: true };
             attacker.Storage.shiwuIgnoreNextDamage = false;
@@ -608,6 +657,9 @@ export class BattleHero {
         const reductionRate = jianzu ? this.getRealSkillRate(50) : 0;
         const reduceThisHit = jianzu && getRandomBool(reductionRate);
         const resolvedInfo = reduceThisHit ? { ...damageInfo, jianzuReduction: true } : damageInfo;
+        const qiqinActive = attacker.Storage.qiqinAllDamageSub?.round === this.Manger.Round;
+        const qiqinInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '七擒七纵');
+        const applyQiqinToSnapshot = num != null && qiqinActive && !qiqinInSnapshot;
         if (jianzu) this.Manger.Record.pushRecord(this,
             `的【健卒不殆】减伤判定（${reductionRate}%）：${reduceThisHit ? '成功，本次伤害降低50%' : '未触发'}`, 1);
         const taoyuan = this.Storage.taoyuanStrategyReduction;
@@ -621,12 +673,13 @@ export class BattleHero {
         let damage;
         if (num != null) {
             damage = num;
-            if (reduceThisHit && [1, 2, 4].includes(damageInfo.type)) {
+            if ((reduceThisHit || applyQiqinToSnapshot) && [1, 2, 4].includes(damageInfo.type)) {
                 // 指挥和持续伤害可能预先算好数值；只折减非兵力基础部分。
                 const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
                     ? attacker.Arms * 373 / (7700 + attacker.Arms)
                     : attacker.Arms * 178 / (6459 + attacker.Arms) / (damageInfo.type === 4 ? 3 : 1));
-                const before = getDamageAddition(attacker, this, damageInfo, skill);
+                const beforeInfo = { ...damageInfo, ignoreQiqin: applyQiqinToSnapshot, jianzuReduction: false };
+                const before = getDamageAddition(attacker, this, beforeInfo, skill);
                 const after = getDamageAddition(attacker, this, resolvedInfo, skill);
                 damage = Math.min(num, Math.round(base + Math.max(0, num - base) * after / before));
             }
@@ -657,6 +710,7 @@ export class BattleHero {
         }
 
         this.Manger.addStat(attacker, skill, realDamage, 0);
+        this.resolveQiqinQizong();
 
         if (damageInfo.type == 2 && taoyuan && this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.remaining > 0) {
             taoyuan.remaining--;
@@ -742,6 +796,7 @@ export class BattleHero {
 
     // 同名持续伤害仅保留较强的一份；重新施加强效果时刷新持续时间。
     applyContinuousDamage(kind, source, skill, rate, rounds, onPursuit = false) {
+        if (this.tryQiqinDefense('控制', source)) return false;
         const damageInfo = { type: 4, rate };
         const damage = clacInte2Damage(source, this, damageInfo, skill);
         const current = this.State.continuousDamage[kind];
