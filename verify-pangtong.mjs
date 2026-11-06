@@ -8,6 +8,7 @@ try {
   const records = [];
   const manager = {
     Round: 1, Over: false,
+    addStat() {},
     Record: { pushRecord: (...v) => records.push(v), pushActionRecord: (...v) => records.push(v) },
     BlueTeam: { hero: [] }, RedTeam: { hero: [] }
   };
@@ -36,8 +37,12 @@ try {
   assert.equal(target.State.continuousDamage['恐慌'], original);
   manager.Round = 2;
   const before = target.Arms;
+  const recordStart = records.length;
   target.triggerContinuousDamage();
   assert.ok(target.Arms < before);
+  const panicRecords = records.slice(recordStart).filter(r => r[0] === target);
+  assert.equal(panicRecords.length, 1);
+  assert.match(panicRecords[0][1], /^受到【密谋定蜀】的恐慌效果，损失 \d+ 兵力\(\d+\)$/);
   const afterPanic = target.Arms;
   target.triggerPursuitCurses();
   assert.ok(target.Arms < afterPanic);

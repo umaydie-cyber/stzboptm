@@ -1946,7 +1946,11 @@ export const __SKILLS__ = [
                 const ratio = (15 + 5 * (self.Manger.Round - 1)) / 100 * scale;
                 for (const neighbor of [enemies[index - 1], enemies[index + 1]]) {
                     if (!neighbor || neighbor.Arms <= 0 || self.Manger.Over) continue;
-                    self.Manger.Record.pushActionRecord(attacker, neighbor, `的【其徐如林】因【${sourceSkill?.name || '策略伤害'}】命中【${target.Name}】对`, '造成策略分兵伤害');
+                    const sourceName = sourceSkill?.name || '策略伤害';
+                    const sourceText = attacker === self
+                        ? `【${sourceName}】`
+                        : `【${attacker.Name}】的【${sourceName}】`;
+                    self.Manger.Record.pushActionRecord(self, neighbor, `的【其徐如林】因${sourceText}命中【${target.Name}】对`, '造成策略分兵伤害');
                     neighbor.beHurt(attacker, { type: 2, rate: damageInfo.rate * ratio, isStrategySplash: true }, this);
                 }
             }, this, self));

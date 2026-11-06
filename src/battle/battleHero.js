@@ -639,7 +639,7 @@ export class BattleHero {
         }
 
         if(record){
-            record();
+            record(realDamage);
         }else{
             this.Manger.Record.pushRecord(this, `损失 ${realDamage} 兵力(${this.Arms})`, 1)
         }
@@ -737,8 +737,17 @@ export class BattleHero {
                 continue;
             }
             if (effect.onPursuit !== onPursuit || (!onPursuit && effect.appliedRound >= this.Manger.Round) || this.Arms <= 0) continue;
-            this.beHurtByNum(effect.source, { type: 4, rate: effect.rate }, effect.skill, effect.damage);
-            this.Manger.Record.pushRecord(this, `受到${kind}效果，损失${effect.damage}兵力`, 1);
+            this.beHurtByNum(
+                effect.source,
+                { type: 4, rate: effect.rate },
+                effect.skill,
+                effect.damage,
+                (realDamage) => this.Manger.Record.pushRecord(
+                    this,
+                    `受到【${effect.skill?.name || kind}】的${kind}效果，损失 ${realDamage} 兵力(${this.Arms})`,
+                    1
+                )
+            );
         }
     }
 
