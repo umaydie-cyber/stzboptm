@@ -48,7 +48,7 @@ export const __SKILLS__ = [
     {
         id: 1070,
         name: "敛微穷极",
-        desc: "战斗开始后，友军全体策略伤害提高40%（受谋略影响），每回合结束降低六分之一；策略伤害率在80%至150%（上限受谋略影响）间浮动，波动范围逐回合收敛，持续至战斗结束",
+        desc: "战斗开始后，友军全体策略伤害提高40%（受谋略影响），每回合结束降低六分之一；策略伤害率在80%至150%（上限受谋略影响）间浮动，第六回合收敛为固定伤害率，持续至战斗结束",
         level: "S", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: false,
         callskill: function (self) {
             const intelligence = self.Attrs.int;

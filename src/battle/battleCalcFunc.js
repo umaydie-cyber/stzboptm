@@ -103,11 +103,14 @@ const getRandNum = () => {
 const getLianweiWave = (attacker) => {
     const effect = attacker.Storage.lianweiQiongji;
     if (!effect) return 1;
-    const elapsed = Math.min(6, Math.max(0, (attacker.Manger.Round || 1) - 1));
-    const minimum = 80 + (57.5 - 80) * elapsed / 6;
+    const elapsed = Math.min(6, Math.max(0, attacker.Manger.Round));
+    const minimum = 80 + (effect.finalMax - 80) * elapsed / 6;
     const maximum = effect.max + (effect.finalMax - effect.max) * elapsed / 6;
-    const multiplier = (minimum + Math.random() * (maximum - minimum)) / 100;
-    attacker.Manger.Record.pushRecord(attacker, `的【敛微穷极】策略伤害率波动至${Number((multiplier * 100).toFixed(2))}%（范围${Number(minimum.toFixed(2))}%～${Number(maximum.toFixed(2))}%）`, 1);
+    const multiplier = (elapsed === 6 ? effect.finalMax : minimum + Math.random() * (maximum - minimum)) / 100;
+    const detail = elapsed === 6
+        ? `固定为${effect.finalMax}%（不再波动）`
+        : `波动至${Number((multiplier * 100).toFixed(2))}%（范围${Number(minimum.toFixed(2))}%～${Number(maximum.toFixed(2))}%）`;
+    attacker.Manger.Record.pushRecord(attacker, `的【敛微穷极】策略伤害率${detail}`, 1);
     return multiplier;
 }
 

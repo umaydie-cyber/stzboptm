@@ -36,9 +36,11 @@ try {
   assert.equal(snapshot, before, '后施加的效果不会修改既有快照数值');
   battle.Round = 7;
   assert.equal(getDamageAddition(lumeng, target, info, lumeng.Skills[1021]), 1);
+  battle.Round = 6;
   const start = battle.Record.Records.length;
+  Math.random = () => { throw new Error('收敛后不应再抽取波动'); };
   clacInteDamage(lumeng, target, { ...info }, lumeng.Skills[1021]);
-  assert(battle.Record.Records.slice(start).some(r => r.msg?.includes('范围57.5%～153%')));
+  assert(battle.Record.Records.slice(start).some(r => r.msg?.includes('固定为153%（不再波动）')));
   console.log = originalLog;
   console.log('刘徽属性、隐藏系数、指挥快照与第六回合收敛通过');
 } finally {
