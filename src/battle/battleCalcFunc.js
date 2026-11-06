@@ -161,9 +161,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (attacker.Treasure) {
         if (skill && [2, 3].includes(skill.type)) special('彤素·亢厉', attacker.Treasure.kangli);
         if (type === 1) {
-            const count = attacker.Manger.BlueTeam.hero.length + attacker.Manger.RedTeam.hero.length + 1;
-            const position = hero => hero.BattleCamp === 'blue' ? hero.Index : count + hero.Index;
-            special('彤素·奇袭', Math.abs(position(attacker) - position(target)) * 3);
+            special('彤素·奇袭', Math.abs(attacker.Index - target.Index) * 3);
         }
         if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('彤素·至策', attacker.Treasure.forgeValue);
     }
