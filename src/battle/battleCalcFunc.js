@@ -39,7 +39,7 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
     if (damageAddition != 1) {
         attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
     }
-    let DamageRate = damageInfo.rate;
+    let DamageRate = damageInfo.rate * getLianweiWave(attacker);
     let inteEffect = calcInteEffect(target.Attrs.int);;
 
     //兵力基础伤害
@@ -62,7 +62,7 @@ export const clacInte2Damage = (attacker, target, damageInfo, skill) => {
     if (damageAddition != 1) {
         attacker.Manger.Record.pushRecord(attacker, `该次造成伤害共计${damageAddition > 1 ? "提升" : "降低"}${Math.abs(roundEightNine(damageAddition * 100 - 100))}%`, 1)
     }
-    let DamageRate = damageInfo.rate;
+    let DamageRate = damageInfo.rate * getLianweiWave(attacker);
     let inteEffect = calcInteEffect(target.Attrs.int);;
 
     //兵力基础伤害
@@ -99,6 +99,18 @@ const getRandNum = () => {
     return rand[Math.floor(Math.random() * rand.length)];
 }
 
+// 指挥阶段计算白衣渡江快照时也在此抽取伤害率波动。
+const getLianweiWave = (attacker) => {
+    const effect = attacker.Storage.lianweiQiongji;
+    if (!effect) return 1;
+    const elapsed = Math.min(6, Math.max(0, (attacker.Manger.Round || 1) - 1));
+    const minimum = 80 + (57.5 - 80) * elapsed / 6;
+    const maximum = effect.max + (effect.finalMax - effect.max) * elapsed / 6;
+    const multiplier = (minimum + Math.random() * (maximum - minimum)) / 100;
+    attacker.Manger.Record.pushRecord(attacker, `的【敛微穷极】策略伤害率波动至${Number((multiplier * 100).toFixed(2))}%（范围${Number(minimum.toFixed(2))}%～${Number(maximum.toFixed(2))}%）`, 1);
+    return multiplier;
+}
+
 // 计算伤害增减
 export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     const type = damageInfo.type;
@@ -110,6 +122,11 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         value -= target.getDamageStateValue("beAttackDamageSub"); //目标受到伤害降低
     } else if (type == 2 || type == 4) {
         value += attacker.getDamageStateValue("inteDamageAdd");
+        const lianwei = attacker.Storage.lianweiQiongji;
+        if (lianwei) {
+            const elapsed = Math.min(6, Math.max(0, (attacker.Manger.Round || 1) - 1));
+            value += lianwei.bonus * (1 - elapsed / 6);
+        }
         value -= attacker.getDamageStateValue("inteDamageSub");
         value += target.getDamageStateValue("beInteDamageAdd");
         value -= target.getDamageStateValue("beInteDamageSub");

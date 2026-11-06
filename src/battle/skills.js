@@ -46,6 +46,25 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1070,
+        name: "敛微穷极",
+        desc: "战斗开始后，友军全体策略伤害提高40%（受谋略影响），每回合结束降低六分之一；策略伤害率在80%至150%（上限受谋略影响）间浮动，波动范围逐回合收敛，持续至战斗结束",
+        level: "S", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: false,
+        callskill: function (self) {
+            const intelligence = self.Attrs.int;
+            // 334.6 谋略实测：增伤 85%，初始上限 188%。
+            const bonus = Math.round(40 + Math.max(0, intelligence - 80) * 0.175);
+            const max = Math.round(150 + Math.max(0, intelligence - 80) * 0.15);
+            const finalMax = Math.round(115 + Math.max(0, intelligence - 80) * 0.15);
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】，策略增伤${bonus}%，伤害率初始波动80%～${max}%`);
+            for (const ally of allies) {
+                // 在指挥阶段立即施加；若先于白衣渡江结算，会进入其伤害快照。
+                ally.Storage.lianweiQiongji = { bonus, max, finalMax, source: self, skill: this };
+            }
+        }
+    },
+    {
         id: 1001,
         name: "连战",
         desc: "使自身可以进行两次普通攻击，持续1回合",
