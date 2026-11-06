@@ -401,7 +401,19 @@ export class BattleHero {
                     if (this.Manger.Over || this.Arms <= 0) return;
                 }
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate))) {
-                    skill.callskill(this, target);
+                    const stacks = this.Storage.shiwuStacks || 0;
+                    if (stacks) {
+                        this.Storage.shiwuPursuitBonus = stacks * 40;
+                        this.Manger.Record.pushRecord(this, `【势无虚动】本次【${skill.name}】追击伤害提高${stacks * 40}%`, 1);
+                    }
+                    try {
+                        skill.callskill(this, target);
+                    } finally {
+                        if (stacks) {
+                            this.Storage.shiwuStacks = 0;
+                            this.Storage.shiwuPursuitBonus = 0;
+                        }
+                    }
                     this.callHook("战法成功发动后", skill, target);
                 }
             }
@@ -581,6 +593,16 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (attacker.Storage.shiwuIgnoreNextDamage) {
+            damageInfo = { ...damageInfo, ignoreEvasion: true };
+            attacker.Storage.shiwuIgnoreNextDamage = false;
+            attacker.Manger.Record.pushRecord(attacker, '的【势无虚动】使本次伤害无视规避', 1);
+        }
+        if (this.Storage.evadeNextDamage && !damageInfo.ignoreEvasion) {
+            this.Storage.evadeNextDamage = false;
+            this.Manger.Record.pushRecord(this, '规避了本次伤害', 1);
+            return;
+        }
         // 健卒不殆每次受伤独立判定；士气使用受伤者当前值。
         const jianzu = this.Storage.jianzuBudai;
         const reductionRate = jianzu ? this.getRealSkillRate(50) : 0;

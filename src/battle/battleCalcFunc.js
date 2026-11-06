@@ -146,6 +146,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         value += target.getDamageStateValue("beActiveDamageAdd");
         value -= target.getDamageStateValue("beActiveDamageSub");
     }
+    if (skill?.type === 3) value += attacker.Storage.shiwuPursuitBonus || 0;
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) value -= 30;
     if (damageInfo.jianzuReduction) value -= 50;

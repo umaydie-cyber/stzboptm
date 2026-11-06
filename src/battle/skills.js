@@ -46,6 +46,22 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1072,
+        name: "势无虚动",
+        desc: "每次试图发动追击战法时，下一次造成伤害无视规避，且下一次发动追击战法造成的伤害提高40%，最多叠加3次",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('尝试发动战法前', '势无虚动蓄势', (attemptedSkill) => {
+                if (attemptedSkill.type !== 3) return;
+                self.Storage.shiwuStacks = Math.min(3, (self.Storage.shiwuStacks || 0) + 1);
+                self.Storage.shiwuIgnoreNextDamage = true;
+                self.Manger.Record.pushRecord(self,
+                    `尝试【${attemptedSkill.name}】，获得【${this.name}】无视规避；追击增伤累计${self.Storage.shiwuStacks * 40}%（最多3层）`, 1);
+            }, this, self);
+        }
+    },
+    {
         id: 1071,
         name: "烈火焚舟",
         desc: "普通攻击后使目标燃烧2回合；若目标已有本战法施加的燃烧，则立即引发剩余燃烧伤害，使目标及相邻敌军士气降低10，并施加1回合更强的焚烧",
@@ -714,7 +730,10 @@ export const __SKILLS__ = [
                         self.clearDebuff(this, self);
                     }
 
-                    // 添加一个在受伤前触发的 50%规避效果的子技能 触发后移除该子技能
+                    if (getRandomBool(self.getRealSkillRate(50))) {
+                        self.Storage.evadeNextDamage = true;
+                        self.Manger.Record.pushRecord(self, '进入规避状态，可免疫下一次伤害', 1);
+                    }
 
                 }
             }
@@ -1183,7 +1202,8 @@ export const __SKILLS__ = [
 
                 let damageInfo = {
                     type: 2,
-                    rate: value
+                    rate: value,
+                    ignoreEvasion: true
                 };
                 let damage = clacInteDamage(self, e, damageInfo, this);
                 e.addHook("行动时", "策略攻击伤害", () => {
