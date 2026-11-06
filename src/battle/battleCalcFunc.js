@@ -34,7 +34,8 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
-    let inteEffect = calcInteEffect(target.Attrs.int);;
+    const ignoreIntelRate = attacker.Storage.weiyuRepeat?.skill === skill ? attacker.Storage.weiyuRepeat.ignoreIntelRate : 0;
+    let inteEffect = calcInteEffect(target.Attrs.int * (1 - ignoreIntelRate / 100));
 
     //兵力基础伤害
     let armsDamage = (attacker.Arms * 178) / (6459 + attacker.Arms);

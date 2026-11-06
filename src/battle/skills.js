@@ -46,6 +46,56 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1075,
+        name: "未雨绸缪",
+        desc: "下回合开始后，2回合内自身下一次造成策略伤害的主动战法发动后可再次发动一次（跳过准备），造成原战法50%的伤害和恢复效果；再次发动造成的策略伤害无视目标30%的谋略属性（受自身谋略属性影响）",
+        level: "A", type: 2, target: 1, target_type: "self", limit: 1, rate: 45, study: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            if (self.Storage.weiyuBuff) {
+                self.Manger.Record.pushRecord(self, '已存在未雨绸缪效果', 1);
+                return true;
+            }
+            const buff = { starts: self.Manger.Round + 1, expires: self.Manger.Round + 2 };
+            self.Storage.weiyuBuff = buff;
+            self.Manger.Record.pushRecord(self, `获得【${this.name}】效果，第${buff.starts}至${buff.expires}回合生效`, 1);
+            const expiryTag = self.addHook('回合开始时', '未雨绸缪到期', () => {
+                if (self.Manger.Round <= buff.expires) return;
+                if (self.Storage.weiyuBuff === buff) self.Storage.weiyuBuff = null;
+                self.clearHook('回合开始时', expiryTag);
+                self.clearHook('战法成功发动后', triggerTag);
+                self.clearHook('造成伤害后', damageTag);
+            }, this, self);
+            const triggerTag = self.addHook('战法成功发动后', '未雨绸缪再次发动', (skill) => {
+                if (self.Storage.weiyuBuff !== buff || self.Manger.Round < buff.starts ||
+                    self.Manger.Round > buff.expires || skill.type !== 2 || skill.id === this.id ||
+                    self.Storage.weiyuRepeat || self.Storage.cijianRepeat) return;
+                // 只在已经造成策略伤害的主动战法后消耗效果。
+                if (!buff.strategyDamageSkills?.has(skill)) return;
+                self.Storage.weiyuBuff = null;
+                self.clearHook('战法成功发动后', triggerTag);
+                self.clearHook('回合开始时', expiryTag);
+                self.clearHook('造成伤害后', damageTag);
+                const ignoreIntelRate = Math.max(0, Math.min(100, 30 + (self.Attrs.int - 80) * 40 / 300));
+                self.Storage.weiyuRepeat = { skill, ignoreIntelRate };
+                try {
+                    self.Manger.Record.pushRecord(self, `的【${skill.name}】受【${this.name}】影响再次发动（跳过准备，伤害和恢复效果为50%，无视目标${Number(ignoreIntelRate.toFixed(2))}%谋略）`, 1);
+                    skill.callskill(self, 100);
+                } finally {
+                    self.Storage.weiyuRepeat = null;
+                }
+            }, this, self);
+            const damageTag = self.addHook('造成伤害后', '未雨绸缪记录策略伤害', (attacker, target, damageInfo, skill, damage) => {
+                if (self.Storage.weiyuBuff !== buff) return;
+                if (self.Manger.Round < buff.starts || self.Manger.Round > buff.expires) return;
+                if (skill?.type !== 2 || damageInfo.type !== 2 || damage <= 0) return;
+                (buff.strategyDamageSkills ||= new Set()).add(skill);
+            }, this, self);
+            return true;
+        }
+    },
+    {
         id: 1074,
         name: "赐剑长驱",
         desc: "自身无法释放主动战法或进行普通攻击；友军全体每回合首次成功释放主动战法后，有40%几率（受刘禅谋略及当前士气影响）再次发动，跳过所有准备回合，造成原战法50%的伤害和恢复效果",

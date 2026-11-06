@@ -387,6 +387,7 @@ export class BattleHero {
                         this.callHook("尝试发动战法前", skill);
                         if (this.Manger.Over || this.Arms <= 0) return;
                         this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${currentRate}%`)
+                        this.Storage.weiyuBuff?.strategyDamageSkills?.delete(skill);
                         let ret = skill.callskill(this, currentRate);
                         if (ret !== true) this.Manger.Record.pushRecord(this, `的【${skill.name}】未发动`);
                         else if (this.canAddReadySkill(skill)) this.callHook("战法成功发动后", skill);
@@ -705,7 +706,7 @@ export class BattleHero {
             }
         }
 
-        if (attacker.Storage.cijianRepeat?.skill === skill) damage = Math.floor(damage * 0.5);
+        if (attacker.Storage.cijianRepeat?.skill === skill || attacker.Storage.weiyuRepeat?.skill === skill) damage = Math.floor(damage * 0.5);
         if (damage >= this.Arms) {
             if (damageInfo.type == 2) this.State.nextInteDamageSub = null;
             // 如果伤害大于剩余的兵力 将兵力改为0
@@ -770,7 +771,7 @@ export class BattleHero {
 
     //受到恢复
     revocer(recoverNum, source, name) {
-        if (source?.Storage.cijianRepeat?.skill?.name === name) recoverNum = Math.floor(recoverNum * 0.5);
+        if (source?.Storage.cijianRepeat?.skill?.name === name || source?.Storage.weiyuRepeat?.skill?.name === name) recoverNum = Math.floor(recoverNum * 0.5);
         if (this.Arms == 0) return;
         if (this.State.noRecoverUntil > this.Manger.Round) {
             this.Manger.Record.pushRecord(this, `受到【${name}】的恢复被禁疗阻止`, 1);
@@ -1407,7 +1408,7 @@ export class BattleHero {
             if(this.READY_VAL[from.id]){
                 round += this.READY_VAL[from.id].skip;
             }
-            if (this.Storage.zhengshiRepeat || this.Storage.cijianRepeat || round <= 0) {
+            if (this.Storage.zhengshiRepeat || this.Storage.cijianRepeat || this.Storage.weiyuRepeat || round <= 0) {
                 this.Manger.Record.pushRecord(this, `发动【${from.name}】`);
                 func();
             }else{
@@ -1434,6 +1435,7 @@ export class BattleHero {
 
                 if (e.round <= 0) {
                     this.Manger.Record.pushRecord(this, `发动【${skill.name}】`);
+                    this.Storage.weiyuBuff?.strategyDamageSkills?.delete(skill);
                     e.func();
                     delete this.IN_READY_SKILL[i];
                     this.callHook('战法成功发动后', skill);
