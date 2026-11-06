@@ -8,6 +8,7 @@ try {
     const logs = [];
     const manager = {
         Round: 0, Over: false,
+        addStat() {},
         Record: { pushRecord: (...x) => logs.push(x), pushActionRecord: (...x) => logs.push(x) },
         BlueTeam: { hero: [] }, RedTeam: { hero: [] }
     };
@@ -22,8 +23,17 @@ try {
     ally.Arms -= 500;
     ally.HurtArms = 500;
     manager.Round = 1;
+    feng.Attrs.int = 280;
+    let checkedBaseRate = null;
+    const getRealSkillRate = feng.getRealSkillRate.bind(feng);
+    feng.getRealSkillRate = rate => {
+        checkedBaseRate = rate;
+        return getRealSkillRate(rate);
+    };
     Math.random = () => 0; // 判定成功，选择降伤
     feng.callHook('回合开始时');
+    assert.equal(checkedBaseRate, 100);
+    feng.getRealSkillRate = getRealSkillRate;
     assert.equal(enemy.getDamageStateValue('attackDamageSub'), 9999);
     assert.equal(enemy.getDamageStateValue('inteDamageSub'), 9999);
     const { clacInteDamage, clacAttackDamage } = await vite.ssrLoadModule('/src/battle/battleCalcFunc.js');

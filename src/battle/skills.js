@@ -1958,12 +1958,13 @@ export const __SKILLS__ = [
     },
     {
         id: 1050, name: "锦车持节",
-        desc: "每回合开始前有50.0%几率使敌军单体本回合造成所有伤害大幅降低，或进入暴走状态且攻击距离与主动战法距离-2；触发后于回合结束时恢复我军兵力最低单体（恢复率150.0%，受谋略属性影响）",
+        desc: "每回合开始前有50.0%几率（受谋略属性影响）使敌军单体本回合造成所有伤害大幅降低，或进入暴走状态且攻击距离与主动战法距离-2；触发后于回合结束时恢复我军兵力最低单体（恢复率150.0%，受谋略属性影响）",
         level: "S", type: 1, target: 1, target_type: "enemy", limit: 5, rate: "--", study: false,
         callskill: function (self) {
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
             self.addHook('回合开始时', '锦车持节判定', () => {
-                if (self.Manger.Round < 1 || !getRandomBool(self.getRealSkillRate(50))) return;
+                const effectRate = clacSkillAdditionRate(50, 0.25, self.Attrs.int);
+                if (self.Manger.Round < 1 || !getRandomBool(self.getRealSkillRate(effectRate))) return;
                 const target = self.getTarget(this.limit, 1)[0];
                 if (!target) return;
                 const round = self.Manger.Round;
