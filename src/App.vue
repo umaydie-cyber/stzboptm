@@ -94,7 +94,7 @@ const simulate = async () => {
 			try {
 				for (let j = 0; j < Math.min(25, simulationCount - i); j++) {
 					const battle = new BattleManger(config, { records: false });
-					battles.push({ BlueTeam: { arms: battle.BlueTeam.arms, hurtArms: battle.BlueTeam.hurtArms, total: battle.BlueTeam.total }, RedTeam: { arms: battle.RedTeam.arms, hurtArms: battle.RedTeam.hurtArms, total: battle.RedTeam.total }, Stats: battle.Stats });
+					battles.push({ Round: battle.Round, BlueTeam: { arms: battle.BlueTeam.arms, hurtArms: battle.BlueTeam.hurtArms, total: battle.BlueTeam.total }, RedTeam: { arms: battle.RedTeam.arms, hurtArms: battle.RedTeam.hurtArms, total: battle.RedTeam.total }, Stats: battle.Stats });
 				}
 			} finally {
 				console.log = originalLog;
@@ -303,7 +303,7 @@ const simulate = async () => {
 			<p v-if="simulationError">{{ simulationError }}</p>
 			<p v-if="!battleinfo.BattleHeros && !simulation">请先点击“开始战斗”或“战斗模拟”。</p>
 			<template v-if="battleinfo.BattleHeros">
-				<h3>上一次战斗</h3>
+				<h3>上一次战斗 · {{ battleinfo.Round }} 回合</h3>
 				<div v-for="camp in ['blue', 'red']" :key="camp">
 					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).hurtArms }}，死亡 {{ (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).total - (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).arms - (camp === 'blue' ? battleinfo.BlueTeam : battleinfo.RedTeam).hurtArms }}</h4>
 					<p>武将伤害 / 恢复</p><div v-for="row in heroRows(battleinfo.Stats, camp)" :key="row.hero">{{ row.hero }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
@@ -312,6 +312,7 @@ const simulate = async () => {
 			</template>
 			<template v-if="simulation">
 				<h3>{{ simulationCount }} 局模拟（每局平均）</h3>
+				<p>平均回合数：{{ format(simulation.averageRounds) }}</p>
 				<p>武勋比（攻方造成伤兵＋死亡 / 守方造成伤兵＋死亡）：{{ ratio(simulation.red.wounded + simulation.red.dead, simulation.blue.wounded + simulation.blue.dead) }}；战损比（攻方造成死亡 / 守方造成死亡）：{{ ratio(simulation.red.dead, simulation.blue.dead) }}</p>
 				<div v-for="camp in ['blue', 'red']" :key="camp">
 					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ format(simulation[camp].wounded) }} ± {{ format(simulation[camp].woundedStd) }}；死亡 {{ format(simulation[camp].dead) }} ± {{ format(simulation[camp].deadStd) }}</h4>

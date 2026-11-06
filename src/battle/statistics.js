@@ -1,5 +1,10 @@
 export function summarizeBattles(battles) {
-    const result = { count: battles.length, blue: {}, red: {} };
+    const result = {
+        count: battles.length,
+        averageRounds: battles.reduce((sum, battle) => sum + Number(battle.Round || 0), 0) / battles.length,
+        blue: {},
+        red: {}
+    };
     for (const camp of ['blue', 'red']) {
         const rows = battles.map(battle => {
             const team = camp === 'blue' ? battle.BlueTeam : battle.RedTeam;
