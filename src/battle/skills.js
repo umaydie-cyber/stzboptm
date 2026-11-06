@@ -46,6 +46,39 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1071,
+        name: "烈火焚舟",
+        desc: "普通攻击后使目标燃烧2回合；若目标已有本战法施加的燃烧，则立即引发剩余燃烧伤害，使目标及相邻敌军士气降低10，并施加1回合更强的焚烧",
+        level: "S", type: 3, target: 1, target_type: "enemy", limit: 0, rate: 120, study: false,
+        callskill: function (self, target) {
+            if (target.Arms <= 0) return;
+            const firstRate = Math.round(150 + Math.max(0, self.Attrs.int - 80) * 150 / 90);
+            const secondRate = Math.round(270 + Math.max(0, self.Attrs.int - 80) * 270 / 120);
+            const existing = target.State.continuousDamage['烈火焚舟燃烧'];
+            if (existing?.source === self && existing.expiresRound > self.Manger.Round) {
+                const remaining = existing.expiresRound - self.Manger.Round;
+                delete target.State.continuousDamage['烈火焚舟燃烧'];
+                self.Manger.Record.pushActionRecord(self, target, '的【烈火焚舟】引发', `剩余${remaining}次燃烧伤害`, 1);
+                for (let i = 0; i < remaining && target.Arms > 0 && !self.Manger.Over; i++) {
+                    target.beHurtByNum(self, { type: 4, rate: existing.rate }, this, existing.damage);
+                }
+                if (self.Manger.Over || target.Arms <= 0) return;
+                const line = [...self.Manger.BlueTeam.hero, ...[...self.Manger.RedTeam.hero].reverse()].filter(hero => hero.Arms > 0);
+                const index = line.indexOf(target);
+                for (const [position, hero] of line.entries()) {
+                    if (hero.BattleCamp !== target.BattleCamp || Math.abs(position - index) > 1) continue;
+                    hero.Morale = Math.max(0, hero.Morale - 10);
+                    self.Manger.Record.pushActionRecord(self, hero, '的【烈火焚舟】使', `士气降低10（当前${hero.Morale}）`, 1);
+                }
+                target.applyContinuousDamage('烈火焚舟焚烧', self, this, secondRate, 1);
+                self.Manger.Record.pushRecord(self, `的【烈火焚舟】第二段伤害率${secondRate}%`, 1);
+            } else {
+                target.applyContinuousDamage('烈火焚舟燃烧', self, this, firstRate, 2);
+                self.Manger.Record.pushRecord(self, `的【烈火焚舟】第一段伤害率${firstRate}%`, 1);
+            }
+        }
+    },
+    {
         id: 1070,
         name: "敛微穷极",
         desc: "战斗开始后，友军全体策略伤害提高40%（受谋略影响），每回合结束降低六分之一；策略伤害率在80%至150%（上限受谋略影响）间浮动，第六回合收敛为固定伤害率，持续至战斗结束",
