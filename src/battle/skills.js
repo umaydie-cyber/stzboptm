@@ -244,7 +244,7 @@ export const __SKILLS__ = [
 
     {
         id: 1003,
-        name: "血践黄砂",
+        name: "血溅黄沙",
         desc: "以无法发动主动战法为代价，使自身进行攻击时的伤害提高120.0%",
         level: "S",
         type: 4,
@@ -256,18 +256,20 @@ export const __SKILLS__ = [
         callskill: function (self) {
             let manger = self.Manger;
             if (manger.Round == "-1") {
-                self.Manger.Record.pushRecord(self, '的战法【血践黄砂】生效');
+                self.Manger.Record.pushRecord(self, `的战法【${this.name}】生效`);
                 // 使自身无法发动主动战法 持续到战斗结束
                 self.State.activeLimit.rounds = -1
                 self.State.activeLimit.from = {
                     hero: self,
-                    skille: this
+                    skill: this
                 }
                 self.Manger.Record.pushRecord(self, '的无法发动主动战法效果已施加', 1);
                 // 增加攻击伤害120%
                 self.State.attackDamageAdd.passive = {
                     value: 120,
-                    rounds: -1
+                    rounds: -1,
+                    from: this,
+                    hero: self
                 }
                 self.Manger.Record.pushRecord(self, '造成的攻击伤害提高120%', 1);
             }
