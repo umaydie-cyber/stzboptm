@@ -234,14 +234,14 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu', 'taie'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0 &&
-                    ['fenran', 'louying'].includes(this.Treasure?.id) && this.Treasure.forge === 'qingyi' &&
+                    ['fenran', 'louying', 'taie'].includes(this.Treasure?.id) && this.Treasure.forge === 'qingyi' &&
                     this.Manger.Round >= 5 && this.Manger.Round <= this.Treasure.forgeValue) {
-                    this.Manger.Record.pushRecord(this, `的【${this.Treasure.id === 'louying' ? '镂影' : '奋髯'}·清毅】洞察免疫控制`, 1);
+                    this.Manger.Record.pushRecord(this, `的【${{ louying: '镂影', taie: '泰阿' }[this.Treasure.id] || '奋髯'}·清毅】洞察免疫控制`, 1);
                     return true;
                 }
                 if (['confusion', 'rage'].includes(name) && value?.rounds > 0 &&
@@ -360,12 +360,18 @@ export class BattleHero {
             this.Attrs[key] = keepTwoDecimal(this.Attrs[key] + 20);
         })
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
+        if (this.Treasure?.id === 'taie') {
+            this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2);
+            this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.mingjing * 2);
+            // 武将数据将统率存为十倍值（如 2.5 存为 25）。
+            if (this.Cost < 30) this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.mingjing * 1.5);
+        }
         if (this.Treasure?.id === 'xiuni') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2);
         if (this.Treasure?.id === 'weizhisan_gong') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'qianjun') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'canghai') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 2.5);
         if (this.Treasure?.id === 'xinghan') this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.wengu / 100));
-        if (['qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'wengu') {
+        if (['qianjun', 'dalu', 'taie'].includes(this.Treasure?.id) && this.Treasure.forge === 'wengu') {
             this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'dalu' && this.Treasure.forge === 'genzhi') {
@@ -379,7 +385,7 @@ export class BattleHero {
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.forgeValue);
         }
-        if (this.Treasure?.id === 'qianjun' && this.Treasure.forge === 'lingdong') {
+        if (['qianjun', 'taie'].includes(this.Treasure?.id) && this.Treasure.forge === 'lingdong') {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.forgeValue);
         }
         if (this.Treasure?.id === 'wuhao') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
@@ -475,7 +481,7 @@ export class BattleHero {
     }
     getTreasureMainRateBonus(skill) {
         if (skill.id !== this.Skill) return 0;
-        if (['tianwen', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
+        if (['tianwen', 'qianjun', 'dalu', 'taie'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
         if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' && skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (['wuhao', 'jinjiu', 'weizhisan_gong', 'tengshe', 'jushu'].includes(this.Treasure?.id) && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
@@ -521,6 +527,7 @@ export class BattleHero {
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' ? '天问·机敏'
                             : this.Treasure?.id === 'qianjun' && this.Treasure.forge === 'jimin' ? '千钧·机敏'
                             : this.Treasure?.id === 'dalu' && this.Treasure.forge === 'jimin' ? '大橹·机敏'
+                            : this.Treasure?.id === 'taie' && this.Treasure.forge === 'jimin' ? '泰阿·机敏'
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' ? '天问·熟虑' : '';
                         const rateDetail = rateTreasureName && treasureBonus
                             ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${rateTreasureName}+${treasureBonus}%）` : '';
@@ -576,9 +583,9 @@ export class BattleHero {
                     this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${moraleRate + mainBonus + treasureRate}%（基础${skill.rate}%，山君·虎啸+${huxiaoBase}%受士气修正后增加${moraleRate - normalRate}%，士气总修正${moraleRate - skill.rate - huxiaoBase >= 0 ? '+' : ''}${moraleRate - skill.rate - huxiaoBase}%${treasureRate ? `，山君·奔袭+${treasureRate}%` : ''}）`, 1);
                 }
                 if ((['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' ||
-                    ['tianwen', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin') && mainBonus) {
+                    ['tianwen', 'qianjun', 'dalu', 'taie'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin') && mainBonus) {
                     const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
-                    const name = { youpiao: '游飘·筹算', xushibishou: '徐氏匕首·筹算', tianwen: '天问·机敏', qianjun: '千钧·机敏', dalu: '大橹·机敏' }[this.Treasure.id];
+                    const name = { youpiao: '游飘·筹算', xushibishou: '徐氏匕首·筹算', tianwen: '天问·机敏', qianjun: '千钧·机敏', dalu: '大橹·机敏', taie: '泰阿·机敏' }[this.Treasure.id];
                     this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${this.getRealSkillRate(skill.rate) + mainBonus}%（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${name}+${mainBonus}%）`, 1);
                 }
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(moraleRate + mainBonus + treasureRate)) {
@@ -834,7 +841,7 @@ export class BattleHero {
     }
 
     applyTreasureRoundStart() {
-        if (!['fenran', 'louying'].includes(this.Treasure?.id) || this.Treasure.forge !== 'qingyi' ||
+        if (!['fenran', 'louying', 'taie'].includes(this.Treasure?.id) || this.Treasure.forge !== 'qingyi' ||
             this.Manger.Round < 5 || this.Manger.Round > this.Treasure.forgeValue) return;
         const cleared = [];
         for (const [key, label] of [['confusion', '混乱'], ['rage', '暴走'],
@@ -844,7 +851,7 @@ export class BattleHero {
                 cleared.push(label);
             }
         }
-        if (cleared.length) this.Manger.Record.pushRecord(this, `的【${this.Treasure.id === 'louying' ? '镂影' : '奋髯'}·清毅】洞察解除${cleared.join('、')}`, 1);
+        if (cleared.length) this.Manger.Record.pushRecord(this, `的【${{ louying: '镂影', taie: '泰阿' }[this.Treasure.id] || '奋髯'}·清毅】洞察解除${cleared.join('、')}`, 1);
     }
 
     registerLouyingDamage(target, damageInfo, realDamage) {
@@ -987,9 +994,11 @@ export class BattleHero {
         const weishiReduction = ['xinghan', 'canghai', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'weishi' &&
             attacker.Cost < this.Cost ? this.Treasure.forgeValue : 0;
         const xinghanDynamicReduction = jishiReduction + buquReduction + weishiReduction;
+        const taieFirstReduction = this.Treasure?.id === 'taie' && this.Manger.Round >= 1 &&
+            this.Storage.taieFirstDamageRound !== this.Manger.Round ? 20 : 0;
         const resolvedInfo = { ...damageInfo, ...(reduceThisHit ? { jianzuReduction: true } : {}),
             treasureJishiReductions: jishiReductions, xinghanBuquReduction: buquReduction,
-            xinghanWeishiReduction: weishiReduction };
+            xinghanWeishiReduction: weishiReduction, taieFirstReduction };
         const qiqinActive = attacker.Storage.qiqinAllDamageSub?.round === this.Manger.Round;
         const qiqinInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '七擒七纵');
         const applyQiqinToSnapshot = num != null && qiqinActive && !qiqinInSnapshot;
@@ -1010,7 +1019,7 @@ export class BattleHero {
         let damage;
         if (num != null) {
             damage = num;
-            if ((reduceThisHit || applyQiqinToSnapshot || applyTaoyuanToSnapshot || xinghanDynamicReduction) && [1, 2, 4].includes(damageInfo.type)) {
+            if ((reduceThisHit || applyQiqinToSnapshot || applyTaoyuanToSnapshot || xinghanDynamicReduction || taieFirstReduction) && [1, 2, 4].includes(damageInfo.type)) {
                 // 指挥和持续伤害可能预先算好数值；只折减非兵力基础部分。
                 const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
                     ? attacker.Arms * 373 / (7700 + attacker.Arms)
@@ -1054,6 +1063,7 @@ export class BattleHero {
         let canghaiNewStacks = 0;
         let daluNewEvasion = false;
         if (realDamage > 0) {
+            if (taieFirstReduction) this.Storage.taieFirstDamageRound = this.Manger.Round;
             if (jishiCharges.length) {
                 this.Storage.xinghanJishiCharges = [];
             }
