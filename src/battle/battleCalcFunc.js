@@ -257,16 +257,18 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             if (continuous + controls) special('金鸠·击虚', (continuous + controls) * attacker.Treasure.forgeValue);
         }
     }
-    if (attacker.Treasure?.id === 'tengshe') {
+    if (['tengshe', 'jushu'].includes(attacker.Treasure?.id)) {
+        const name = attacker.Treasure.id === 'jushu' ? '钜黍' : '螣蛇';
+        if (attacker.Treasure.id === 'jushu' && skill?.type === 3) special('钜黍·无畏', attacker.Treasure.wuwei);
         if (skill?.id === attacker.Skill && [2, 3].includes(skill.type) && attacker.Treasure.forge === 'kangli') {
-            special('螣蛇·锻造亢厉', attacker.Treasure.forgeValue);
+            special(`${name}·锻造亢厉`, attacker.Treasure.forgeValue);
         }
-        if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('螣蛇·至策', attacker.Treasure.forgeValue);
+        if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special(`${name}·至策`, attacker.Treasure.forgeValue);
         if (attacker.Treasure.forge === 'jixu' && attacker.Manger.Round >= 1) {
             const continuous = Object.values(target.State.continuousDamage || {}).filter(effect => effect.expiresRound >= attacker.Manger.Round).length;
             const controls = ['confusion', 'rage', 'attackLimit', 'activeLimit']
                 .filter(name => target.State[name]?.rounds > 0).length;
-            if (continuous + controls) special('螣蛇·击虚', (continuous + controls) * attacker.Treasure.forgeValue);
+            if (continuous + controls) special(`${name}·击虚`, (continuous + controls) * attacker.Treasure.forgeValue);
         }
     }
     if (attacker.Treasure?.id === 'canghai' && attacker.Storage.canghaiPolangRound === attacker.Manger.Round &&
