@@ -159,8 +159,8 @@ export class BattleManger {
 
             if (this.Round === 0) {
                 for (const hero of this.BattleHeros) {
-                    if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong'].includes(hero.Treasure?.id) && hero.Treasure.forge === 'tianzi') {
-                        const name = { yuanrong: '元戎', youpiao: '游飘', wuhao: '乌号', xushibishou: '徐氏匕首', louying: '镂影', tianwen: '天问', jinjiu: '金鸠', weizhisan_gong: '位至三公' }[hero.Treasure.id];
+                    if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng'].includes(hero.Treasure?.id) && hero.Treasure.forge === 'tianzi') {
+                        const name = { yuanrong: '元戎', youpiao: '游飘', wuhao: '乌号', xushibishou: '徐氏匕首', louying: '镂影', tianwen: '天问', jinjiu: '金鸠', weizhisan_gong: '位至三公', shenfeng: '神锋' }[hero.Treasure.id];
                         this.Record.pushRecord(hero, `的【${name}·天资】使基础谋略提高${hero.Treasure.forgeValue}%（${hero.Attrs.int}）`, 1);
                     }
                 }
@@ -202,6 +202,8 @@ export class BattleManger {
                         // 判断怯战
                         if(e.isAttackLimit()){
                             e.skipAttackByAttackLimit();
+                        }else if(e.Treasure?.id === 'shenfeng' && this.Round === 1){
+                            this.Record.pushRecord(e, '的【神锋·劲弩】首回合无法发动普通攻击', 1);
                         }else{
                             // 执行普攻
                             e.callHook("普攻前");

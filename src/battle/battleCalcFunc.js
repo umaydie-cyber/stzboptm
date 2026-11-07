@@ -217,6 +217,18 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             damageInfo.yuanrongXuanfengApplied = true;
         }
     }
+    if (attacker.Treasure?.id === 'shenfeng') {
+        if (skill?.type === 3) {
+            special('神锋·无畏', attacker.Treasure.wuwei);
+            if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
+                special('神锋·蓄锐', attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
+            }
+        }
+        if ([2, 4].includes(type) && attacker.Treasure.forge === 'xuanfeng' && attacker.Storage.yuanrongXuanfengReady) {
+            special('神锋·选锋', attacker.Treasure.forgeValue);
+            damageInfo.yuanrongXuanfengApplied = true;
+        }
+    }
     if (attacker.Treasure?.id === 'shanjun' && skill?.type === 3) {
         if (attacker.Treasure.forge === 'wuwei') special('山君·无畏', attacker.Treasure.forgeValue);
         if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
