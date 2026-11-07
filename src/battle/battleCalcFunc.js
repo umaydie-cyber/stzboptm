@@ -199,6 +199,23 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (fire && attacker.Treasure.forge === 'quhuo') special('游飘·驱火', attacker.Treasure.forgeValue);
         if (curse && attacker.Treasure.forge === 'xuanhuo') special('游飘·炫惑', attacker.Treasure.forgeValue);
     }
+    if (attacker.Treasure?.id === 'wuhao') {
+        const ownMainSkill = skill?.id === attacker.Skill && [2, 3].includes(skill.type);
+        if (ownMainSkill) {
+            special('乌号·亢厉', attacker.Treasure.kangli * 2);
+            if (attacker.Treasure.forge === 'kangli') special('乌号·锻造亢厉', attacker.Treasure.forgeValue);
+        }
+        const enemies = attacker.BattleCamp === 'blue' ? attacker.Manger.RedTeam.hero : attacker.Manger.BlueTeam.hero;
+        const livingArms = enemies.filter(hero => hero.Arms > 0).map(hero => hero.Arms);
+        if (livingArms.length && target.Arms === Math.min(...livingArms)) special('乌号·逐胜', 15);
+        if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('乌号·至策', attacker.Treasure.forgeValue);
+        if (attacker.Treasure.forge === 'jixu' && attacker.Manger.Round >= 1) {
+            const continuous = Object.values(target.State.continuousDamage || {}).filter(effect => effect.expiresRound >= attacker.Manger.Round).length;
+            const controls = ['confusion', 'rage', 'attackLimit', 'activeLimit']
+                .filter(name => target.State[name]?.rounds > 0).length;
+            if (continuous + controls) special('乌号·击虚', (continuous + controls) * attacker.Treasure.forgeValue);
+        }
+    }
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
     const qiqin = attacker.Storage.qiqinAllDamageSub;

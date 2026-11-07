@@ -766,6 +766,7 @@ export const __SKILLS__ = [
     {
         id: 1014,
         name: "浑水摸鱼",
+        ready: true,
         desc: "1回合准备，使敌军群体陷入混乱状态，持续2回合",
         level: "S",
         type: 2,
@@ -774,9 +775,9 @@ export const __SKILLS__ = [
         limit: 4,
         rate: 35,
         study: true,
-        callskill: function (self) {
+        callskill: function (self, currentRate) {
             // 准备型战法先创建子技能方法 然后提交在准备战法效果执行堆里
-            if (getRandomBool(this.rate)) {
+            if (getRandomBool(currentRate)) {
                 let subskill = () => {
                     // 先获取目标
                     let targets = self.getTarget(this.limit, this.target);
@@ -1272,7 +1273,7 @@ export const __SKILLS__ = [
         desc: "战斗开始后前2回合，使敌军群体无法进行普通攻击，在此效果结束后，将对敌军全体发动一次强力策略攻击（伤害率215.0%，受谋略属性影响），造成的伤害无视规避",
         level: "S",
         type: 1,
-        target: 2,
+        target: 3,
         target_type: "enemy",
         limit: 5,
         rate: "--",
@@ -1280,7 +1281,7 @@ export const __SKILLS__ = [
         callskill: function (self) {
             self.Manger.Record.pushRecord(self, '发动【白衣渡江】')
 
-            let enemy = self.getTarget(5, 2);
+            let enemy = self.getTarget(5, 3);
 
             enemy.forEach(e => {
                 let value = clacSkillAdditionRate(215, 2.25, self.Attrs.int);
@@ -1488,6 +1489,7 @@ export const __SKILLS__ = [
     {
         id: 1026, //ID
         name: "一骑当千", //名称
+        ready: true,
         desc: "1回合准备，使敌军群体陷入混乱状态，持续2回合", //描述
         level: "S", //战法级别
         type: 2, //战法类型 1=指挥 2=主动 3=追击 4=被动
@@ -1496,9 +1498,9 @@ export const __SKILLS__ = [
         limit: 5, //战法距离
         rate: 30, //战法发动率
         study: true, //战法是否可学习
-        callskill: function (self) {
+        callskill: function (self, currentRate) {
             // 准备型战法先创建子技能方法 然后添加在准备战法效果执行堆里
-            if (getRandomBool(this.rate)) {
+            if (getRandomBool(currentRate)) {
                 let subskill = () => {
                     // 先获取目标
                     let targets = self.getTarget(this.limit, this.target);
@@ -1520,6 +1522,7 @@ export const __SKILLS__ = [
     {
         id: 1027, //ID
         name: "三军之众", //名称
+        ready: true,
         desc: "1回合准备，使我军单体恢复4次兵力（恢复率151.0%，受谋略属性影响），每次目标独立判定", //描述
         level: "S", //战法级别
         type: 2, //战法类型 1=指挥 2=主动 3=追击 4=被动
@@ -1528,11 +1531,11 @@ export const __SKILLS__ = [
         limit: 3, //战法距离
         rate: 45, //战法发动率
         study: true, //战法是否可学习
-        callskill: function (self) {
+        callskill: function (self, currentRate) {
             let revocerRate = 151;
             let revocerRateAdd = 1.575;
 
-            if (getRandomBool(this.rate)) {
+            if (getRandomBool(currentRate)) {
                 let subskill = () => {
                     for (let index = 0; index < 4; index++) {
                         let targets = self.getTarget(this.limit, this.target, 2);
@@ -1585,6 +1588,7 @@ export const __SKILLS__ = [
     {
         id: 1029, //ID
         name: "火势风威", //名称
+        ready: true,
         desc: "1回合准备，对敌军全体发动策略攻击（伤害率111.0%，受谋略属性影响），并使其在受到下一次伤害时，会额外引发一次燃烧（伤害率221.0%，受谋略属性影响）", //描述
         level: "S", //战法级别
         type: 2, //战法类型 1=指挥 2=主动 3=追击 4=被动
@@ -1593,14 +1597,14 @@ export const __SKILLS__ = [
         limit: 5, //战法距离
         rate: 40, //战法发动率
         study: false, //战法是否可学习
-        callskill: function (self) {
+        callskill: function (self, currentRate) {
             // 准备型战法先创建子技能方法 然后添加在准备战法效果执行堆里
             let mainDamage = 111;
             let mainDamageAdd = 0.95;
             let fireDamage = 221;
             let fireDamageAdd = 2.45;
 
-            if (getRandomBool(this.rate)) {
+            if (getRandomBool(currentRate)) {
                 let subskill = () => {
                     // 先获取目标
                     let targets = self.getTarget(this.limit, this.target);
@@ -1774,6 +1778,7 @@ export const __SKILLS__ = [
     {
         id: 1034,
         name: "妖术",
+        ready: true,
         desc: "1回合准备，使敌军群体（随机2目标）陷入暴走，普通攻击及攻击战法无差别选择目标，持续2次实际行动。",
         level: "A",
         type: 2,
@@ -2039,6 +2044,7 @@ export const __SKILLS__ = [
     },
     {
         id: 1047, name: "绝水遏敌",
+        ready: true,
         desc: "1回合准备，对敌军群体发动策略攻击（伤害率230.0%，受谋略属性影响），并使其无法恢复兵力，持续1回合",
         level: "A", type: 2, target: 2, target_type: "enemy", limit: 4, rate: 50, study: true,
         callskill: function (self, currentRate, forced = false, range = this.limit) {
@@ -2207,7 +2213,7 @@ export const __SKILLS__ = [
         desc: config.desc,
         level: 'A', type: 2, target: config.targets, target_type: 'enemy',
         limit: config.name === '伐谋' || config.name === '溃堤' ? 3 : config.name === '毒泉' ? 5 : 4,
-        rate: config.rate, study: true,
+        rate: config.rate, study: true, ready: !!config.ready,
         callskill: function (self, currentRate, forced = false, range = this.limit) {
             if (!forced && !getRandomBool(currentRate)) return false;
             const execute = () => {

@@ -233,7 +233,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -327,12 +327,13 @@ export class BattleHero {
         })
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.forgeValue);
         }
+        if (this.Treasure?.id === 'wuhao') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -398,6 +399,8 @@ export class BattleHero {
     }
     getTreasureMainRateBonus(skill) {
         if (skill.id !== this.Skill) return 0;
+        if (this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' &&
+            skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' &&
             /策略攻击|策略伤害|火攻|燃烧|恐慌|妖术/.test(skill.desc || '')) return this.Treasure.forgeValue;
         if (!/造成.*攻击|发动.*攻击|攻击伤害/.test(skill.desc || '')) return 0;
@@ -422,8 +425,10 @@ export class BattleHero {
                         if (this.Manger.Over || this.Arms <= 0) return;
                         const treasureBonus = this.getTreasureMainRateBonus(skill);
                         const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
-                        const rateDetail = this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' && treasureBonus
-                            ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，游飘·筹算+${treasureBonus}%）` : '';
+                        const rateTreasureName = this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' ? '游飘·筹算'
+                            : this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' ? '乌号·熟虑' : '';
+                        const rateDetail = rateTreasureName && treasureBonus
+                            ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${rateTreasureName}+${treasureBonus}%）` : '';
                         this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${currentRate}%${rateDetail}`)
                         this.Storage.weiyuBuff?.strategyDamageSkills?.delete(skill);
                         let ret = skill.callskill(this, currentRate);
