@@ -57,11 +57,20 @@ const yuanrongForgeOptions = [
     { id: 'xuanfeng', name: '选锋', min: 10, max: 30, desc: '普通攻击后下一次策略伤害提高' },
     { id: 'xurui', name: '蓄锐', min: 5, max: 15, desc: '每两次普攻，追击伤害叠加提高' }
 ];
+const fenranForgeOptions = [
+    tongsuForgeOptions[0], tongsuForgeOptions[2],
+    { id: 'xianzhen', name: '陷阵', min: 10, max: 30, desc: '普通攻击伤害提高' },
+    { id: 'qiangji', name: '强击', min: 1, max: 5, unit: '回合', desc: '前几回合普通攻击不受反击' },
+    { id: 'qingyi', name: '清毅', min: 5, max: 8, unit: '回合', desc: '第5回合至所选回合获得洞察' },
+    { id: 'cangfeng', name: '藏锋', min: 10, max: 30, desc: '本回合未普攻时，下回合首次普攻无视防御' }
+];
 const treasureSpecs = {
     tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
         fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
     yuanrong: { name: '元戎', first: 'xianzhen', second: 'wuwei', firstName: '陷阵', secondName: '无畏', fixedName: '迸发',
-        fixedDesc: '首次发动追击类主战法时，攻击距离内额外选取 1 个目标', forgeOptions: yuanrongForgeOptions }
+        fixedDesc: '首次发动追击类主战法时，攻击距离内额外选取 1 个目标', forgeOptions: yuanrongForgeOptions },
+    fenran: { name: '奋髯', first: 'xiaorui', second: 'buyi', firstName: '骁锐', secondName: '不移', fixedName: '奋武',
+        fixedDesc: '普通攻击增伤累计超过 250% 时，该次攻击无视规避', forgeOptions: fenranForgeOptions }
 };
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
 const forgeOptions = computed(() => treasureSpec.value?.forgeOptions || []);
@@ -294,8 +303,8 @@ const addAllPoints = type => {
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` : `普通攻击伤害 +${treasureDraft.xianzhen}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
-                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : `追击伤害 +${treasureDraft.wuwei * 2}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">
@@ -304,7 +313,8 @@ const addAllPoints = type => {
                     <div v-if="treasureDraft.forge" class="forge-value">
                         <span>{{ forgeOptions.find(item => item.id === treasureDraft.forge).desc }}</span>
                         <input v-model.number="treasureDraft.forgeValue" type="number" :min="forgeOptions.find(item => item.id === treasureDraft.forge).min" :max="forgeOptions.find(item => item.id === treasureDraft.forge).max" step="1">{{ forgeOptions.find(item => item.id === treasureDraft.forge).unit || '%' }}
-                        <small>可选 {{ forgeOptions.find(item => item.id === treasureDraft.forge).min }}–{{ forgeOptions.find(item => item.id === treasureDraft.forge).max }} 的整数</small>
+                        <small v-if="treasureDraft.forge === 'qingyi'">可选第5回合、5–6、5–7、5–8回合（输入结束回合）</small>
+                        <small v-else>可选 {{ forgeOptions.find(item => item.id === treasureDraft.forge).min }}–{{ forgeOptions.find(item => item.id === treasureDraft.forge).max }} 的整数</small>
                     </div>
                     <div class="treasure-actions"><button type="button" @click="treasureDraft = null">选择其他宝物</button><button type="button" @click="removeTreasure">卸下</button><button type="button" :disabled="!treasureDraft.forge" @click="saveTreasure">装备{{ treasureSpec.name }}</button></div>
                 </div>

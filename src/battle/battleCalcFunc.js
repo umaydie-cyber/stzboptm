@@ -18,6 +18,10 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     //主要伤害
     let targetDef = target.Attrs.def;
     if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
+    if (attacker.Treasure?.id === 'fenran' && attacker.Treasure.forge === 'cangfeng' &&
+        attacker.Storage.fenranCangfengCurrentAttack && damageInfo.isBasicAttack) {
+        targetDef *= 1 - attacker.Treasure.forgeValue / 100;
+    }
     if (skill && skill.id == 1011) {
         targetDef = 0;
     }
@@ -180,6 +184,9 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             damageInfo.yuanrongXuanfengApplied = true;
         }
     }
+    if (target.Treasure?.id === 'fenran') special('奋髯·不移', -target.Treasure.buyi, target);
+    if (attacker.Treasure?.id === 'fenran' && type === 1 && damageInfo.isBasicAttack &&
+        attacker.Treasure.forge === 'xianzhen') special('奋髯·陷阵', attacker.Treasure.forgeValue);
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
     const qiqin = attacker.Storage.qiqinAllDamageSub;

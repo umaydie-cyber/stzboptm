@@ -136,6 +136,8 @@ export class BattleManger {
             let roundName = this.Round == 0 ? '准备' : '第'+this.Round;
             if(index != 0) this.Record.pushRoundRecord(`${roundName}回合`);
 
+            if (this.Round >= 1) this.BattleHeros.forEach(hero => hero.applyTreasureRoundStart());
+
             this.BattleHeros.forEach(e => e.callHook("速度排序前"));
             this.sortBattleHerosBySpd();
 

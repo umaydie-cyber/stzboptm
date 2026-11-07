@@ -233,10 +233,16 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
+                if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0 &&
+                    this.Treasure?.id === 'fenran' && this.Treasure.forge === 'qingyi' &&
+                    this.Manger.Round >= 5 && this.Manger.Round <= this.Treasure.forgeValue) {
+                    this.Manger.Record.pushRecord(this, '的【奋髯·清毅】洞察免疫控制', 1);
+                    return true;
+                }
                 if (['confusion', 'rage'].includes(name) && value?.rounds > 0 &&
                     this.Treasure?.id === 'yuanrong' && this.Treasure.forge === 'jianyi' &&
                     this.Manger.Round >= 1 && this.Manger.Round <= this.Treasure.forgeValue) {
@@ -319,7 +325,7 @@ export class BattleHero {
         CanAddAttrsKey.forEach((key) => {
             this.Attrs[key] = keepTwoDecimal(this.Attrs[key] + 20);
         })
-        if (this.Treasure?.id === 'tongsu') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
+        if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
         if (this.Treasure?.id === 'yuanrong' && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
@@ -585,6 +591,11 @@ export class BattleHero {
 
     //普通攻击
     basicAttack(target) {
+        if (this.Treasure?.id === 'fenran') {
+            this.Storage.fenranAttackedThisRound = true;
+            this.Storage.fenranCangfengCurrentAttack = this.Treasure.forge === 'cangfeng' && !!this.Storage.fenranCangfengReady;
+            this.Storage.fenranCangfengReady = false;
+        }
         // 在普攻结算前确定相邻位置，避免目标阵亡后队列收缩改变分兵目标。
         const splitTargets = this.getSplitAttackTargets(target);
         this.Manger.Record.pushActionRecord(this, target, '对', '发动普通攻击');
@@ -596,6 +607,7 @@ export class BattleHero {
         this.registerYuanrongBasicAttack();
         if (this.Manger.Over == true) return;
         this.performSplitAttack(splitTargets);
+        this.Storage.fenranCangfengCurrentAttack = false;
         if (this.Manger.Over || this.Arms <= 0) return;
         this.callPursuitSkill(target);
     }
@@ -643,10 +655,28 @@ export class BattleHero {
     }
 
     finishRound() {
+        if (this.Treasure?.id === 'fenran' && this.Treasure.forge === 'cangfeng' && this.Manger.Round >= 1) {
+            this.Storage.fenranCangfengReady = !this.Storage.fenranAttackedThisRound;
+            this.Storage.fenranAttackedThisRound = false;
+        }
         if (this.State.splitAttack && this.State.splitAttack.expiresRound <= this.Manger.Round) {
             this.State.splitAttack = null;
             this.Manger.Record.pushRecord(this, '分兵状态在回合结束时消失', 1);
         }
+    }
+
+    applyTreasureRoundStart() {
+        if (this.Treasure?.id !== 'fenran' || this.Treasure.forge !== 'qingyi' ||
+            this.Manger.Round < 5 || this.Manger.Round > this.Treasure.forgeValue) return;
+        const cleared = [];
+        for (const [key, label] of [['confusion', '混乱'], ['rage', '暴走'],
+            ['attackLimit', '怯战'], ['activeLimit', '犹豫']]) {
+            if (this.State[key].rounds > 0) {
+                this.State[key].rounds = 0;
+                cleared.push(label);
+            }
+        }
+        if (cleared.length) this.Manger.Record.pushRecord(this, `的【奋髯·清毅】洞察解除${cleared.join('、')}`, 1);
     }
 
     tryQiqinDefense(kind, attacker) {
@@ -696,7 +726,17 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
-        if (this.tryQiqinDefense('伤害', attacker)) return;
+        if (attacker.Treasure?.id === 'fenran' && damageInfo.isBasicAttack) {
+            getDamageAddition(attacker, this, damageInfo, skill);
+            const bonus = damageInfo.damageModifiers.entries
+                .filter(entry => entry.hero === attacker.Name && entry.value > 0)
+                .reduce((sum, entry) => sum + entry.value, 0);
+            if (bonus > 250) {
+                damageInfo.ignoreEvasion = true;
+                attacker.Manger.Record.pushRecord(attacker, `的【奋髯·奋武】增伤累计${bonus}%，本次普攻无视规避`, 1);
+            }
+        }
+        if (!damageInfo.ignoreEvasion && this.tryQiqinDefense('伤害', attacker)) return;
         if (attacker.Storage.shiwuIgnoreNextDamage) {
             damageInfo = { ...damageInfo, ignoreEvasion: true };
             attacker.Storage.shiwuIgnoreNextDamage = false;
@@ -806,6 +846,8 @@ export class BattleHero {
         // 反击是普通攻击类型伤害，但不再次触发受击事件或反击链。
         if (!damageInfo.isCounterattack) this.callHook('受伤时', attacker, damageInfo, skill, realDamage);
         if (this.Storage.jianzuBudai && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && !damageInfo.isCounterattack &&
+            !(attacker.Treasure?.id === 'fenran' && attacker.Treasure.forge === 'qiangji' &&
+                this.Manger.Round >= 1 && this.Manger.Round <= attacker.Treasure.forgeValue) &&
             this.Arms > 0 && attacker.Arms > 0 && !this.Manger.Over &&
             this.State.confusion.rounds <= 0 && this.State.attackLimit.rounds <= 0 &&
             attacker.BattleCamp !== this.BattleCamp) {
