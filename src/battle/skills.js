@@ -633,7 +633,7 @@ export const __SKILLS__ = [
             if (getRandomBool(currentRate)) {
                 self.Manger.Record.pushRecord(self, '发动【忠克猛烈】')
                 // 战法攻击效果
-                let target = self.getTarget(4, 1);
+                let target = self.getTarget(this.limit, 1);
                 target[0].beHurt(self, {
                     type: 1,
                     rate: 280,
