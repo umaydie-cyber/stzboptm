@@ -99,6 +99,7 @@ const treasureSpecs = {
         fixedDesc: '攻击与谋略属性提高 5%', forgeOptions: xushibishouForgeOptions }
 };
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
+const treasureImageUrl = id => `/stzboptm/assets/treasure/${id}.png${id === 'fenran' ? '?v=2' : ''}`;
 const forgeOptions = computed(() => treasureSpec.value?.forgeOptions || []);
 const remainingTreasurePoints = computed(() => treasureDraft.value
     ? 12 - Number(treasureDraft.value[treasureSpec.value.first]) - Number(treasureDraft.value[treasureSpec.value.second]) : 10);
@@ -305,7 +306,7 @@ const addAllPoints = type => {
                         </div>
                         <div class="treasure-slot" role="button" tabindex="0" :aria-label="hero.treasure ? `编辑${treasureSpecs[hero.treasure.id]?.name || '宝物'}` : '选择宝物'"
                             @click="openTreasure(index)" @keydown.enter="openTreasure(index)" @keydown.space.prevent="openTreasure(index)">
-                            <img v-if="hero.treasure" :src="`/stzboptm/assets/treasure/${hero.treasure.id}.png`" :alt="treasureSpecs[hero.treasure.id]?.name" class="equipped-treasure">
+                            <img v-if="hero.treasure" :src="treasureImageUrl(hero.treasure.id)" :alt="treasureSpecs[hero.treasure.id]?.name" class="equipped-treasure">
                             <span v-if="hero.treasure?.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span>
                             <template v-else>
                                 <div class="treasure-emblem" aria-hidden="true">+</div>
@@ -322,11 +323,11 @@ const addAllPoints = type => {
             <div class="treasure-header"><span>宝物{{ treasureSpec ? ` · ${treasureSpec.name}` : '' }}</span><button type="button" @click="showTreasure = false" aria-label="关闭">×</button></div>
             <div v-if="!treasureDraft" class="treasure-choices">
                 <button v-for="(spec, id) in treasureSpecs" :key="id" type="button" @click="chooseTreasure(id)">
-                    <div class="treasure-art"><img :src="`/stzboptm/assets/treasure/${id}.png`" :alt="spec.name"><span v-if="id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div><span>{{ spec.name }}</span>
+                    <div class="treasure-art"><img :src="treasureImageUrl(id)" :alt="spec.name"><span v-if="id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div><span>{{ spec.name }}</span>
                 </button>
             </div>
             <div v-else class="treasure-body">
-                <div class="treasure-card"><img :src="`/stzboptm/assets/treasure/${treasureDraft.id}.png`" :alt="`${treasureSpec.name}宝物卡`"><span v-if="treasureDraft.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div>
+                <div class="treasure-card"><img :src="treasureImageUrl(treasureDraft.id)" :alt="`${treasureSpec.name}宝物卡`"><span v-if="treasureDraft.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div>
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
@@ -1619,15 +1620,15 @@ const addAllPoints = type => {
     cursor: pointer;
 }
 .team-config-warp .treasure-slot:focus-visible { outline: 2px solid #e8ce82; outline-offset: -3px; }
-.team-config-warp .equipped-treasure { width: 100%; height: 100%; object-fit: fill; }
+.team-config-warp .equipped-treasure { width: 100%; height: 100%; object-fit: contain; background: #171819; }
 .treasure-dialog { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: #000b; box-sizing: border-box; color: #eee9d9; }
 .treasure-panel { width: min(960px, 100%); max-height: 94dvh; overflow: auto; background: linear-gradient(145deg, #3d4045, #25272a); border: 2px solid #968562; box-shadow: 0 15px 50px #000b; }
 .treasure-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #796e5c; color: #ead6a0; font-size: 24px; }
 .treasure-header button { border: 0; background: none; color: inherit; font-size: 32px; cursor: pointer; }
 .treasure-choices { display: flex; flex-wrap: wrap; gap: 18px; padding: 24px; }
-.treasure-choices button { width: 170px; padding: 0; border: 2px solid #9f8b65; background: #252323; color: #ead6a0; cursor: pointer; font-size: 18px; }
+.treasure-choices button { width: 136px; padding: 0; border: 2px solid #9f8b65; background: #252323; color: #ead6a0; cursor: pointer; font-size: 18px; }
 .treasure-choices button:hover, .treasure-choices button:focus-visible { border-color: #f2d591; }
-.treasure-choices img { display: block; width: 100%; aspect-ratio: .68; object-fit: fill; }
+.treasure-choices img { display: block; width: 100%; height: auto; aspect-ratio: 405 / 915; object-fit: contain; }
 .treasure-choices span { display: block; padding: 7px; }
 .treasure-art { position: relative; }
 .treasure-art-label, .treasure-choices .treasure-art-label { position: absolute; bottom: 0; left: 0; right: 0; height: 9%; display: flex; align-items: center; justify-content: center; padding: 0; background: linear-gradient(#2b1818, #261416); color: #efdc9d; font-family: "FZLBJW_B", serif; font-size: clamp(10px, 1.5vw, 22px); white-space: nowrap; pointer-events: none; }
