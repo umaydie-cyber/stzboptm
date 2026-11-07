@@ -786,7 +786,7 @@ export const __SKILLS__ = [
                         if (!target.isConfusion()) {
                             target.State.confusion = {
                                 rounds: 2,
-                                from: this
+                                from: { hero: self, skill: this }
                             }
                             self.Manger.Record.pushRecord(target, `陷入混乱2回合`, 1);
                         } else {
