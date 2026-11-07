@@ -110,6 +110,14 @@ const weizhisan_gongForgeOptions = [
     wuhaoForgeOptions[0], yuanrongForgeOptions[1], wuhaoForgeOptions[2],
     tongsuForgeOptions[1], tongsuForgeOptions[0], wuhaoForgeOptions[5]
 ];
+const xinghanForgeOptions = [
+    { id: 'jishi', name: '济世', min: 5, max: 15, desc: '主战法每次造成恢复后，目标下一次受到的伤害降低（可叠加）' },
+    tongsuForgeOptions[5],
+    { id: 'buqu', name: '不屈', min: 3, max: 9, desc: '每次受到伤害后，本回合后续受到的所有伤害降低（可叠加）' },
+    louyingForgeOptions[3],
+    { id: 'weishi', name: '威势', min: 10, max: 20, desc: '受到统帅值低于自身的武将造成的所有伤害降低' },
+    tianwenForgeOptions[1]
+];
 const treasureSpecs = {
     tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
         fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
@@ -132,7 +140,9 @@ const treasureSpecs = {
     jinjiu: { name: '金鸠', first: 'podi', second: 'kangli', firstName: '破敌', secondName: '亢厉', fixedName: '鸠佑',
         fixedDesc: '自身主动类武将主战法每发动一次，之后造成的攻击伤害提高 6%，可叠加', forgeOptions: jinjiuForgeOptions },
     weizhisan_gong: { name: '位至三公', first: 'wengu', second: 'yanshi', firstName: '稳固', secondName: '炎势', fixedName: '燮理',
-        fixedDesc: '正式回合后，自身施加的燃烧效果每回合首次造成伤害后，自身恢复一次兵力（恢复率 120%）', forgeOptions: weizhisan_gongForgeOptions }
+        fixedDesc: '正式回合后，自身施加的燃烧效果每回合首次造成伤害后，自身恢复一次兵力（恢复率 120%）', forgeOptions: weizhisan_gongForgeOptions },
+    xinghan: { name: '星汉', first: 'wengu', second: 'buyi', firstName: '稳固', secondName: '不移', fixedName: '归心',
+        fixedDesc: '我军全体每发动 2 次主动战法，自身恢复一次兵力（恢复率 150%）', forgeOptions: xinghanForgeOptions }
 };
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
 const treasureImageUrl = id => `/stzboptm/assets/treasure/${id}.png${id === 'fenran' ? '?v=2' : ''}`;
@@ -369,8 +379,8 @@ const addAllPoints = type => {
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'weizhisan_gong' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jinjiu' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'shanjun' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : treasureDraft.id === 'louying' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'tianwen' ? `受到攻击伤害 -${treasureDraft.buyi}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
-                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'weizhisan_gong' ? `火攻、燃烧伤害 +${treasureDraft.yanshi}%` : treasureDraft.id === 'jinjiu' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'shanjun' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'louying' ? `攻击、谋略 +${treasureDraft.yingcai}` : treasureDraft.id === 'tianwen' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'xinghan' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'weizhisan_gong' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jinjiu' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'shanjun' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : treasureDraft.id === 'louying' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'tianwen' ? `受到攻击伤害 -${treasureDraft.buyi}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'xinghan' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'weizhisan_gong' ? `火攻、燃烧伤害 +${treasureDraft.yanshi}%` : treasureDraft.id === 'jinjiu' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'shanjun' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'louying' ? `攻击、谋略 +${treasureDraft.yingcai}` : treasureDraft.id === 'tianwen' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">
@@ -1668,12 +1678,15 @@ const addAllPoints = type => {
 .treasure-choices button { width: 136px; padding: 0; border: 2px solid #9f8b65; background: #252323; color: #ead6a0; cursor: pointer; font-size: 18px; }
 .treasure-choices button:hover, .treasure-choices button:focus-visible { border-color: #f2d591; }
 .treasure-choices img { display: block; width: 100%; height: auto; aspect-ratio: 405 / 915; object-fit: contain; }
+.treasure-choices img[src*="xinghan"] { object-fit: cover; object-position: left center; }
 .treasure-choices span { display: block; padding: 7px; }
 .treasure-art { position: relative; }
 .treasure-art-label, .treasure-choices .treasure-art-label { position: absolute; bottom: 0; left: 0; right: 0; height: 9%; display: flex; align-items: center; justify-content: center; padding: 0; background: linear-gradient(#2b1818, #261416); color: #efdc9d; font-family: "FZLBJW_B", serif; font-size: clamp(10px, 1.5vw, 22px); white-space: nowrap; pointer-events: none; }
 .treasure-body { display: flex; gap: 24px; padding: 20px; }
 .treasure-card { position: relative; width: 230px; max-width: 30%; align-self: flex-start; }
 .treasure-card img { display: block; width: 100%; object-fit: contain; }
+.treasure-card img[src*="xinghan"] { aspect-ratio: 405 / 915; object-fit: cover; object-position: left center; }
+.team-config-warp .equipped-treasure[src*="xinghan"] { width: 65%; object-fit: cover; object-position: left center; background: #171819; }
 .treasure-settings { flex: 1; min-width: 0; }
 .treasure-settings h3 { margin: 8px 0 12px; color: #ead6a0; border-bottom: 1px solid #777; font-size: 20px; }
 .treasure-settings p { margin: 8px 0; color: #60d8aa; }
