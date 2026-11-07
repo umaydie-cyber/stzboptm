@@ -17,7 +17,9 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     let basicDamage = attacker.Attrs.atk * getRandNum() * (DamageRate / 100) * damageAddition;
     //主要伤害
     let targetDef = target.Attrs.def;
-    if (attacker.Treasure?.id === 'shanjun') {
+    if (attacker.Treasure?.id === 'jinjiu') {
+        targetDef *= 1 - Math.min(100, attacker.Treasure.podi) / 100;
+    } else if (attacker.Treasure?.id === 'shanjun') {
         const ignore = attacker.Treasure.podi * 1.5 + (attacker.Treasure.forge === 'podi' ? attacker.Treasure.forgeValue : 0);
         targetDef *= 1 - Math.min(100, ignore) / 100;
     } else if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
@@ -207,6 +209,22 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (attacker.Treasure.forge === 'wuwei') special('山君·无畏', attacker.Treasure.forgeValue);
         if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
             special('山君·蓄锐', attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
+        }
+    }
+    if (attacker.Treasure?.id === 'jinjiu') {
+        if (skill?.type === 2) special('金鸠·亢厉', attacker.Treasure.kangli);
+        if ([1, 3].includes(type) && attacker.Storage.jinjiuYouyouStacks) {
+            special('金鸠·鸠佑', attacker.Storage.jinjiuYouyouStacks * 6);
+        }
+        if (skill?.id === attacker.Skill && [2, 3].includes(skill.type) && attacker.Treasure.forge === 'kangli') {
+            special('金鸠·锻造亢厉', attacker.Treasure.forgeValue);
+        }
+        if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('金鸠·至策', attacker.Treasure.forgeValue);
+        if (attacker.Treasure.forge === 'jixu' && attacker.Manger.Round >= 1) {
+            const continuous = Object.values(target.State.continuousDamage || {}).filter(effect => effect.expiresRound >= attacker.Manger.Round).length;
+            const controls = ['confusion', 'rage', 'attackLimit', 'activeLimit']
+                .filter(name => target.State[name]?.rounds > 0).length;
+            if (continuous + controls) special('金鸠·击虚', (continuous + controls) * attacker.Treasure.forgeValue);
         }
     }
     if (target.Treasure?.id === 'fenran') special('奋髯·不移', -target.Treasure.buyi, target);

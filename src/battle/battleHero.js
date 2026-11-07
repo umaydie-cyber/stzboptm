@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -345,7 +345,7 @@ export class BattleHero {
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         if (this.Treasure?.id === 'shanjun') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.xiaorui / 100));
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
@@ -433,7 +433,7 @@ export class BattleHero {
         if (skill.id !== this.Skill) return 0;
         if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
         if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' && skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
-        if (this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' &&
+        if (['wuhao', 'jinjiu'].includes(this.Treasure?.id) && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' &&
             /策略攻击|策略伤害|火攻|燃烧|恐慌|妖术/.test(skill.desc || '')) return this.Treasure.forgeValue;
@@ -441,6 +441,14 @@ export class BattleHero {
         if (this.Treasure?.forge === 'yingyong') return this.Treasure.forgeValue;
         if (this.Treasure?.forge === 'shanmou' && [4, 6].includes(this.Manger.Round)) return this.Treasure.forgeValue;
         return 0;
+    }
+    registerJinjiuMainActivation(skill) {
+        if (this.Treasure?.id !== 'jinjiu' || skill?.id !== this.Skill || skill.type !== 2) return;
+        // 准备阶段尚未真正发动；仅在实际结算后叠加一次。
+        if (this.IN_READY_SKILL.some(entry => entry?.from === skill)) return;
+        this.Storage.jinjiuYouyouStacks = (this.Storage.jinjiuYouyouStacks || 0) + 1;
+        this.Manger.Record.pushRecord(this,
+            `的【金鸠·鸠佑】主战法发动${this.Storage.jinjiuYouyouStacks}次，之后造成的攻击伤害提高${this.Storage.jinjiuYouyouStacks * 6}%`, 1);
     }
     //执行主动技能
     callActiveSkill() {
@@ -462,6 +470,7 @@ export class BattleHero {
                         const rateTreasureName = this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' ? '游飘·筹算'
                             : this.Treasure?.id === 'xushibishou' && this.Treasure.forge === 'chousuan' ? '徐氏匕首·筹算'
                             : this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' ? '乌号·熟虑'
+                            : this.Treasure?.id === 'jinjiu' && this.Treasure.forge === 'shulv' ? '金鸠·熟虑'
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' ? '天问·机敏'
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' ? '天问·熟虑' : '';
                         const rateDetail = rateTreasureName && treasureBonus
@@ -482,7 +491,10 @@ export class BattleHero {
                             }
                         }
                         if (ret !== true) this.Manger.Record.pushRecord(this, `的【${skill.name}】未发动`);
-                        else if (this.canAddReadySkill(skill)) this.callHook("战法成功发动后", skill);
+                        else if (this.canAddReadySkill(skill)) {
+                            this.callHook("战法成功发动后", skill);
+                            this.registerJinjiuMainActivation(skill);
+                        }
                     } else {
                         this.subReadySkillRound(skill);
                     }
@@ -1691,6 +1703,7 @@ export class BattleHero {
                     e.func();
                     delete this.IN_READY_SKILL[i];
                     this.callHook('战法成功发动后', skill);
+                    this.registerJinjiuMainActivation(skill);
                 }
             }
         });
