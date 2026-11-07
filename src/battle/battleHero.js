@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -345,6 +345,7 @@ export class BattleHero {
         })
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         if (this.Treasure?.id === 'weizhisan_gong') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
+        if (this.Treasure?.id === 'canghai') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 2.5);
         if (this.Treasure?.id === 'xinghan') this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.wengu / 100));
         if (this.Treasure?.id === 'shanjun') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.xiaorui / 100));
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
@@ -906,15 +907,20 @@ export class BattleHero {
         const reduceThisHit = jianzu && getRandomBool(reductionRate);
         const jishiCharges = this.Storage.xinghanJishiCharges || [];
         const jishiReduction = jishiCharges.reduce((sum, charge) => sum + charge.value, 0);
+        const jishiReductions = Object.entries(jishiCharges.reduce((groups, charge) => {
+            const name = charge.source?.Treasure?.id === 'canghai' ? '沧海·济世' : '星汉·济世';
+            groups[name] = (groups[name] || 0) + charge.value;
+            return groups;
+        }, {})).map(([name, value]) => ({ name, value }));
         const buquStacks = this.Storage.xinghanBuquRound === this.Manger.Round
             ? this.Storage.xinghanBuquStacks || 0 : 0;
-        const buquReduction = this.Treasure?.id === 'xinghan' && this.Treasure.forge === 'buqu'
+        const buquReduction = ['xinghan', 'canghai'].includes(this.Treasure?.id) && this.Treasure.forge === 'buqu'
             ? buquStacks * this.Treasure.forgeValue : 0;
-        const weishiReduction = this.Treasure?.id === 'xinghan' && this.Treasure.forge === 'weishi' &&
+        const weishiReduction = ['xinghan', 'canghai'].includes(this.Treasure?.id) && this.Treasure.forge === 'weishi' &&
             attacker.Cost < this.Cost ? this.Treasure.forgeValue : 0;
         const xinghanDynamicReduction = jishiReduction + buquReduction + weishiReduction;
         const resolvedInfo = { ...damageInfo, ...(reduceThisHit ? { jianzuReduction: true } : {}),
-            xinghanJishiReduction: jishiReduction, xinghanBuquReduction: buquReduction,
+            treasureJishiReductions: jishiReductions, xinghanBuquReduction: buquReduction,
             xinghanWeishiReduction: weishiReduction };
         const qiqinActive = attacker.Storage.qiqinAllDamageSub?.round === this.Manger.Round;
         const qiqinInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '七擒七纵');
@@ -977,13 +983,20 @@ export class BattleHero {
         this.Manger.addStat(attacker, skill, realDamage, 0);
         const jishiUsed = realDamage > 0 ? jishiCharges.length : 0;
         let buquNewStacks = 0;
+        let canghaiNewStacks = 0;
         if (realDamage > 0) {
             if (jishiCharges.length) {
                 this.Storage.xinghanJishiCharges = [];
             }
-            if (this.Treasure?.id === 'xinghan' && this.Treasure.forge === 'buqu' && this.Manger.Round >= 1) {
+            if (['xinghan', 'canghai'].includes(this.Treasure?.id) && this.Treasure.forge === 'buqu' && this.Manger.Round >= 1) {
                 this.Storage.xinghanBuquRound = this.Manger.Round;
                 buquNewStacks = this.Storage.xinghanBuquStacks = buquStacks + 1;
+            }
+            if (this.Treasure?.id === 'canghai' && this.Manger.Round >= 1) {
+                const oldStacks = this.Storage.canghaiPolangRound === this.Manger.Round ? this.Storage.canghaiPolangStacks || 0 : 0;
+                this.Storage.canghaiPolangRound = this.Manger.Round;
+                this.Storage.canghaiPolangStacks = Math.min(10, oldStacks + 1);
+                if (oldStacks < 10) canghaiNewStacks = this.Storage.canghaiPolangStacks;
             }
         }
         if (realDamage > 0 && resolvedInfo.yuanrongXuanfengApplied) {
@@ -1005,9 +1018,12 @@ export class BattleHero {
             const modifiers = resolvedInfo.damageModifiers || (getDamageAddition(attacker, this, resolvedInfo, skill), resolvedInfo.damageModifiers);
             this.Manger.Record.Records.at(-1).damageModifiers = modifiers;
         }
-        if (jishiUsed) this.Manger.Record.pushRecord(this, `的【星汉·济世】${jishiUsed}层减伤已用于本次伤害`, 1);
+        if (jishiUsed) this.Manger.Record.pushRecord(this,
+            `的【${jishiReductions.map(entry => entry.name).join('、')}】${jishiUsed}层减伤已用于本次伤害`, 1);
         if (buquNewStacks) this.Manger.Record.pushRecord(this,
-            `的【星汉·不屈】本回合叠加至${buquNewStacks}层，后续受到的所有伤害降低${buquNewStacks * this.Treasure.forgeValue}%`, 1);
+            `的【${this.Treasure.id === 'canghai' ? '沧海' : '星汉'}·不屈】本回合叠加至${buquNewStacks}层，后续受到的所有伤害降低${buquNewStacks * this.Treasure.forgeValue}%`, 1);
+        if (canghaiNewStacks) this.Manger.Record.pushRecord(this,
+            `的【沧海·破浪】本回合叠加至${canghaiNewStacks}/10层，造成的所有伤害提高${canghaiNewStacks * 10}%`, 1);
         if (this.Posname == '大营' && this.Arms <= 0) this.Manger.Over = true;
         attacker.callHook("攻击后", attacker, this);
         attacker.registerLouyingDamage(this, damageInfo, realDamage);
@@ -1060,10 +1076,10 @@ export class BattleHero {
         if (source?.Treasure?.id === 'tianwen' && source.Treasure.forge === 'renxin') {
             recoveryBonuses.push({ name: '天问·仁心', value: source.Treasure.forgeValue });
         }
-        if (['louying', 'xinghan'].includes(this.Treasure?.id) && this.Treasure.forge === 'buxie') {
+        if (['louying', 'xinghan', 'canghai'].includes(this.Treasure?.id) && this.Treasure.forge === 'buxie') {
             const lost = Math.max(0, this.OriginAttrs.arms - this.Arms);
             const tiers = Math.floor(lost / (this.OriginAttrs.arms * 0.15) + 1e-9);
-            if (tiers > 0) recoveryBonuses.push({ name: `${this.Treasure.id === 'xinghan' ? '星汉' : '镂影'}·不懈（${tiers}层）`, value: tiers * this.Treasure.forgeValue });
+            if (tiers > 0) recoveryBonuses.push({ name: `${{ xinghan: '星汉', canghai: '沧海', louying: '镂影' }[this.Treasure.id]}·不懈（${tiers}层）`, value: tiers * this.Treasure.forgeValue });
         }
         if (recoverNum > 0 && this.HurtArms > 0 && recoveryBonuses.length) {
             const before = recoverNum;
@@ -1079,12 +1095,12 @@ export class BattleHero {
             this.HurtArms -= recoverNum;
         }
         this.Arms += recoverNum;
-        if (recoverNum > 0 && source?.Treasure?.id === 'xinghan' && source.Treasure.forge === 'jishi' &&
+        if (recoverNum > 0 && ['xinghan', 'canghai'].includes(source?.Treasure?.id) && source.Treasure.forge === 'jishi' &&
             source.Skills?.[source.Skill]?.name === name) {
             this.Storage.xinghanJishiCharges ||= [];
             this.Storage.xinghanJishiCharges.push({ source, value: source.Treasure.forgeValue });
             const total = this.Storage.xinghanJishiCharges.reduce((sum, charge) => sum + charge.value, 0);
-            this.Manger.Record.pushRecord(this, `的【星汉·济世】因【${name}】恢复获得${this.Storage.xinghanJishiCharges.length}层，下次受到伤害降低${total}%`, 1);
+            this.Manger.Record.pushRecord(this, `的【${source.Treasure.id === 'canghai' ? '沧海' : '星汉'}·济世】因【${name}】恢复获得${this.Storage.xinghanJishiCharges.length}层，下次受到伤害降低${total}%`, 1);
         }
         const skill = Object.values(source?.Skills || {}).find(e => e?.name === name);
         this.Manger.addStat(source, skill || { id: name, name }, 0, recoverNum);
