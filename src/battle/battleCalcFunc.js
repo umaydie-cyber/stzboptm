@@ -18,6 +18,7 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     //主要伤害
     let targetDef = target.Attrs.def;
     if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
+    if (attacker.Treasure?.id === 'xushibishou') targetDef *= 1 - attacker.Treasure.podi * 1.5 / 100;
     if (attacker.Treasure?.id === 'fenran' && attacker.Treasure.forge === 'cangfeng' &&
         attacker.Storage.fenranCangfengCurrentAttack && damageInfo.isBasicAttack) {
         targetDef *= 1 - attacker.Treasure.forgeValue / 100;
@@ -215,6 +216,10 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
                 .filter(name => target.State[name]?.rounds > 0).length;
             if (continuous + controls) special('乌号·击虚', (continuous + controls) * attacker.Treasure.forgeValue);
         }
+    }
+    if (attacker.Treasure?.id === 'xushibishou' && attacker.Treasure.forge === 'kangli' &&
+        skill?.id === attacker.Skill && [2, 3].includes(skill.type)) {
+        special('徐氏匕首·亢厉', attacker.Treasure.forgeValue);
     }
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);

@@ -233,7 +233,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -327,13 +327,18 @@ export class BattleHero {
         })
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao', 'wuhao'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.forgeValue);
         }
         if (this.Treasure?.id === 'wuhao') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
+        if (this.Treasure?.id === 'xushibishou') {
+            this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
+            this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * 1.05);
+            this.Attrs.int = keepTwoDecimal(this.Attrs.int * 1.05);
+        }
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -401,7 +406,7 @@ export class BattleHero {
         if (skill.id !== this.Skill) return 0;
         if (this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
-        if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' &&
+        if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' &&
             /策略攻击|策略伤害|火攻|燃烧|恐慌|妖术/.test(skill.desc || '')) return this.Treasure.forgeValue;
         if (!/造成.*攻击|发动.*攻击|攻击伤害/.test(skill.desc || '')) return 0;
         if (this.Treasure?.forge === 'yingyong') return this.Treasure.forgeValue;
@@ -426,6 +431,7 @@ export class BattleHero {
                         const treasureBonus = this.getTreasureMainRateBonus(skill);
                         const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
                         const rateTreasureName = this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' ? '游飘·筹算'
+                            : this.Treasure?.id === 'xushibishou' && this.Treasure.forge === 'chousuan' ? '徐氏匕首·筹算'
                             : this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' ? '乌号·熟虑' : '';
                         const rateDetail = rateTreasureName && treasureBonus
                             ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${rateTreasureName}+${treasureBonus}%）` : '';
@@ -458,9 +464,10 @@ export class BattleHero {
                 const treasureRate = this.Treasure?.id === 'yuanrong' && this.Treasure.forge === 'benxi'
                     ? this.Treasure.forgeValue : 0;
                 const mainBonus = this.getTreasureMainRateBonus(skill);
-                if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' && mainBonus) {
+                if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' && mainBonus) {
                     const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
-                    this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${this.getRealSkillRate(skill.rate) + mainBonus}%（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，游飘·筹算+${mainBonus}%）`, 1);
+                    const name = this.Treasure.id === 'youpiao' ? '游飘' : '徐氏匕首';
+                    this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${this.getRealSkillRate(skill.rate) + mainBonus}%（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${name}·筹算+${mainBonus}%）`, 1);
                 }
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate) + mainBonus + treasureRate)) {
                     const stacks = this.Storage.shiwuStacks || 0;
@@ -746,6 +753,11 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (attacker.Treasure?.id === 'xushibishou' && attacker.Treasure.forge === 'shipo' &&
+            this.Manger.Round >= 1 && this.Manger.Round <= attacker.Treasure.forgeValue &&
+            skill?.id === attacker.Skill && [2, 3].includes(skill.type)) {
+            damageInfo = { ...damageInfo, ignoreEvasion: true };
+        }
         if (attacker.Treasure?.id === 'fenran' && damageInfo.isBasicAttack) {
             getDamageAddition(attacker, this, damageInfo, skill);
             const bonus = damageInfo.damageModifiers.entries

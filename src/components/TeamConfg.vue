@@ -79,6 +79,11 @@ const wuhaoForgeOptions = [
     tongsuForgeOptions[1], tongsuForgeOptions[0],
     { id: 'jixu', name: '击虚', min: 3, max: 9, desc: '每种持续伤害或控制效果使目标受到的伤害提高' }
 ];
+const xushibishouForgeOptions = [
+    yuanrongForgeOptions[1], tongsuForgeOptions[0], youpiaoForgeOptions[5],
+    { id: 'shipo', name: '识破', min: 1, max: 4, unit: '回合', desc: '前几回合主战法伤害无视规避' },
+    wuhaoForgeOptions[2], tongsuForgeOptions[3]
+];
 const treasureSpecs = {
     tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
         fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
@@ -89,7 +94,9 @@ const treasureSpecs = {
     youpiao: { name: '游飘', first: 'xianzhi', second: 'miaosuan', firstName: '先知', secondName: '妙算', fixedName: '颖悟',
         fixedDesc: '造成的策略伤害无视目标 10% 谋略属性', forgeOptions: youpiaoForgeOptions },
     wuhao: { name: '乌号', first: 'lingdong', second: 'kangli', firstName: '灵动', secondName: '亢厉', fixedName: '逐胜',
-        fixedDesc: '对敌方当前兵力最低的武将造成伤害提高 15%；兵力相同者均生效', forgeOptions: wuhaoForgeOptions }
+        fixedDesc: '对敌方当前兵力最低的武将造成伤害提高 15%；兵力相同者均生效', forgeOptions: wuhaoForgeOptions },
+    xushibishou: { name: '徐氏匕首', first: 'lingdong', second: 'podi', firstName: '灵动', secondName: '破敌', fixedName: '英才',
+        fixedDesc: '攻击与谋略属性提高 5%', forgeOptions: xushibishouForgeOptions }
 };
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
 const forgeOptions = computed(() => treasureSpec.value?.forgeOptions || []);
@@ -299,6 +306,7 @@ const addAllPoints = type => {
                         <div class="treasure-slot" role="button" tabindex="0" :aria-label="hero.treasure ? `编辑${treasureSpecs[hero.treasure.id]?.name || '宝物'}` : '选择宝物'"
                             @click="openTreasure(index)" @keydown.enter="openTreasure(index)" @keydown.space.prevent="openTreasure(index)">
                             <img v-if="hero.treasure" :src="`/stzboptm/assets/treasure/${hero.treasure.id}.png`" :alt="treasureSpecs[hero.treasure.id]?.name" class="equipped-treasure">
+                            <span v-if="hero.treasure?.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span>
                             <template v-else>
                                 <div class="treasure-emblem" aria-hidden="true">+</div>
                                 <div class="treasure-label">可授予</div>
@@ -314,16 +322,16 @@ const addAllPoints = type => {
             <div class="treasure-header"><span>宝物{{ treasureSpec ? ` · ${treasureSpec.name}` : '' }}</span><button type="button" @click="showTreasure = false" aria-label="关闭">×</button></div>
             <div v-if="!treasureDraft" class="treasure-choices">
                 <button v-for="(spec, id) in treasureSpecs" :key="id" type="button" @click="chooseTreasure(id)">
-                    <img :src="`/stzboptm/assets/treasure/${id}.png`" :alt="spec.name"><span>{{ spec.name }}</span>
+                    <div class="treasure-art"><img :src="`/stzboptm/assets/treasure/${id}.png`" :alt="spec.name"><span v-if="id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div><span>{{ spec.name }}</span>
                 </button>
             </div>
             <div v-else class="treasure-body">
-                <img :src="`/stzboptm/assets/treasure/${treasureDraft.id}.png`" :alt="`${treasureSpec.name}宝物卡`" class="treasure-card">
+                <div class="treasure-card"><img :src="`/stzboptm/assets/treasure/${treasureDraft.id}.png`" :alt="`${treasureSpec.name}宝物卡`"><span v-if="treasureDraft.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div>
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : treasureDraft.id === 'wuhao' ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
-                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">
@@ -1621,8 +1629,11 @@ const addAllPoints = type => {
 .treasure-choices button:hover, .treasure-choices button:focus-visible { border-color: #f2d591; }
 .treasure-choices img { display: block; width: 100%; aspect-ratio: .68; object-fit: fill; }
 .treasure-choices span { display: block; padding: 7px; }
+.treasure-art { position: relative; }
+.treasure-art-label, .treasure-choices .treasure-art-label { position: absolute; bottom: 0; left: 0; right: 0; height: 9%; display: flex; align-items: center; justify-content: center; padding: 0; background: linear-gradient(#2b1818, #261416); color: #efdc9d; font-family: "FZLBJW_B", serif; font-size: clamp(10px, 1.5vw, 22px); white-space: nowrap; pointer-events: none; }
 .treasure-body { display: flex; gap: 24px; padding: 20px; }
-.treasure-card { width: 230px; max-width: 30%; object-fit: contain; align-self: flex-start; }
+.treasure-card { position: relative; width: 230px; max-width: 30%; align-self: flex-start; }
+.treasure-card img { display: block; width: 100%; object-fit: contain; }
 .treasure-settings { flex: 1; min-width: 0; }
 .treasure-settings h3 { margin: 8px 0 12px; color: #ead6a0; border-bottom: 1px solid #777; font-size: 20px; }
 .treasure-settings p { margin: 8px 0; color: #60d8aa; }
