@@ -629,8 +629,8 @@ export const __SKILLS__ = [
         limit: 4,
         rate: 50,
         study: false,
-        callskill: function (self) {
-            if (getRandomBool(this.rate)) {
+        callskill: function (self, currentRate) {
+            if (getRandomBool(currentRate)) {
                 self.Manger.Record.pushRecord(self, '发动【忠克猛烈】')
                 // 战法攻击效果
                 let target = self.getTarget(4, 1);
@@ -647,7 +647,7 @@ export const __SKILLS__ = [
                             skill: this
                         }
                     }
-                    self.Manger.Record.pushActionRecord(self, target[0], '的【忠克猛烈】使', '陷入犹豫1回合');
+                    self.Manger.Record.pushActionRecord(self, target[0], '的【忠克猛烈】使', `陷入犹豫${target[0].State.activeLimit.rounds}回合`);
                 } else {
                     self.Manger.Record.pushRecord(target[0], '已存在犹豫效果', 1);
                 }
@@ -1245,7 +1245,7 @@ export const __SKILLS__ = [
                     if (enemy.isActiveLimit()) return;
                     enemy.State.activeLimit = { rounds: 1, from: { hero: self, skill: this } };
                     hesitationApplied = true;
-                    self.Manger.Record.pushActionRecord(self, enemy, `的【${this.name}】使`, '陷入犹豫1回合', 1);
+                    self.Manger.Record.pushActionRecord(self, enemy, `的【${this.name}】使`, `陷入犹豫${enemy.State.activeLimit.rounds}回合`, 1);
                 });
                 if (hesitationApplied && ['司马懿', '司马师', '司马昭'].includes(self.Name)) {
                     self.revocer(calcRecover(self, 300, 0, 2), self, this.name);

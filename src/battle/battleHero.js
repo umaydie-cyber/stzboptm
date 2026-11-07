@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -253,6 +253,22 @@ export class BattleHero {
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) &&
                     value?.rounds > 0 && value.from?.hero?.BattleCamp !== undefined &&
                     this.tryQiqinDefense('控制', value.from.hero)) return true;
+                if (name === 'activeLimit' && value?.rounds > 0) {
+                    const source = value.from?.hero;
+                    const sourceSkillId = value.from?.skill?.id ?? value.from?.skill;
+                    const firstCast = source?.Storage.tianwenFirstMainCast;
+                    const preparedFirst = !!source && source.Storage.tianwenFirstMainPreparedSkillId === sourceSkillId &&
+                        (source.Storage.tianwenFirstMainPreparedResolutionRound == null ||
+                            source.Storage.tianwenFirstMainPreparedResolutionRound === source.Manger.Round);
+                    if (source?.Treasure?.id === 'tianwen' && sourceSkillId === source.Skill &&
+                        (firstCast?.id === sourceSkillId || preparedFirst || source.Storage.tianwenFirstMainCommandSkillId === sourceSkillId)) {
+                        if (firstCast) firstCast.applied = true;
+                        if (preparedFirst) source.Storage.tianwenFirstMainPreparedResolutionRound = source.Manger.Round;
+                        const extended = getRandomBool(40);
+                        if (extended) value.rounds += 1;
+                        source.Manger.Record.pushRecord(source, `的【天问·观星】首次主战法犹豫延长判定（40%）：${extended ? `成功，持续${value.rounds}回合` : '未触发'}`, 1);
+                    }
+                }
                 states[name] = value;
                 return true;
             }
@@ -328,7 +344,7 @@ export class BattleHero {
         })
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
@@ -344,6 +360,7 @@ export class BattleHero {
             this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.yingcai);
             this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.yingcai);
         }
+        if (this.Treasure?.id === 'tianwen') this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.tianzi * 2.5);
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -403,12 +420,18 @@ export class BattleHero {
             if (!e) return;
             let skill = this.Skills[e];
             if (skill.type == 1) {
+                if (this.Treasure?.id === 'tianwen' && e === this.Skill && !this.Storage.tianwenFirstMainUsed) {
+                    this.Storage.tianwenFirstMainUsed = true;
+                    this.Storage.tianwenFirstMainCommandSkillId = skill.id;
+                }
                 skill.callskill(this);
             }
         });
     }
     getTreasureMainRateBonus(skill) {
         if (skill.id !== this.Skill) return 0;
+        if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
+        if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' && skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' &&
@@ -437,12 +460,26 @@ export class BattleHero {
                         const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
                         const rateTreasureName = this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'chousuan' ? '游飘·筹算'
                             : this.Treasure?.id === 'xushibishou' && this.Treasure.forge === 'chousuan' ? '徐氏匕首·筹算'
-                            : this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' ? '乌号·熟虑' : '';
+                            : this.Treasure?.id === 'wuhao' && this.Treasure.forge === 'shulv' ? '乌号·熟虑'
+                            : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' ? '天问·机敏'
+                            : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' ? '天问·熟虑' : '';
                         const rateDetail = rateTreasureName && treasureBonus
                             ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${rateTreasureName}+${treasureBonus}%）` : '';
                         this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${currentRate}%${rateDetail}`)
                         this.Storage.weiyuBuff?.strategyDamageSkills?.delete(skill);
-                        let ret = skill.callskill(this, currentRate);
+                        const firstMainCast = this.Treasure?.id === 'tianwen' && e === this.Skill && !this.Storage.tianwenFirstMainUsed
+                            ? { id: skill.id, applied: false } : null;
+                        if (firstMainCast) this.Storage.tianwenFirstMainCast = firstMainCast;
+                        let ret;
+                        try {
+                            ret = skill.callskill(this, currentRate);
+                        } finally {
+                            if (firstMainCast) {
+                                if (ret === true || firstMainCast.applied) this.Storage.tianwenFirstMainUsed = true;
+                                if (ret === true && skill.ready) this.Storage.tianwenFirstMainPreparedSkillId = skill.id;
+                                delete this.Storage.tianwenFirstMainCast;
+                            }
+                        }
                         if (ret !== true) this.Manger.Record.pushRecord(this, `的【${skill.name}】未发动`);
                         else if (this.canAddReadySkill(skill)) this.callHook("战法成功发动后", skill);
                     } else {
@@ -469,10 +506,11 @@ export class BattleHero {
                 const treasureRate = this.Treasure?.id === 'yuanrong' && this.Treasure.forge === 'benxi'
                     ? this.Treasure.forgeValue : 0;
                 const mainBonus = this.getTreasureMainRateBonus(skill);
-                if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' && mainBonus) {
+                if ((['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' ||
+                    this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin') && mainBonus) {
                     const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
-                    const name = this.Treasure.id === 'youpiao' ? '游飘' : '徐氏匕首';
-                    this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${this.getRealSkillRate(skill.rate) + mainBonus}%（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${name}·筹算+${mainBonus}%）`, 1);
+                    const name = { youpiao: '游飘·筹算', xushibishou: '徐氏匕首·筹算', tianwen: '天问·机敏' }[this.Treasure.id];
+                    this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${this.getRealSkillRate(skill.rate) + mainBonus}%（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${name}+${mainBonus}%）`, 1);
                 }
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(this.getRealSkillRate(skill.rate) + mainBonus + treasureRate)) {
                     const stacks = this.Storage.shiwuStacks || 0;
@@ -484,7 +522,17 @@ export class BattleHero {
                         const burst = this.Treasure?.id === 'yuanrong' && e === this.Skill &&
                             !this.Storage.yuanrongBurstUsed;
                         if (burst) this.Storage.yuanrongBurstUsed = true;
-                        skill.callskill(this, target);
+                        const firstMainCast = this.Treasure?.id === 'tianwen' && e === this.Skill && !this.Storage.tianwenFirstMainUsed
+                            ? { id: skill.id, applied: false } : null;
+                        if (firstMainCast) this.Storage.tianwenFirstMainCast = firstMainCast;
+                        try {
+                            skill.callskill(this, target);
+                        } finally {
+                            if (firstMainCast) {
+                                this.Storage.tianwenFirstMainUsed = true;
+                                delete this.Storage.tianwenFirstMainCast;
+                            }
+                        }
                         if (burst && !this.Manger.Over && this.Arms > 0) {
                             const enemies = this.BattleCamp === 'blue' ? this.Manger.RedTeam.hero : this.Manger.BlueTeam.hero;
                             const eligible = enemies.filter(hero => hero !== target && hero.Arms > 0 &&
@@ -950,6 +998,9 @@ export class BattleHero {
         const recoveryBonuses = Object.values(this.Storage.recoveryBonuses || {})
             .filter(bonus => Number.isFinite(bonus?.value) && bonus.value > 0)
             .map(bonus => ({ name: bonus.name || '恢复加成', value: bonus.value }));
+        if (source?.Treasure?.id === 'tianwen' && source.Treasure.forge === 'renxin') {
+            recoveryBonuses.push({ name: '天问·仁心', value: source.Treasure.forgeValue });
+        }
         if (this.Treasure?.id === 'louying' && this.Treasure.forge === 'buxie') {
             const lost = Math.max(0, this.OriginAttrs.arms - this.Arms);
             const tiers = Math.floor(lost / (this.OriginAttrs.arms * 0.15) + 1e-9);

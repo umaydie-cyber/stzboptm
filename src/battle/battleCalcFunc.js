@@ -179,6 +179,13 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         special('镂影·坚忍', -target.Treasure.jianren, target);
         if (target.Treasure.forge === 'jianren') special('镂影·锻造坚忍', -target.Treasure.forgeValue, target);
     }
+    if (target.Treasure?.id === 'tianwen') {
+        if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
+        if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
+            special('天问·戒备', -target.Treasure.forgeValue, target);
+        }
+        if (skill?.type === 2 && target.Treasure.forge === 'jianren') special('天问·坚忍', -target.Treasure.forgeValue, target);
+    }
     if (attacker.Treasure?.id === 'yuanrong') {
         // 分兵的 damageInfo.isBasicAttack 为 true，因此也享受陷阵的普通攻击增伤。
         if (type === 1 && damageInfo.isBasicAttack) special('元戎·陷阵', attacker.Treasure.xianzhen);
