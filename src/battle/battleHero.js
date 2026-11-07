@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -261,12 +261,12 @@ export class BattleHero {
                         value.rounds += 1;
                         source.Manger.Record.pushRecord(source, `的【龙鳞·慎心】使主战法施加的控制效果额外持续1回合（共${value.rounds}回合）`, 1);
                     }
-                    if (source?.Treasure?.id === 'qianjun' && source.Treasure.forge === 'huoyan' &&
+                    if (['qianjun', 'dalu'].includes(source?.Treasure?.id) && source.Treasure.forge === 'huoyan' &&
                         source.Manger.Round >= 1 && sourceSkillId === source.Skill &&
                         (source.Storage.qianjunHuoyanCount || 0) < source.Treasure.forgeValue) {
                         source.Storage.qianjunHuoyanCount = (source.Storage.qianjunHuoyanCount || 0) + 1;
                         value.rounds += 1;
-                        source.Manger.Record.pushRecord(source, `的【千钧·惑言】第${source.Storage.qianjunHuoyanCount}个主战法控制效果额外持续1回合（共${value.rounds}回合）`, 1);
+                        source.Manger.Record.pushRecord(source, `的【${source.Treasure.id === 'dalu' ? '大橹' : '千钧'}·惑言】第${source.Storage.qianjunHuoyanCount}个主战法控制效果额外持续1回合（共${value.rounds}回合）`, 1);
                     }
                 }
                 if (name === 'activeLimit' && value?.rounds > 0) {
@@ -365,8 +365,11 @@ export class BattleHero {
         if (this.Treasure?.id === 'qianjun') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'canghai') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 2.5);
         if (this.Treasure?.id === 'xinghan') this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.wengu / 100));
-        if (this.Treasure?.id === 'qianjun' && this.Treasure.forge === 'wengu') {
+        if (['qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'wengu') {
             this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.forgeValue / 100));
+        }
+        if (this.Treasure?.id === 'dalu' && this.Treasure.forge === 'genzhi') {
+            this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.forgeValue);
         }
         if (this.Treasure?.id === 'shanjun') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.xiaorui / 100));
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
@@ -472,7 +475,7 @@ export class BattleHero {
     }
     getTreasureMainRateBonus(skill) {
         if (skill.id !== this.Skill) return 0;
-        if (['tianwen', 'qianjun'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
+        if (['tianwen', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
         if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' && skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (['wuhao', 'jinjiu', 'weizhisan_gong', 'tengshe', 'jushu'].includes(this.Treasure?.id) && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
@@ -517,6 +520,7 @@ export class BattleHero {
                             : this.Treasure?.id === 'jushu' && this.Treasure.forge === 'shulv' ? '钜黍·熟虑'
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' ? '天问·机敏'
                             : this.Treasure?.id === 'qianjun' && this.Treasure.forge === 'jimin' ? '千钧·机敏'
+                            : this.Treasure?.id === 'dalu' && this.Treasure.forge === 'jimin' ? '大橹·机敏'
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' ? '天问·熟虑' : '';
                         const rateDetail = rateTreasureName && treasureBonus
                             ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${rateTreasureName}+${treasureBonus}%）` : '';
@@ -572,9 +576,9 @@ export class BattleHero {
                     this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${moraleRate + mainBonus + treasureRate}%（基础${skill.rate}%，山君·虎啸+${huxiaoBase}%受士气修正后增加${moraleRate - normalRate}%，士气总修正${moraleRate - skill.rate - huxiaoBase >= 0 ? '+' : ''}${moraleRate - skill.rate - huxiaoBase}%${treasureRate ? `，山君·奔袭+${treasureRate}%` : ''}）`, 1);
                 }
                 if ((['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' ||
-                    ['tianwen', 'qianjun'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin') && mainBonus) {
+                    ['tianwen', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin') && mainBonus) {
                     const moraleBonus = this.getRealSkillRate(skill.rate) - skill.rate;
-                    const name = { youpiao: '游飘·筹算', xushibishou: '徐氏匕首·筹算', tianwen: '天问·机敏', qianjun: '千钧·机敏' }[this.Treasure.id];
+                    const name = { youpiao: '游飘·筹算', xushibishou: '徐氏匕首·筹算', tianwen: '天问·机敏', qianjun: '千钧·机敏', dalu: '大橹·机敏' }[this.Treasure.id];
                     this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${this.getRealSkillRate(skill.rate) + mainBonus}%（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${name}+${mainBonus}%）`, 1);
                 }
                 if ((target.Arms != 0 || skill.randomTargets) && getRandomBool(moraleRate + mainBonus + treasureRate)) {
@@ -719,6 +723,7 @@ export class BattleHero {
     }
 
     callAttack() {
+        if (this.Treasure?.id === 'dalu' && this.Treasure.forge === 'genzhi') return;
         if (this.Storage.cijianDisabled) return;
         if (this.Treasure?.id === 'shenfeng' && this.Manger.Round === 1) return;
         if (this.Treasure?.id === 'shenfeng' && this.Manger.Round >= 2 && !this.Storage.shenfengVolleyUsed) {
@@ -959,6 +964,11 @@ export class BattleHero {
             this.Manger.Record.pushRecord(this, '规避了本次伤害', 1);
             return;
         }
+        if (this.Storage.daluEvadeNextDamage && !damageInfo.ignoreEvasion) {
+            this.Storage.daluEvadeNextDamage = false;
+            this.Manger.Record.pushRecord(this, '的【大橹·避险】规避了本次伤害', 1);
+            return;
+        }
         // 健卒不殆每次受伤独立判定；士气使用受伤者当前值。
         const jianzu = this.Storage.jianzuBudai;
         const reductionRate = jianzu ? this.getRealSkillRate(50) : 0;
@@ -966,15 +976,15 @@ export class BattleHero {
         const jishiCharges = this.Storage.xinghanJishiCharges || [];
         const jishiReduction = jishiCharges.reduce((sum, charge) => sum + charge.value, 0);
         const jishiReductions = Object.entries(jishiCharges.reduce((groups, charge) => {
-            const name = { canghai: '沧海', qianjun: '千钧' }[charge.source?.Treasure?.id] || '星汉';
+            const name = { canghai: '沧海', qianjun: '千钧', dalu: '大橹' }[charge.source?.Treasure?.id] || '星汉';
             groups[`${name}·济世`] = (groups[`${name}·济世`] || 0) + charge.value;
             return groups;
         }, {})).map(([name, value]) => ({ name, value }));
         const buquStacks = this.Storage.xinghanBuquRound === this.Manger.Round
             ? this.Storage.xinghanBuquStacks || 0 : 0;
-        const buquReduction = ['xinghan', 'canghai', 'qianjun'].includes(this.Treasure?.id) && this.Treasure.forge === 'buqu'
+        const buquReduction = ['xinghan', 'canghai', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'buqu'
             ? buquStacks * this.Treasure.forgeValue : 0;
-        const weishiReduction = ['xinghan', 'canghai', 'qianjun'].includes(this.Treasure?.id) && this.Treasure.forge === 'weishi' &&
+        const weishiReduction = ['xinghan', 'canghai', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'weishi' &&
             attacker.Cost < this.Cost ? this.Treasure.forgeValue : 0;
         const xinghanDynamicReduction = jishiReduction + buquReduction + weishiReduction;
         const resolvedInfo = { ...damageInfo, ...(reduceThisHit ? { jianzuReduction: true } : {}),
@@ -1042,11 +1052,12 @@ export class BattleHero {
         const jishiUsed = realDamage > 0 ? jishiCharges.length : 0;
         let buquNewStacks = 0;
         let canghaiNewStacks = 0;
+        let daluNewEvasion = false;
         if (realDamage > 0) {
             if (jishiCharges.length) {
                 this.Storage.xinghanJishiCharges = [];
             }
-            if (['xinghan', 'canghai', 'qianjun'].includes(this.Treasure?.id) && this.Treasure.forge === 'buqu' && this.Manger.Round >= 1) {
+            if (['xinghan', 'canghai', 'qianjun', 'dalu'].includes(this.Treasure?.id) && this.Treasure.forge === 'buqu' && this.Manger.Round >= 1) {
                 this.Storage.xinghanBuquRound = this.Manger.Round;
                 buquNewStacks = this.Storage.xinghanBuquStacks = buquStacks + 1;
             }
@@ -1055,6 +1066,11 @@ export class BattleHero {
                 this.Storage.canghaiPolangRound = this.Manger.Round;
                 this.Storage.canghaiPolangStacks = Math.min(10, oldStacks + 1);
                 if (oldStacks < 10) canghaiNewStacks = this.Storage.canghaiPolangStacks;
+            }
+            if (this.Treasure?.id === 'dalu' && !this.Storage.daluFirstDamageTaken) {
+                this.Storage.daluFirstDamageTaken = true;
+                this.Storage.daluEvadeNextDamage = true;
+                daluNewEvasion = true;
             }
         }
         if (realDamage > 0 && resolvedInfo.yuanrongXuanfengApplied) {
@@ -1078,8 +1094,9 @@ export class BattleHero {
         }
         if (jishiUsed) this.Manger.Record.pushRecord(this,
             `的【${jishiReductions.map(entry => entry.name).join('、')}】${jishiUsed}层减伤已用于本次伤害`, 1);
+        if (daluNewEvasion) this.Manger.Record.pushRecord(this, '的【大橹·避险】首次受伤后获得1次规避', 1);
         if (buquNewStacks) this.Manger.Record.pushRecord(this,
-            `的【${{ canghai: '沧海', qianjun: '千钧' }[this.Treasure.id] || '星汉'}·不屈】本回合叠加至${buquNewStacks}层，后续受到的所有伤害降低${buquNewStacks * this.Treasure.forgeValue}%`, 1);
+            `的【${{ canghai: '沧海', qianjun: '千钧', dalu: '大橹' }[this.Treasure.id] || '星汉'}·不屈】本回合叠加至${buquNewStacks}层，后续受到的所有伤害降低${buquNewStacks * this.Treasure.forgeValue}%`, 1);
         if (canghaiNewStacks) this.Manger.Record.pushRecord(this,
             `的【沧海·破浪】本回合叠加至${canghaiNewStacks}/10层，造成的所有伤害提高${canghaiNewStacks * 10}%`, 1);
         if (this.Posname == '大营' && this.Arms <= 0) this.Manger.Over = true;
@@ -1153,12 +1170,12 @@ export class BattleHero {
             this.HurtArms -= recoverNum;
         }
         this.Arms += recoverNum;
-        if (recoverNum > 0 && ['xinghan', 'canghai', 'qianjun'].includes(source?.Treasure?.id) && source.Treasure.forge === 'jishi' &&
+        if (recoverNum > 0 && ['xinghan', 'canghai', 'qianjun', 'dalu'].includes(source?.Treasure?.id) && source.Treasure.forge === 'jishi' &&
             source.Skills?.[source.Skill]?.name === name) {
             this.Storage.xinghanJishiCharges ||= [];
             this.Storage.xinghanJishiCharges.push({ source, value: source.Treasure.forgeValue });
             const total = this.Storage.xinghanJishiCharges.reduce((sum, charge) => sum + charge.value, 0);
-            this.Manger.Record.pushRecord(this, `的【${{ canghai: '沧海', qianjun: '千钧' }[source.Treasure.id] || '星汉'}·济世】因【${name}】恢复获得${this.Storage.xinghanJishiCharges.length}层，下次受到伤害降低${total}%`, 1);
+            this.Manger.Record.pushRecord(this, `的【${{ canghai: '沧海', qianjun: '千钧', dalu: '大橹' }[source.Treasure.id] || '星汉'}·济世】因【${name}】恢复获得${this.Storage.xinghanJishiCharges.length}层，下次受到伤害降低${total}%`, 1);
         }
         const skill = Object.values(source?.Skills || {}).find(e => e?.name === name);
         this.Manger.addStat(source, skill || { id: name, name }, 0, recoverNum);

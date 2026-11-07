@@ -185,6 +185,10 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (target.Treasure.forge === 'jianren') special('镂影·锻造坚忍', -target.Treasure.forgeValue, target);
     }
     if (skill?.type === 2 && target.Treasure?.id === 'xiuni') special('貅猊·坚忍', -target.Treasure.jianren, target);
+    if (target.Treasure?.id === 'dalu') {
+        if (type === 1 && damageInfo.isBasicAttack) special('大橹·强韧', -target.Treasure.qiangren, target);
+        if (skill?.type === 2) special('大橹·坚忍', -target.Treasure.jianren, target);
+    }
     if (target.Treasure?.id === 'tianwen') {
         if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
         if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
@@ -192,8 +196,8 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         }
         if (skill?.type === 2 && target.Treasure.forge === 'jianren') special('天问·坚忍', -target.Treasure.forgeValue, target);
     }
-    if (['xinghan', 'canghai', 'qianjun'].includes(target.Treasure?.id)) {
-        const name = { canghai: '沧海', qianjun: '千钧' }[target.Treasure.id] || '星汉';
+    if (['xinghan', 'canghai', 'qianjun', 'dalu'].includes(target.Treasure?.id)) {
+        const name = { canghai: '沧海', qianjun: '千钧', dalu: '大橹' }[target.Treasure.id] || '星汉';
         if (target.Treasure.id === 'xinghan') special('星汉·不移', -target.Treasure.buyi, target);
         if (skill?.type === 2 && target.Treasure.id === 'canghai') special('沧海·坚忍', -target.Treasure.jianren, target);
         if (skill?.type === 2 && target.Treasure.forge === 'jianren') special(target.Treasure.id === 'canghai' ? '沧海·锻造坚忍' : '星汉·坚忍', -target.Treasure.forgeValue, target);
@@ -204,8 +208,8 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (target.Treasure?.id === 'qianjun' && ['confusion', 'rage', 'activeLimit', 'attackLimit']
         .some(name => target.State[name]?.rounds > 0)) special('千钧·安贞', -target.Treasure.anzhen, target);
     for (const reduction of damageInfo.treasureJishiReductions || []) special(reduction.name, -reduction.value, target);
-    if (damageInfo.xinghanBuquReduction) special(`${{ canghai: '沧海', qianjun: '千钧' }[target.Treasure?.id] || '星汉'}·不屈`, -damageInfo.xinghanBuquReduction, target);
-    if (damageInfo.xinghanWeishiReduction) special(`${{ canghai: '沧海', qianjun: '千钧' }[target.Treasure?.id] || '星汉'}·威势`, -damageInfo.xinghanWeishiReduction, target);
+    if (damageInfo.xinghanBuquReduction) special(`${{ canghai: '沧海', qianjun: '千钧', dalu: '大橹' }[target.Treasure?.id] || '星汉'}·不屈`, -damageInfo.xinghanBuquReduction, target);
+    if (damageInfo.xinghanWeishiReduction) special(`${{ canghai: '沧海', qianjun: '千钧', dalu: '大橹' }[target.Treasure?.id] || '星汉'}·威势`, -damageInfo.xinghanWeishiReduction, target);
     if (attacker.Treasure?.id === 'yuanrong') {
         // 分兵的 damageInfo.isBasicAttack 为 true，因此也享受陷阵的普通攻击增伤。
         if (type === 1 && damageInfo.isBasicAttack) special('元戎·陷阵', attacker.Treasure.xianzhen);
