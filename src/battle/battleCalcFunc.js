@@ -17,7 +17,10 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     let basicDamage = attacker.Attrs.atk * getRandNum() * (DamageRate / 100) * damageAddition;
     //主要伤害
     let targetDef = target.Attrs.def;
-    if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
+    if (attacker.Treasure?.id === 'shanjun') {
+        const ignore = attacker.Treasure.podi * 1.5 + (attacker.Treasure.forge === 'podi' ? attacker.Treasure.forgeValue : 0);
+        targetDef *= 1 - Math.min(100, ignore) / 100;
+    } else if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
     if (attacker.Treasure?.id === 'xushibishou') targetDef *= 1 - attacker.Treasure.podi * 1.5 / 100;
     if (attacker.Treasure?.id === 'fenran' && attacker.Treasure.forge === 'cangfeng' &&
         attacker.Storage.fenranCangfengCurrentAttack && damageInfo.isBasicAttack) {
@@ -198,6 +201,12 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if ([2, 4].includes(type) && attacker.Treasure.forge === 'xuanfeng' && attacker.Storage.yuanrongXuanfengReady) {
             special('元戎·选锋', attacker.Treasure.forgeValue);
             damageInfo.yuanrongXuanfengApplied = true;
+        }
+    }
+    if (attacker.Treasure?.id === 'shanjun' && skill?.type === 3) {
+        if (attacker.Treasure.forge === 'wuwei') special('山君·无畏', attacker.Treasure.forgeValue);
+        if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
+            special('山君·蓄锐', attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
         }
     }
     if (target.Treasure?.id === 'fenran') special('奋髯·不移', -target.Treasure.buyi, target);
