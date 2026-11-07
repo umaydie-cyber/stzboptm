@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -245,14 +245,23 @@ export class BattleHero {
                     return true;
                 }
                 if (['confusion', 'rage'].includes(name) && value?.rounds > 0 &&
-                    ['yuanrong', 'shanjun', 'shenfeng', 'xiuni'].includes(this.Treasure?.id) && this.Treasure.forge === 'jianyi' &&
+                    ['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin'].includes(this.Treasure?.id) && this.Treasure.forge === 'jianyi' &&
                     this.Manger.Round >= 1 && this.Manger.Round <= this.Treasure.forgeValue) {
-                    this.Manger.Record.pushRecord(this, `的【${{ yuanrong: '元戎', shanjun: '山君', shenfeng: '神锋', xiuni: '貅猊' }[this.Treasure.id]}·坚毅】免疫${name === 'confusion' ? '混乱' : '暴走'}`, 1);
+                    this.Manger.Record.pushRecord(this, `的【${{ yuanrong: '元戎', shanjun: '山君', shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞' }[this.Treasure.id]}·坚毅】免疫${name === 'confusion' ? '混乱' : '暴走'}`, 1);
                     return true;
                 }
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) &&
                     value?.rounds > 0 && value.from?.hero?.BattleCamp !== undefined &&
                     this.tryQiqinDefense('控制', value.from.hero)) return true;
+                if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0) {
+                    const source = value.from?.hero;
+                    const sourceSkillId = value.from?.skill?.id ?? value.from?.skill;
+                    const sourceSkill = source?.Skills?.[sourceSkillId];
+                    if (source?.Treasure?.id === 'longlin' && sourceSkillId === source.Skill && sourceSkill?.type === 3) {
+                        value.rounds += 1;
+                        source.Manger.Record.pushRecord(source, `的【龙鳞·慎心】使主战法施加的控制效果额外持续1回合（共${value.rounds}回合）`, 1);
+                    }
+                }
                 if (name === 'activeLimit' && value?.rounds > 0) {
                     const source = value.from?.hero;
                     const sourceSkillId = value.from?.skill?.id ?? value.from?.skill;
@@ -350,13 +359,14 @@ export class BattleHero {
         if (this.Treasure?.id === 'xinghan') this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.wengu / 100));
         if (this.Treasure?.id === 'shanjun') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.xiaorui / 100));
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng', 'xiuni'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng', 'xiuni', 'longlin'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.forgeValue);
         }
         if (this.Treasure?.id === 'wuhao') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
+        if (this.Treasure?.id === 'longlin') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
         if (this.Treasure?.id === 'xushibishou') {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
             this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * 1.05);
@@ -526,7 +536,7 @@ export class BattleHero {
                     this.callHook("尝试发动战法前", skill);
                     if (this.Manger.Over || this.Arms <= 0) return;
                 }
-                const treasureRate = ['yuanrong', 'shanjun', 'shenfeng', 'xiuni'].includes(this.Treasure?.id) && this.Treasure.forge === 'benxi'
+                const treasureRate = ['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin'].includes(this.Treasure?.id) && this.Treasure.forge === 'benxi'
                     ? this.Treasure.forgeValue : 0;
                 const mainBonus = this.getTreasureMainRateBonus(skill);
                 const huxiaoBase = this.Treasure?.id === 'shanjun' && this.Storage.shanjunHuxiaoRound === this.Manger.Round
@@ -739,14 +749,14 @@ export class BattleHero {
     }
 
     registerYuanrongBasicAttack() {
-        if (!['yuanrong', 'shanjun', 'shenfeng', 'xiuni'].includes(this.Treasure?.id)) return;
+        if (!['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin'].includes(this.Treasure?.id)) return;
         // 分兵也视为普通攻击：陷阵加成、选锋触发和蓄锐计次均适用。
         if (this.Treasure.forge === 'xuanfeng') this.Storage.yuanrongXuanfengReady = true;
         if (this.Treasure.forge === 'xurui') {
             this.Storage.yuanrongBasicAttacks = (this.Storage.yuanrongBasicAttacks || 0) + 1;
             if (this.Storage.yuanrongBasicAttacks % 2 === 0) {
                 this.Storage.yuanrongXuruiStacks = (this.Storage.yuanrongXuruiStacks || 0) + 1;
-                this.Manger.Record.pushRecord(this, `的【${{ yuanrong: '元戎', shanjun: '山君', shenfeng: '神锋', xiuni: '貅猊' }[this.Treasure.id]}·蓄锐】累积${this.Storage.yuanrongXuruiStacks}层`, 1);
+                this.Manger.Record.pushRecord(this, `的【${{ yuanrong: '元戎', shanjun: '山君', shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞' }[this.Treasure.id]}·蓄锐】累积${this.Storage.yuanrongXuruiStacks}层`, 1);
             }
         }
     }

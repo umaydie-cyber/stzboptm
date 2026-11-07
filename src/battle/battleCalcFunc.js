@@ -218,13 +218,14 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             damageInfo.yuanrongXuanfengApplied = true;
         }
     }
-    if (['shenfeng', 'xiuni'].includes(attacker.Treasure?.id)) {
-        const name = attacker.Treasure.id === 'xiuni' ? '貅猊' : '神锋';
+    if (['shenfeng', 'xiuni', 'longlin'].includes(attacker.Treasure?.id)) {
+        const name = { shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞' }[attacker.Treasure.id];
         if (attacker.Treasure.id === 'xiuni' && type === 1 && damageInfo.isBasicAttack && attacker.State.doubleAttack.rounds !== 0) {
             special('貅猊·迅猛', 20);
         }
         if (skill?.type === 3) {
             if (attacker.Treasure.id === 'shenfeng') special('神锋·无畏', attacker.Treasure.wuwei);
+            if (attacker.Treasure.id === 'longlin' && skill.id === attacker.Skill) special('龙鳞·亢厉', attacker.Treasure.kangli * 2);
             if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
                 special(`${name}·蓄锐`, attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
             }
