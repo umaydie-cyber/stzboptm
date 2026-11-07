@@ -169,7 +169,7 @@ export const __SKILLS__ = [
                 delete target.State.continuousDamage['烈火焚舟燃烧'];
                 self.Manger.Record.pushActionRecord(self, target, '的【烈火焚舟】引发', `剩余${remaining}次燃烧伤害`, 1);
                 for (let i = 0; i < remaining && target.Arms > 0 && !self.Manger.Over; i++) {
-                    target.beHurtByNum(self, { type: 4, rate: existing.rate }, this, existing.damage);
+                    target.beHurtByNum(self, { type: 4, rate: existing.rate, kind: '烈火焚舟燃烧' }, this, existing.damage);
                 }
                 if (self.Manger.Over || target.Arms <= 0) return;
                 const line = [...self.Manger.BlueTeam.hero, ...[...self.Manger.RedTeam.hero].reverse()].filter(hero => hero.Arms > 0);
@@ -1621,7 +1621,8 @@ export const __SKILLS__ = [
                     targets.forEach(target => {
                         let damageInfo = {
                             type: 4,
-                            rate: value2
+                            rate: value2,
+                            kind: '燃烧'
                         };
                         let damage = clacInte2Damage(self, target, damageInfo, this);
                         let tag = target.addHook("受伤时","受伤时燃烧",() => {

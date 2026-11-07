@@ -259,6 +259,20 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         skill?.id === attacker.Skill && [2, 3].includes(skill.type)) {
         special('徐氏匕首·亢厉', attacker.Treasure.forgeValue);
     }
+    if (attacker.Treasure?.id === 'weizhisan_gong') {
+        const fire = /燃烧|焚烧/.test(damageInfo.kind || '') || /火攻|火辎|火势风威/.test(skill?.name || '');
+        if ([2, 4].includes(type) && fire) special('位至三公·炎势', attacker.Treasure.yanshi);
+        if (skill?.id === attacker.Skill && [2, 3].includes(skill.type) && attacker.Treasure.forge === 'kangli') {
+            special('位至三公·锻造亢厉', attacker.Treasure.forgeValue);
+        }
+        if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('位至三公·至策', attacker.Treasure.forgeValue);
+        if (attacker.Treasure.forge === 'jixu' && attacker.Manger.Round >= 1) {
+            const continuous = Object.values(target.State.continuousDamage || {}).filter(effect => effect.expiresRound >= attacker.Manger.Round).length;
+            const controls = ['confusion', 'rage', 'attackLimit', 'activeLimit']
+                .filter(name => target.State[name]?.rounds > 0).length;
+            if (continuous + controls) special('位至三公·击虚', (continuous + controls) * attacker.Treasure.forgeValue);
+        }
+    }
     if (attacker.Treasure?.id === 'louying' && attacker.Treasure.forge === 'shanzhan' &&
         [1, 2, 4].includes(type) && attacker.Storage.louyingShanzhanStacks > 0) {
         special('镂影·善战', attacker.Storage.louyingShanzhanStacks * 2);
