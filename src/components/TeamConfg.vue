@@ -64,13 +64,23 @@ const fenranForgeOptions = [
     { id: 'qingyi', name: '清毅', min: 5, max: 8, unit: '回合', desc: '第5回合至所选回合获得洞察' },
     { id: 'cangfeng', name: '藏锋', min: 10, max: 30, desc: '本回合未普攻时，下回合首次普攻无视防御' }
 ];
+const youpiaoForgeOptions = [
+    { id: 'lingdong', name: '灵动', min: 10, max: 30, unit: '速度', desc: '速度属性提高' },
+    yuanrongForgeOptions[1],
+    { id: 'yingwu', name: '颖悟', min: 10, max: 20, desc: '策略伤害额外无视目标谋略' },
+    { id: 'quhuo', name: '驱火', min: 10, max: 30, desc: '燃烧及火攻伤害提高' },
+    { id: 'xuanhuo', name: '炫惑', min: 10, max: 30, desc: '恐慌及妖术伤害提高' },
+    { id: 'chousuan', name: '筹算', min: 5, max: 15, desc: '策略伤害主战法发动率提高' }
+];
 const treasureSpecs = {
     tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
         fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
     yuanrong: { name: '元戎', first: 'xianzhen', second: 'wuwei', firstName: '陷阵', secondName: '无畏', fixedName: '迸发',
         fixedDesc: '首次发动追击类主战法时，攻击距离内额外选取 1 个目标', forgeOptions: yuanrongForgeOptions },
     fenran: { name: '奋髯', first: 'xiaorui', second: 'buyi', firstName: '骁锐', secondName: '不移', fixedName: '奋武',
-        fixedDesc: '普通攻击增伤累计超过 250% 时，该次攻击无视规避', forgeOptions: fenranForgeOptions }
+        fixedDesc: '普通攻击增伤累计超过 250% 时，该次攻击无视规避', forgeOptions: fenranForgeOptions },
+    youpiao: { name: '游飘', first: 'xianzhi', second: 'miaosuan', firstName: '先知', secondName: '妙算', fixedName: '颖悟',
+        fixedDesc: '造成的策略伤害无视目标 10% 谋略属性', forgeOptions: youpiaoForgeOptions }
 };
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
 const forgeOptions = computed(() => treasureSpec.value?.forgeOptions || []);
@@ -303,8 +313,8 @@ const addAllPoints = type => {
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
-                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">

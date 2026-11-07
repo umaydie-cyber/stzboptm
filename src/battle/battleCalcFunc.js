@@ -39,7 +39,9 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
-    const ignoreIntelRate = attacker.Storage.weiyuRepeat?.skill === skill ? attacker.Storage.weiyuRepeat.ignoreIntelRate : 0;
+    const treasureIgnore = attacker.Treasure?.id === 'youpiao'
+        ? 10 + (attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0) : 0;
+    const ignoreIntelRate = (attacker.Storage.weiyuRepeat?.skill === skill ? attacker.Storage.weiyuRepeat.ignoreIntelRate : 0) + treasureIgnore;
     let inteEffect = calcInteEffect(target.Attrs.int * (1 - ignoreIntelRate / 100));
 
     //兵力基础伤害
@@ -60,7 +62,9 @@ export const clacInte2Damage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
-    let inteEffect = calcInteEffect(target.Attrs.int);;
+    const treasureIgnore = attacker.Treasure?.id === 'youpiao'
+        ? 10 + (attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0) : 0;
+    let inteEffect = calcInteEffect(target.Attrs.int * (1 - treasureIgnore / 100));
 
     //兵力基础伤害
     let armsDamage = (attacker.Arms * 178) / (6459 + attacker.Arms);
@@ -187,6 +191,14 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (target.Treasure?.id === 'fenran') special('奋髯·不移', -target.Treasure.buyi, target);
     if (attacker.Treasure?.id === 'fenran' && type === 1 && damageInfo.isBasicAttack &&
         attacker.Treasure.forge === 'xianzhen') special('奋髯·陷阵', attacker.Treasure.forgeValue);
+    if (target.Treasure?.id === 'youpiao' && [2, 4].includes(type)) special('游飘·先知', -target.Treasure.xianzhi, target);
+    if (attacker.Treasure?.id === 'youpiao' && [2, 4].includes(type)) {
+        if (skill?.type === 2) special('游飘·妙算', attacker.Treasure.miaosuan);
+        const fire = /燃烧|焚烧/.test(damageInfo.kind || '') || /火攻|火辎|火势风威/.test(skill?.name || '');
+        const curse = /恐慌|妖术/.test(damageInfo.kind || '');
+        if (fire && attacker.Treasure.forge === 'quhuo') special('游飘·驱火', attacker.Treasure.forgeValue);
+        if (curse && attacker.Treasure.forge === 'xuanhuo') special('游飘·炫惑', attacker.Treasure.forgeValue);
+    }
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);
     const qiqin = attacker.Storage.qiqinAllDamageSub;

@@ -159,8 +159,8 @@ export class BattleManger {
 
             if (this.Round === 0) {
                 for (const hero of this.BattleHeros) {
-                    if (hero.Treasure?.id === 'yuanrong' && hero.Treasure.forge === 'tianzi') {
-                        this.Record.pushRecord(hero, `的【元戎·天资】使基础谋略提高${hero.Treasure.forgeValue}%（${hero.Attrs.int}）`, 1);
+                    if (['yuanrong', 'youpiao'].includes(hero.Treasure?.id) && hero.Treasure.forge === 'tianzi') {
+                        this.Record.pushRecord(hero, `的【${hero.Treasure.id === 'yuanrong' ? '元戎' : '游飘'}·天资】使基础谋略提高${hero.Treasure.forgeValue}%（${hero.Attrs.int}）`, 1);
                     }
                 }
             }
