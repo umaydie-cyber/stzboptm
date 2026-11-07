@@ -184,6 +184,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         special('镂影·坚忍', -target.Treasure.jianren, target);
         if (target.Treasure.forge === 'jianren') special('镂影·锻造坚忍', -target.Treasure.forgeValue, target);
     }
+    if (skill?.type === 2 && target.Treasure?.id === 'xiuni') special('貅猊·坚忍', -target.Treasure.jianren, target);
     if (target.Treasure?.id === 'tianwen') {
         if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
         if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
@@ -217,15 +218,19 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             damageInfo.yuanrongXuanfengApplied = true;
         }
     }
-    if (attacker.Treasure?.id === 'shenfeng') {
+    if (['shenfeng', 'xiuni'].includes(attacker.Treasure?.id)) {
+        const name = attacker.Treasure.id === 'xiuni' ? '貅猊' : '神锋';
+        if (attacker.Treasure.id === 'xiuni' && type === 1 && damageInfo.isBasicAttack && attacker.State.doubleAttack.rounds !== 0) {
+            special('貅猊·迅猛', 20);
+        }
         if (skill?.type === 3) {
-            special('神锋·无畏', attacker.Treasure.wuwei);
+            if (attacker.Treasure.id === 'shenfeng') special('神锋·无畏', attacker.Treasure.wuwei);
             if (attacker.Treasure.forge === 'xurui' && attacker.Storage.yuanrongXuruiStacks) {
-                special('神锋·蓄锐', attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
+                special(`${name}·蓄锐`, attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
             }
         }
         if ([2, 4].includes(type) && attacker.Treasure.forge === 'xuanfeng' && attacker.Storage.yuanrongXuanfengReady) {
-            special('神锋·选锋', attacker.Treasure.forgeValue);
+            special(`${name}·选锋`, attacker.Treasure.forgeValue);
             damageInfo.yuanrongXuanfengApplied = true;
         }
     }
