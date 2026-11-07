@@ -175,6 +175,10 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (skill?.type === 2 && attacker.Treasure.forge === 'zhice') special('彤素·至策', attacker.Treasure.forgeValue);
     }
     if (skill?.type === 2 && target.Treasure?.id === 'tongsu' && target.Treasure.forge === 'jianren') special('彤素·坚忍', -target.Treasure.forgeValue, target);
+    if (skill?.type === 2 && target.Treasure?.id === 'louying') {
+        special('镂影·坚忍', -target.Treasure.jianren, target);
+        if (target.Treasure.forge === 'jianren') special('镂影·锻造坚忍', -target.Treasure.forgeValue, target);
+    }
     if (attacker.Treasure?.id === 'yuanrong') {
         // 分兵的 damageInfo.isBasicAttack 为 true，因此也享受陷阵的普通攻击增伤。
         if (type === 1 && damageInfo.isBasicAttack) special('元戎·陷阵', attacker.Treasure.xianzhen);
@@ -220,6 +224,10 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (attacker.Treasure?.id === 'xushibishou' && attacker.Treasure.forge === 'kangli' &&
         skill?.id === attacker.Skill && [2, 3].includes(skill.type)) {
         special('徐氏匕首·亢厉', attacker.Treasure.forgeValue);
+    }
+    if (attacker.Treasure?.id === 'louying' && attacker.Treasure.forge === 'shanzhan' &&
+        [1, 2, 4].includes(type) && attacker.Storage.louyingShanzhanStacks > 0) {
+        special('镂影·善战', attacker.Storage.louyingShanzhanStacks * 2);
     }
 
     if (target.Storage.chuewujin && target.Manger.Round >= 1 && target.Manger.Round <= 3 && target.isAttackLimit()) special('除恶务尽', -30, target);

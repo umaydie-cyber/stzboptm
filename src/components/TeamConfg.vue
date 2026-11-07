@@ -84,6 +84,12 @@ const xushibishouForgeOptions = [
     { id: 'shipo', name: '识破', min: 1, max: 4, unit: '回合', desc: '前几回合主战法伤害无视规避' },
     wuhaoForgeOptions[2], tongsuForgeOptions[3]
 ];
+const louyingForgeOptions = [
+    tongsuForgeOptions[0], tongsuForgeOptions[5], yuanrongForgeOptions[1],
+    { id: 'buxie', name: '不懈', min: 3, max: 9, desc: '每损失15%初始兵力，受到的恢复效果提高' },
+    fenranForgeOptions[4],
+    { id: 'shanzhan', name: '善战', min: 3, max: 7, unit: '层', desc: '每次造成攻击或策略伤害增伤2%，最多叠加' }
+];
 const treasureSpecs = {
     tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
         fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
@@ -96,7 +102,9 @@ const treasureSpecs = {
     wuhao: { name: '乌号', first: 'lingdong', second: 'kangli', firstName: '灵动', secondName: '亢厉', fixedName: '逐胜',
         fixedDesc: '对敌方当前兵力最低的武将造成伤害提高 15%；兵力相同者均生效', forgeOptions: wuhaoForgeOptions },
     xushibishou: { name: '徐氏匕首', first: 'lingdong', second: 'podi', firstName: '灵动', secondName: '破敌', fixedName: '英才',
-        fixedDesc: '攻击与谋略属性提高 5%', forgeOptions: xushibishouForgeOptions }
+        fixedDesc: '攻击与谋略属性提高 5%', forgeOptions: xushibishouForgeOptions },
+    louying: { name: '镂影', first: 'jianren', second: 'yingcai', firstName: '坚忍', secondName: '英才', fixedName: '穿影',
+        fixedDesc: '每对敌军造成 4 次攻击伤害，下次行动前对 3 距离内敌军单体发动 1 次攻击（伤害率 20%）', forgeOptions: louyingForgeOptions }
 };
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
 const treasureImageUrl = id => `/stzboptm/assets/treasure/${id}.png${id === 'fenran' ? '?v=2' : ''}`;
@@ -333,8 +341,8 @@ const addAllPoints = type => {
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
-                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : treasureDraft.id === 'louying' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'louying' ? `攻击、谋略 +${treasureDraft.yingcai}` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">

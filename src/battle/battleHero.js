@@ -9,6 +9,7 @@ import { keepTwoDecimal, makeSkillTag, roundEightNine } from "../uilts"
 import { clacAttackDamage, getRandomBool, clacInteDamage, clacInte2Damage, getDamageAddition } from "./battleCalcFunc"
 
 const CanAddAttrsKey = ['atk', 'def', 'int', 'spd'];
+const LOUYING_CHUANYING = { id: 'louying-chuanying', name: '镂影·穿影', type: 4 };
 export class BattleHero {
     /*
         args: 
@@ -233,14 +234,14 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0 &&
-                    this.Treasure?.id === 'fenran' && this.Treasure.forge === 'qingyi' &&
+                    ['fenran', 'louying'].includes(this.Treasure?.id) && this.Treasure.forge === 'qingyi' &&
                     this.Manger.Round >= 5 && this.Manger.Round <= this.Treasure.forgeValue) {
-                    this.Manger.Record.pushRecord(this, '的【奋髯·清毅】洞察免疫控制', 1);
+                    this.Manger.Record.pushRecord(this, `的【${this.Treasure.id === 'louying' ? '镂影' : '奋髯'}·清毅】洞察免疫控制`, 1);
                     return true;
                 }
                 if (['confusion', 'rage'].includes(name) && value?.rounds > 0 &&
@@ -327,7 +328,7 @@ export class BattleHero {
         })
         if (['tongsu', 'fenran'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
@@ -338,6 +339,10 @@ export class BattleHero {
             this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + this.Treasure.lingdong * 1.5);
             this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * 1.05);
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * 1.05);
+        }
+        if (this.Treasure?.id === 'louying') {
+            this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.yingcai);
+            this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.yingcai);
         }
 
         // // 疾风营强化
@@ -693,7 +698,7 @@ export class BattleHero {
     }
 
     applyTreasureRoundStart() {
-        if (this.Treasure?.id !== 'fenran' || this.Treasure.forge !== 'qingyi' ||
+        if (!['fenran', 'louying'].includes(this.Treasure?.id) || this.Treasure.forge !== 'qingyi' ||
             this.Manger.Round < 5 || this.Manger.Round > this.Treasure.forgeValue) return;
         const cleared = [];
         for (const [key, label] of [['confusion', '混乱'], ['rage', '暴走'],
@@ -703,7 +708,42 @@ export class BattleHero {
                 cleared.push(label);
             }
         }
-        if (cleared.length) this.Manger.Record.pushRecord(this, `的【奋髯·清毅】洞察解除${cleared.join('、')}`, 1);
+        if (cleared.length) this.Manger.Record.pushRecord(this, `的【${this.Treasure.id === 'louying' ? '镂影' : '奋髯'}·清毅】洞察解除${cleared.join('、')}`, 1);
+    }
+
+    registerLouyingDamage(target, damageInfo, realDamage) {
+        if (this.Treasure?.id !== 'louying' || realDamage <= 0) return;
+        if (damageInfo.type === 1 && target.BattleCamp !== this.BattleCamp) {
+            const hits = (this.Storage.louyingAttackHits || 0) + 1;
+            this.Storage.louyingAttackHits = hits;
+            if (hits % 4 === 0) {
+                this.Storage.louyingPending = (this.Storage.louyingPending || 0) + 1;
+                this.Manger.Record.pushRecord(this, `的【镂影·穿影】累计${hits}次攻击伤害，下次行动前追加攻击`, 1);
+            }
+        }
+        if (this.Treasure.forge === 'shanzhan' && [1, 2, 4].includes(damageInfo.type)) {
+            const previous = this.Storage.louyingShanzhanStacks || 0;
+            const next = Math.min(this.Treasure.forgeValue, previous + 1);
+            this.Storage.louyingShanzhanStacks = next;
+            if (next > previous) this.Manger.Record.pushRecord(this, `的【镂影·善战】叠加至${next}层，攻击与策略伤害提高${next * 2}%`, 1);
+        }
+    }
+
+    applyTreasureBeforeAction() {
+        if (this.Treasure?.id !== 'louying') return;
+        const pending = this.Storage.louyingPending || 0;
+        this.Storage.louyingPending = 0;
+        for (let i = 0; i < pending && this.Arms > 0 && !this.Manger.Over; i++) {
+            const enemies = this.BattleCamp === 'blue' ? this.Manger.RedTeam.hero : this.Manger.BlueTeam.hero;
+            const eligible = enemies.filter(hero => hero.Arms > 0 && Math.abs(this.Index - hero.Index) <= 3);
+            if (!eligible.length) {
+                this.Manger.Record.pushRecord(this, '的【镂影·穿影】因3距离内没有敌军而未触发', 1);
+                break;
+            }
+            const target = eligible[Math.floor(Math.random() * eligible.length)];
+            this.Manger.Record.pushActionRecord(this, target, '的【镂影·穿影】对', '发动攻击（伤害率20%）', 1);
+            target.beHurt(this, { type: 1, rate: 20 }, LOUYING_CHUANYING);
+        }
     }
 
     tryQiqinDefense(kind, attacker) {
@@ -864,6 +904,7 @@ export class BattleHero {
         }
         if (this.Posname == '大营' && this.Arms <= 0) this.Manger.Over = true;
         attacker.callHook("攻击后", attacker, this);
+        attacker.registerLouyingDamage(this, damageInfo, realDamage);
         attacker.callHook("造成伤害后", attacker, this, damageInfo, skill, realDamage);
 
         // 受到伤害后 获得此次伤害95%的伤兵
@@ -905,6 +946,20 @@ export class BattleHero {
         if (this.State.noRecoverUntil > this.Manger.Round) {
             this.Manger.Record.pushRecord(this, `受到【${name}】的恢复被禁疗阻止`, 1);
             return;
+        }
+        const recoveryBonuses = Object.values(this.Storage.recoveryBonuses || {})
+            .filter(bonus => Number.isFinite(bonus?.value) && bonus.value > 0)
+            .map(bonus => ({ name: bonus.name || '恢复加成', value: bonus.value }));
+        if (this.Treasure?.id === 'louying' && this.Treasure.forge === 'buxie') {
+            const lost = Math.max(0, this.OriginAttrs.arms - this.Arms);
+            const tiers = Math.floor(lost / (this.OriginAttrs.arms * 0.15) + 1e-9);
+            if (tiers > 0) recoveryBonuses.push({ name: `镂影·不懈（${tiers}层）`, value: tiers * this.Treasure.forgeValue });
+        }
+        if (recoverNum > 0 && this.HurtArms > 0 && recoveryBonuses.length) {
+            const before = recoverNum;
+            const total = recoveryBonuses.reduce((sum, bonus) => sum + bonus.value, 0);
+            recoverNum = Math.floor(recoverNum * (1 + total / 100));
+            this.Manger.Record.pushRecord(this, `受到【${name}】的恢复加成：${recoveryBonuses.map(bonus => `${bonus.name}+${bonus.value}%`).join('、')}，合计+${total}%（${before}→${recoverNum}）`, 1);
         }
         if (this.HurtArms == 0) recoverNum = 0;
         if (recoverNum >= this.HurtArms) {
