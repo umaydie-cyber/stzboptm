@@ -306,8 +306,10 @@ const addAllPoints = type => {
                         </div>
                         <div class="treasure-slot" role="button" tabindex="0" :aria-label="hero.treasure ? `编辑${treasureSpecs[hero.treasure.id]?.name || '宝物'}` : '选择宝物'"
                             @click="openTreasure(index)" @keydown.enter="openTreasure(index)" @keydown.space.prevent="openTreasure(index)">
-                            <img v-if="hero.treasure" :src="treasureImageUrl(hero.treasure.id)" :alt="treasureSpecs[hero.treasure.id]?.name" class="equipped-treasure">
-                            <span v-if="hero.treasure?.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span>
+                            <template v-if="hero.treasure">
+                                <img :src="treasureImageUrl(hero.treasure.id)" :alt="treasureSpecs[hero.treasure.id]?.name" class="equipped-treasure">
+                                <span v-if="hero.treasure.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span>
+                            </template>
                             <template v-else>
                                 <div class="treasure-emblem" aria-hidden="true">+</div>
                                 <div class="treasure-label">可授予</div>
@@ -1618,9 +1620,10 @@ const addAllPoints = type => {
     background: linear-gradient(145deg, #303236, #1b1d20);
     font-family: "FZLBJW_B";
     cursor: pointer;
+    overflow: hidden;
 }
 .team-config-warp .treasure-slot:focus-visible { outline: 2px solid #e8ce82; outline-offset: -3px; }
-.team-config-warp .equipped-treasure { width: 100%; height: 100%; object-fit: contain; background: #171819; }
+.team-config-warp .equipped-treasure { display: block; width: 100%; height: 100%; object-fit: fill; flex: none; }
 .treasure-dialog { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: #000b; box-sizing: border-box; color: #eee9d9; }
 .treasure-panel { width: min(960px, 100%); max-height: 94dvh; overflow: auto; background: linear-gradient(145deg, #3d4045, #25272a); border: 2px solid #968562; box-shadow: 0 15px 50px #000b; }
 .treasure-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #796e5c; color: #ead6a0; font-size: 24px; }
