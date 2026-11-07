@@ -44,6 +44,21 @@ try {
   hero.callActiveSkill();
   assert.ok(messages.some(msg => msg.includes('士气修正') && msg.includes('游飘·筹算+10%')));
 
+  for (const id of ['youpiao', 'xushibishou']) {
+    const liu = new BattleHero(config(1021, { id, forge: 'chousuan', forgeValue: 15 }), 'blue', manager, 120);
+    const main = liu.Skills[liu.Skill];
+    assert.equal(main.name, '光武中兴');
+    assert.equal(liu.getTreasureMainRateBonus(main), 15);
+    liu.SkillsOrder = [liu.Skill];
+    liu.Skills[liu.Skill] = { ...main, callskill: (_, rate) => {
+      assert.equal(rate, liu.getRealSkillRate(main.rate) + 15);
+      return false;
+    } };
+    liu.callActiveSkill();
+    assert.ok(messages.some(msg => msg.includes('【光武中兴】发动率为') &&
+      msg.includes('士气修正') && msg.includes('筹算+15%')));
+  }
+
   const { BattleManger } = await vite.ssrLoadModule('/src/battle/battleManger.js');
   console.log = () => {};
   try {

@@ -445,7 +445,7 @@ export class BattleHero {
         if (['wuhao', 'jinjiu', 'weizhisan_gong'].includes(this.Treasure?.id) && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' &&
-            /策略攻击|策略伤害|火攻|燃烧|恐慌|妖术/.test(skill.desc || '')) return this.Treasure.forgeValue;
+            (skill.causesStrategyDamage || /策略攻击|策略伤害|火攻|燃烧|恐慌|妖术/.test(skill.desc || ''))) return this.Treasure.forgeValue;
         if (!/造成.*攻击|发动.*攻击|攻击伤害/.test(skill.desc || '')) return 0;
         if (this.Treasure?.forge === 'yingyong') return this.Treasure.forgeValue;
         if (this.Treasure?.forge === 'shanmou' && [4, 6].includes(this.Manger.Round)) return this.Treasure.forgeValue;

@@ -2071,6 +2071,7 @@ export const __SKILLS__ = [
         id: 1048, name: "光武中兴",
         desc: "为我军兵力最低的单体恢复2次兵力（恢复率225.0%，受谋略属性影响），每次重新选目标并在恢复后独立判定30.0%几率额外随机发动落雷、落石、绝水遏敌之一；两次判定后固定随机发动其中之一；同回合三种均发动后敌军全体士气降低20.0",
         level: "S", type: 2, target: 1, target_type: "team", limit: 5, rate: 45, study: false,
+        causesStrategyDamage: true,
         callskill: function (self, currentRate) {
             if (!getRandomBool(currentRate)) return false;
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
