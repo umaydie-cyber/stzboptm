@@ -22,6 +22,10 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     } else if (attacker.Treasure?.id === 'shanjun') {
         const ignore = attacker.Treasure.podi * 1.5 + (attacker.Treasure.forge === 'podi' ? attacker.Treasure.forgeValue : 0);
         targetDef *= 1 - Math.min(100, ignore) / 100;
+    } else if (['zhengang', 'jingni', 'qulu'].includes(attacker.Treasure?.id)) {
+        const fixed = attacker.Treasure.id === 'qulu' ? 10 : attacker.Treasure.podi * (attacker.Treasure.id === 'jingni' ? 1.5 : 1);
+        const forge = attacker.Treasure.forge === 'podi' ? attacker.Treasure.forgeValue : 0;
+        targetDef *= 1 - Math.min(100, fixed + forge) / 100;
     } else if (attacker.Treasure?.forge === 'podi') targetDef *= 1 - attacker.Treasure.forgeValue / 100;
     if (attacker.Treasure?.id === 'xushibishou') targetDef *= 1 - attacker.Treasure.podi * 1.5 / 100;
     if (attacker.Treasure?.id === 'fenran' && attacker.Treasure.forge === 'cangfeng' &&
@@ -344,6 +348,26 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         special('沧海·破浪', attacker.Storage.canghaiPolangStacks * 10);
     }
     if (target.Treasure?.id === 'fenran') special('奋髯·不移', -target.Treasure.buyi, target);
+    if (target.Treasure?.id === 'jingni' && type === 1) special('惊鲵·不移', -target.Treasure.buyi, target);
+    if (['zhengang', 'jingni', 'mingshangouyue'].includes(target.Treasure?.id) && skill?.type === 2 && target.Treasure.forge === 'jianren')
+        special(`${{ zhengang: '真刚', jingni: '惊鲵', mingshangouyue: '冥山勾月' }[target.Treasure.id]}·坚忍`, -target.Treasure.forgeValue, target);
+    if (['zhengang', 'jingni', 'mingshangouyue'].includes(attacker.Treasure?.id)) {
+        const name = { zhengang: '真刚', jingni: '惊鲵', mingshangouyue: '冥山勾月' }[attacker.Treasure.id];
+        if (attacker.Treasure.id === 'zhengang' && type === 1 && attacker.Manger.Round >= 1 && attacker.Manger.Round <= 2) special('真刚·盛气', 20);
+        if (attacker.Treasure.id === 'mingshangouyue' && skill?.id === attacker.Skill && [2, 3].includes(skill.type)) special('冥山勾月·亢厉', attacker.Treasure.kangli);
+        if (attacker.Treasure.forge === 'zhice' && skill?.type === 2) special(`${name}·至策`, attacker.Treasure.forgeValue);
+    }
+    if (['qulu', 'zhengjiaoqiang'].includes(attacker.Treasure?.id)) {
+        const name = attacker.Treasure.id === 'qulu' ? '屈卢' : '狰角枪';
+        if (skill?.type === 3) {
+            special(`${name}·无畏`, attacker.Treasure.wuwei);
+            if (attacker.Treasure.forge === 'wuwei') special(`${name}·锻造无畏`, attacker.Treasure.forgeValue);
+        }
+        if (type === 1 && damageInfo.isBasicAttack) {
+            if (attacker.Treasure.id === 'zhengjiaoqiang') special('狰角枪·陷阵', 12);
+            if (attacker.Treasure.forge === 'xianzhen') special(`${name}·锻造陷阵`, attacker.Treasure.forgeValue);
+        }
+    }
     if (attacker.Treasure?.id === 'fenran' && type === 1 && damageInfo.isBasicAttack &&
         attacker.Treasure.forge === 'xianzhen') special('奋髯·陷阵', attacker.Treasure.forgeValue);
     if (target.Treasure?.id === 'youpiao' && [2, 4].includes(type)) special('游飘·先知', -target.Treasure.xianzhi, target);
