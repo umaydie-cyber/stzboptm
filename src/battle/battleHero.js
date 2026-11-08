@@ -31,6 +31,7 @@ export class BattleHero {
         this.HOOKS = {
             ON_HURT: {}, //受击时执行堆
             BEFORE_BASEATK: {}, //普通攻击前执行堆
+            AFTER_BASEATK: {}, //普通攻击后执行堆
             ON_ACTION: {}, //行动时
             BEFORE_ACTION: {}, //行动前
             ROUND_START: {}, //回合开始时
@@ -331,6 +332,7 @@ export class BattleHero {
         this.Animation = config?.animation == true;
         // this.Camp = ['蜀', '魏', '吴', '汉', '群','晋'][hero.camp-1]
         this.Camp = hero.camp;
+        this.BasicLimit = hero.limit;
         this.BisicArm = hero.army;
         this.Skill = hero.skill;
         this.CommandPriority = hero.commandPriority || 0;
@@ -826,6 +828,8 @@ export class BattleHero {
             rate: 100,
             isBasicAttack: true
         });
+        if (this.Storage.madaiAttackStacks) this.Storage.madaiAttackStacks = 0;
+        this.callHook('普通攻击后', target);
         if (this.Treasure?.id === 'qianjun' && target.Arms > 0) target.clearOneActiveBuff(this);
         this.registerYuanrongBasicAttack();
         if (this.Manger.Over == true) return;
@@ -1013,6 +1017,7 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (attacker.Storage.jixianIgnoreEvasion) damageInfo = { ...damageInfo, ignoreEvasion: true };
         if (['xushibishou', 'xuanyi', 'kunwu', 'minghong'].includes(attacker.Treasure?.id) && attacker.Treasure.forge === 'shipo' &&
             this.Manger.Round >= 1 && this.Manger.Round <= attacker.Treasure.forgeValue &&
             skill?.id === attacker.Skill && [2, 3].includes(skill.type)) {
@@ -1033,6 +1038,13 @@ export class BattleHero {
             damageInfo = { ...damageInfo, ignoreEvasion: true };
             attacker.Storage.shiwuIgnoreNextDamage = false;
             attacker.Manger.Record.pushRecord(attacker, '的【势无虚动】使本次伤害无视规避', 1);
+        }
+        if (this.Storage.panzhenEvasion?.round === this.Manger.Round) {
+            this.Storage.panzhenEvasion = null;
+            if (!damageInfo.ignoreEvasion && getRandomBool(100)) {
+                this.Manger.Record.pushRecord(this, '的【磐阵善守】规避了本次伤害', 1);
+                return;
+            }
         }
         if (this.Storage.evadeNextDamage && !damageInfo.ignoreEvasion) {
             this.Storage.evadeNextDamage = false;
@@ -1064,9 +1076,14 @@ export class BattleHero {
         const xinghanDynamicReduction = jishiReduction + buquReduction + weishiReduction;
         const taieFirstReduction = this.Treasure?.id === 'taie' && this.Manger.Round >= 1 &&
             this.Storage.taieFirstDamageRound !== this.Manger.Round ? 20 : 0;
+        const panzhen = this.Storage.panzhenProtection;
+        const panzhenKind = damageInfo.type === 1 ? 'attackUsed' : damageInfo.type === 2 ? 'strategyUsed' : null;
+        const panzhenReduction = panzhen?.round === this.Manger.Round && panzhenKind && !panzhen[panzhenKind] ? 90 : 0;
+        const jixianFront = this.Storage.jixianFront;
+        const jixianReduction = jixianFront?.round === this.Manger.Round && !jixianFront.used && [1, 2].includes(damageInfo.type) ? 50 : 0;
         const resolvedInfo = { ...damageInfo, ...(reduceThisHit ? { jianzuReduction: true } : {}),
             treasureJishiReductions: jishiReductions, xinghanBuquReduction: buquReduction,
-            xinghanWeishiReduction: weishiReduction, taieFirstReduction };
+            xinghanWeishiReduction: weishiReduction, taieFirstReduction, panzhenReduction, jixianReduction };
         const qiqinActive = attacker.Storage.qiqinAllDamageSub?.round === this.Manger.Round;
         const qiqinInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '七擒七纵');
         const applyQiqinToSnapshot = num != null && qiqinActive && !qiqinInSnapshot;
@@ -1087,7 +1104,7 @@ export class BattleHero {
         let damage;
         if (num != null) {
             damage = num;
-            if ((reduceThisHit || applyQiqinToSnapshot || applyTaoyuanToSnapshot || xinghanDynamicReduction || taieFirstReduction) && [1, 2, 4].includes(damageInfo.type)) {
+            if ((reduceThisHit || applyQiqinToSnapshot || applyTaoyuanToSnapshot || xinghanDynamicReduction || taieFirstReduction || panzhenReduction || jixianReduction) && [1, 2, 4].includes(damageInfo.type)) {
                 // 指挥和持续伤害可能预先算好数值；只折减非兵力基础部分。
                 const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
                     ? attacker.Arms * 373 / (7700 + attacker.Arms)
@@ -1142,6 +1159,9 @@ export class BattleHero {
         }
 
         this.Manger.addStat(attacker, skill, realDamage, 0);
+        if (realDamage > 0 && panzhenReduction) panzhen[panzhenKind] = true;
+        if (realDamage > 0 && jixianReduction) jixianFront.used = true;
+        if (realDamage > 0 && this.Storage.madaiDefenseStacks) this.Storage.madaiDefenseStacks = 0;
         if (realDamage > 0 && attacker.Treasure?.id === 'chengying' && [2, 4].includes(damageInfo.type) &&
             this.Manger.Round >= 1 && (attacker.Storage.chengyingStrategyHits || 0) < 2) {
             attacker.Storage.chengyingStrategyHits = (attacker.Storage.chengyingStrategyHits || 0) + 1;
@@ -1679,6 +1699,9 @@ export class BattleHero {
                 break;
             case "攻击前":
                 obj = this.HOOKS.BEFORE_ATK;
+                break;
+            case "普通攻击后":
+                obj = this.HOOKS.AFTER_BASEATK;
                 break;
             case "攻击后":
                 obj = this.HOOKS.AFTER_ATK;

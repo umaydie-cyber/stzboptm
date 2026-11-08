@@ -168,6 +168,22 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             if (!damageInfo.ignoreTaoyuan && taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) special('桃源问津', -9999, target);
         }
     }
+    if (damageInfo.isBasicAttack && !damageInfo.isSplitAttack && attacker.Storage.madaiAttackStacks) {
+        const layers = attacker.Storage.madaiAttackStacks;
+        special('奉令护蜀', layers * 35 + Math.floor(Math.max(0, attacker.Attrs.atk - 80) / 5) * layers, attacker);
+    }
+    if (target.Storage.madaiDefenseStacks) {
+        const layers = target.Storage.madaiDefenseStacks;
+        special('奉令护蜀', -(layers * 20 + Math.floor(Math.max(0, target.Attrs.def - 80) / 8) * layers), target);
+    }
+    if (damageInfo.panzhenReduction) special('磐阵善守', -damageInfo.panzhenReduction, target);
+    if (damageInfo.jixianReduction) special('计险远近·前锋减伤', -damageInfo.jixianReduction, target);
+    if (target.Storage.jixianVulnerability?.round === target.Manger.Round) {
+        special('计险远近·受伤提高', target.Storage.jixianVulnerability.stacks * 15, target);
+    }
+    if (attacker.Storage.hezongLianheng && attacker.Camp !== target.Camp && [1, 2, 3, 4].includes(type)) {
+        special('合纵连横', 10, attacker);
+    }
 
     if (skill && skill.type == 2){
         add(attacker, "activeDamageAdd", 1);

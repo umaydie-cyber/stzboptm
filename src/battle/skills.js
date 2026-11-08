@@ -46,6 +46,151 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1081, name: "计险远近",
+        desc: "当我军3名武将基础攻击距离均不相同时，大营造成的伤害无视规避，中军攻击、防御、谋略属性增加20.0，前锋每回合受到的首次攻击或策略攻击伤害减少50.0%；且我军全体在发动普通攻击后，使攻击目标本回合受到的所有伤害提高15.0%，可叠加",
+        level: "A", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            if (allies.length !== 3 || new Set(allies.map(hero => hero.BasicLimit)).size !== 3) {
+                self.Manger.Record.pushRecord(self, `的【${this.name}】因基础攻击距离未各不相同而未生效`);
+                return;
+            }
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const rear = allies.find(hero => hero.Posname === '大营');
+            const middle = allies.find(hero => hero.Posname === '中军');
+            const front = allies.find(hero => hero.Posname === '前锋');
+            if (rear) rear.Storage.jixianIgnoreEvasion = true;
+            if (middle) {
+                for (const attr of ['atk', 'def', 'int']) middle.Attrs[attr] = keepTwoDecimal(middle.Attrs[attr] + 20);
+                self.Manger.Record.pushRecord(middle, `受【${this.name}】影响，攻击、防御、谋略各增加20`, 1);
+            }
+            if (front) {
+                front.addHook('速度排序前', '计险远近前锋每回合减伤', () => {
+                    if (front.Manger.Round >= 1) front.Storage.jixianFront = { round: front.Manger.Round, used: false };
+                }, this, self);
+            }
+            for (const ally of allies) {
+                ally.addHook('普通攻击后', '计险远近普攻叠层', target => {
+                    if (!target || target.Arms <= 0) return;
+                    const round = self.Manger.Round;
+                    const previous = target.Storage.jixianVulnerability;
+                    target.Storage.jixianVulnerability = { round, stacks: (previous?.round === round ? previous.stacks : 0) + 1 };
+                    self.Manger.Record.pushRecord(target, `受到【${this.name}】影响，本回合所受所有伤害提高${target.Storage.jixianVulnerability.stacks * 15}%`, 1);
+                }, this, self);
+            }
+        }
+    },
+    {
+        id: 1080, name: "磐阵善守",
+        desc: "战斗开始后前4回合，每回合使我军单体兵力最低的武将受到首次攻击和策略攻击的伤害大幅度降低（90%），并使我军随机单体受到下1次伤害时有100.0%几率进入规避状态，免疫该次伤害",
+        level: "A", type: 1, target: 1, target_type: "team", limit: 2, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('速度排序前', '磐阵善守逐回合保护', () => {
+                const round = self.Manger.Round;
+                if (round < 1 || round > 4) return;
+                const allies = self.getTarget(this.limit, 3, 2).filter(hero => hero.Arms > 0);
+                if (!allies.length) return;
+                const lowest = [...allies].sort((a, b) => a.Arms - b.Arms)[0];
+                lowest.Storage.panzhenProtection = { round, attackUsed: false, strategyUsed: false };
+                const evader = allies[getRandomInt(0, allies.length - 1)];
+                evader.Storage.panzhenEvasion = { round };
+                self.Manger.Record.pushRecord(lowest, `获得【${this.name}】本回合首次攻击和策略攻击伤害降低90%`, 1);
+                self.Manger.Record.pushRecord(evader, `获得【${this.name}】本回合下一次伤害100%规避判定`, 1);
+            }, this, self);
+        }
+    },
+    {
+        id: 1079, name: "战必断金",
+        desc: "战斗开始后前3回合，使有效距离内敌军群体（2个目标）每回合都有90.0%的几率陷入怯战状态，无法进行普通攻击（概率受士气影响）",
+        level: "S", type: 1, target: 2, target_type: "enemy", limit: 4, rate: "--", study: true,
+        callskill: function (self) {
+            const targets = self.getTarget(this.limit, this.target);
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】，目标：${targets.map(target => target.Name).join('、')}`);
+            for (const target of targets) {
+                target.addHook('回合开始时', '战必断金逐回合怯战', () => {
+                    const round = self.Manger.Round;
+                    if (round < 1 || round > 3 || target.Arms <= 0) return;
+                    const rate = self.getRealSkillRate(90);
+                    const success = getRandomBool(rate);
+                    self.Manger.Record.pushRecord(target, `的【${this.name}】怯战判定：${rate}%（受${self.Name}士气影响），${success ? '成功' : '失败'}`, 1);
+                    if (!success) return;
+                    if (target.isAttackLimit() && target.State.attackLimit.from?.skill !== this) return;
+                    target.State.attackLimit = { rounds: 1, from: { hero: self, skill: this } };
+                    target.StateFlag.attackLimit = false;
+                    self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, '陷入怯战1回合', 1);
+                }, this, self, 'debuff');
+            }
+        }
+    },
+    {
+        id: 1078, name: "合纵连横",
+        desc: "战斗中，我方3名武将无法获得阵营属性加成，令我军全体武将战法距离+1，对非自身阵营的武将造成攻击与策略伤害提高10%；对非自身阵营的武将普通攻击后有40%概率（受士气影响）使目标陷入围困状态，持续1回合",
+        level: "A", type: 1, target: 3, target_type: "team", limit: 3, rate: "--", study: true,
+        callskill: function (self) {
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            for (const ally of allies) {
+                ally.Storage.hezongLianheng = true;
+                // 战法实例按武将保存，避免影响敌方和共享配置。
+                for (const [id, equipped] of Object.entries(ally.Skills)) {
+                    if ([1, 2].includes(equipped?.type) && equipped.limit > 0) {
+                        ally.Skills[id] = { ...equipped, limit: equipped.limit + 1 };
+                    }
+                }
+                ally.addHook('普通攻击后', '合纵连横围困', target => {
+                    if (!target || target.Arms <= 0 || target.Camp === ally.Camp) return;
+                    const rate = ally.getRealSkillRate(40);
+                    if (!getRandomBool(rate)) return;
+                    target.State.noRecoverUntil = Math.max(target.State.noRecoverUntil || 0, self.Manger.Round + 1);
+                    self.Manger.Record.pushActionRecord(ally, target, `的【${this.name}】使`, '陷入围困，1回合内无法恢复兵力', 1);
+                }, this, self);
+            }
+        }
+    },
+    {
+        id: 1077, name: "奉令护蜀",
+        desc: "战斗中，任意友军发动普通攻击、主动战法、追击战法后，马岱的下1次普通攻击造成的伤害提升35.0%（受攻击属性影响），下1次受到的所有伤害降低20.0%（受防御属性影响），以上效果可叠加5次",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 2, rate: "--", study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            const addLayer = () => {
+                if (self.Arms <= 0) return;
+                self.Storage.madaiAttackStacks = Math.min(5, (self.Storage.madaiAttackStacks || 0) + 1);
+                self.Storage.madaiDefenseStacks = Math.min(5, (self.Storage.madaiDefenseStacks || 0) + 1);
+                self.Manger.Record.pushRecord(self, `的【${this.name}】下次普攻增伤叠至${self.Storage.madaiAttackStacks}层，下次受伤减伤叠至${self.Storage.madaiDefenseStacks}层`, 1);
+            };
+            for (const ally of allies) {
+                ally.addHook('普通攻击后', '奉令护蜀普攻叠层', addLayer, this, self);
+                ally.addHook('战法成功发动后', '奉令护蜀战法叠层', skill => {
+                    if (skill?.type === 2 || skill?.type === 3) addLayer();
+                }, this, self);
+            }
+        }
+    },
+    {
+        id: 1076,
+        name: "宣威再战",
+        desc: "战斗开始后前3回合，普通攻击后对攻击目标发动一次攻击（伤害率150.0%）；第4回合起，普通攻击后对敌军单体随机发动1-3次攻击（伤害率150.0%），每次目标独立判定",
+        level: "A", type: 3, target: 1, target_type: "enemy", limit: 0, rate: 120,
+        study: false, randomTargets: true,
+        callskill: function (self, attackTarget) {
+            self.Manger.Record.pushRecord(self, `的攻击发动【${this.name}】`);
+            if (self.Manger.Round <= 3) {
+                if (attackTarget.Arms > 0) attackTarget.beHurt(self, { type: 1, rate: 150 }, this);
+                return;
+            }
+            const count = getRandomInt(1, 3);
+            for (let i = 0; i < count; i++) {
+                if (self.Manger.Over || self.Arms <= 0) break;
+                const target = self.getTarget(self.Limit, 1)[0];
+                if (!target) break;
+                target.beHurt(self, { type: 1, rate: 150 }, this);
+            }
+        }
+    },
+    {
         id: 1075,
         name: "未雨绸缪",
         desc: "下回合开始后，2回合内自身下一次造成策略伤害的主动战法发动后可再次发动一次（跳过准备），造成原战法50%的伤害和恢复效果；再次发动造成的策略伤害无视目标30%的谋略属性（受自身谋略属性影响）",
