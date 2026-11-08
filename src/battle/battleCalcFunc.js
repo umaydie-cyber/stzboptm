@@ -201,6 +201,10 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (skill?.type === 2 && target.Treasure.forge === 'jianren') special('大将·坚忍', -target.Treasure.forgeValue, target);
         if (skill?.type === 1 && target.Treasure.forge === 'chenwen') special('大将·沉稳', -target.Treasure.forgeValue, target);
     }
+    if (target.Treasure?.id === 'renfeng') {
+        if ([2, 4].includes(type)) special('仁风·先知', -target.Treasure.xianzhi, target);
+        if (skill?.type === 2 && target.Treasure.forge === 'jianren') special('仁风·坚忍', -target.Treasure.forgeValue, target);
+    }
     if (target.Treasure?.id === 'tianwen') {
         if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
         if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
