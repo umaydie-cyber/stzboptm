@@ -1891,15 +1891,19 @@ export const __SKILLS__ = [
     {
         id: 1039,
         name: "乘胜追击",
-        desc: "普通攻击后，对攻击目标发动一次攻击（伤害率150.0%）；每次发动攻击后有60.0%概率再次攻击（伤害率100.0%），此概率每次降低20个百分点，战法结束后重置",
+        desc: "普通攻击后，对攻击目标发动一次攻击（伤害率150.0%）；每次发动攻击后有60.0%基础概率再次攻击（伤害率100.0%，受士气影响），此基础概率每次降低20个百分点，战法结束后重置",
         level: "S", type: 3, target: 1, target_type: "enemy", limit: 0, rate: 35, study: true,
         callskill: function (self, target) {
             self.Manger.Record.pushRecord(self, `的攻击发动【${this.name}】`);
             target.beHurt(self, { type: 1, rate: 150 }, this);
             // 每次发动独立计算；追加攻击只对仍存活的原目标生效。
             for (let chance = 60; chance > 0 && target.Arms > 0; chance -= 20) {
-                if (!getRandomBool(chance)) break;
-                self.Manger.Record.pushRecord(self, `的【${this.name}】追加攻击发动（${chance}%）`, 1);
+                const actualChance = self.getRealSkillRate(chance);
+                const moraleBonus = actualChance - chance;
+                const success = getRandomBool(actualChance);
+                self.Manger.Record.pushRecord(self, `的【${this.name}】追加攻击判定：基础${chance}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，实际${actualChance}%：${success ? '成功' : '失败'}`, 1);
+                if (!success) break;
+                self.Manger.Record.pushRecord(self, `的【${this.name}】追加攻击发动`, 1);
                 target.beHurt(self, { type: 1, rate: 100 }, this);
             }
         }
