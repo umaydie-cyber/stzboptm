@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu', 'taie', 'dajiang', 'yanri'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu', 'taie', 'dajiang', 'yanri', 'shaofu'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -245,9 +245,9 @@ export class BattleHero {
                     return true;
                 }
                 if (['confusion', 'rage'].includes(name) && value?.rounds > 0 &&
-                    ['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin'].includes(this.Treasure?.id) && this.Treasure.forge === 'jianyi' &&
+                    ['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin', 'shaofu'].includes(this.Treasure?.id) && this.Treasure.forge === 'jianyi' &&
                     this.Manger.Round >= 1 && this.Manger.Round <= this.Treasure.forgeValue) {
-                    this.Manger.Record.pushRecord(this, `的【${{ yuanrong: '元戎', shanjun: '山君', shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞' }[this.Treasure.id]}·坚毅】免疫${name === 'confusion' ? '混乱' : '暴走'}`, 1);
+                    this.Manger.Record.pushRecord(this, `的【${{ yuanrong: '元戎', shanjun: '山君', shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞', shaofu: '少府' }[this.Treasure.id]}·坚毅】免疫${name === 'confusion' ? '混乱' : '暴走'}`, 1);
                     return true;
                 }
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) &&
@@ -367,6 +367,7 @@ export class BattleHero {
             if (this.Cost < 30) this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.mingjing * 1.5);
         }
         if (this.Treasure?.id === 'xiuni') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2);
+        if (this.Treasure?.id === 'shaofu') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2);
         if (this.Treasure?.id === 'weizhisan_gong') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'qianjun') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'canghai') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 2.5);
@@ -576,7 +577,7 @@ export class BattleHero {
                     this.callHook("尝试发动战法前", skill);
                     if (this.Manger.Over || this.Arms <= 0) return;
                 }
-                const treasureRate = ['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin'].includes(this.Treasure?.id) && this.Treasure.forge === 'benxi'
+                const treasureRate = ['yuanrong', 'shanjun', 'shenfeng', 'xiuni', 'longlin', 'shaofu'].includes(this.Treasure?.id) && this.Treasure.forge === 'benxi'
                     ? this.Treasure.forgeValue : 0;
                 const mainBonus = this.getTreasureMainRateBonus(skill);
                 const huxiaoBase = this.Treasure?.id === 'shanjun' && this.Storage.shanjunHuxiaoRound === this.Manger.Round
@@ -856,6 +857,15 @@ export class BattleHero {
     }
 
     applyTreasureRoundStart() {
+        if (this.Treasure?.id === 'shaofu' && this.Manger.Round === 5 && this.Arms > 0) {
+            const rate = this.getRealSkillRate(50);
+            const success = getRandomBool(rate);
+            this.Manger.Record.pushRecord(this, `的【少府·再战】连击判定：基础50%，士气修正${rate - 50 >= 0 ? '+' : ''}${rate - 50}%，实际${rate}%：${success ? '成功' : '失败'}`, 1);
+            if (success && this.State.doubleAttack.rounds <= 0) {
+                this.State.doubleAttack = { rounds: 1, from: { hero: this, skill: { name: '少府·再战', type: 4 } } };
+                this.Manger.Record.pushRecord(this, '的【少府·再战】获得本回合连击', 1);
+            }
+        }
         if (!['fenran', 'louying', 'taie', 'dajiang'].includes(this.Treasure?.id) || this.Treasure.forge !== 'qingyi' ||
             this.Manger.Round < 5 || this.Manger.Round > this.Treasure.forgeValue) return;
         const cleared = [];
@@ -1142,7 +1152,7 @@ export class BattleHero {
         // 反击是普通攻击类型伤害，但不再次触发受击事件或反击链。
         if (!damageInfo.isCounterattack) this.callHook('受伤时', attacker, damageInfo, skill, realDamage);
         if (this.Storage.jianzuBudai && damageInfo.isBasicAttack && !damageInfo.isSplitAttack && !damageInfo.isCounterattack &&
-            !(attacker.Treasure?.id === 'fenran' && attacker.Treasure.forge === 'qiangji' &&
+            !(['fenran', 'shaofu'].includes(attacker.Treasure?.id) && attacker.Treasure.forge === 'qiangji' &&
                 this.Manger.Round >= 1 && this.Manger.Round <= attacker.Treasure.forgeValue) &&
             this.Arms > 0 && attacker.Arms > 0 && !this.Manger.Over &&
             this.State.confusion.rounds <= 0 && this.State.attackLimit.rounds <= 0 &&

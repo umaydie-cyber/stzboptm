@@ -259,6 +259,13 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             special('山君·蓄锐', attacker.Storage.yuanrongXuruiStacks * attacker.Treasure.forgeValue);
         }
     }
+    if (attacker.Treasure?.id === 'shaofu') {
+        if (type === 1 && damageInfo.isBasicAttack) {
+            if (attacker.Manger.Round >= 1 && attacker.Manger.Round <= 4) special('少府·陷阵', attacker.Treasure.xianzhen * 2);
+            if (attacker.Treasure.forge === 'xianzhen') special('少府·锻造陷阵', attacker.Treasure.forgeValue);
+        }
+        if (skill?.type === 3 && attacker.Treasure.forge === 'wuwei') special('少府·无畏', attacker.Treasure.forgeValue);
+    }
     if (attacker.Treasure?.id === 'jinjiu') {
         if (skill?.type === 2) special('金鸠·亢厉', attacker.Treasure.kangli);
         if ([1, 3].includes(type) && attacker.Storage.jinjiuYouyouStacks) {
