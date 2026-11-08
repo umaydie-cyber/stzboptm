@@ -45,8 +45,8 @@ export const clacInteDamage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
-    const treasureIgnore = attacker.Treasure?.id === 'youpiao'
-        ? 10 + (attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0) : 0;
+    const treasureIgnore = attacker.Treasure?.id === 'youpiao' ? 10 + (attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0)
+        : ['chengying', 'jingyangwanren'].includes(attacker.Treasure?.id) && attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0;
     const ignoreIntelRate = (attacker.Storage.weiyuRepeat?.skill === skill ? attacker.Storage.weiyuRepeat.ignoreIntelRate : 0) + treasureIgnore;
     let inteEffect = calcInteEffect(target.Attrs.int * (1 - ignoreIntelRate / 100));
 
@@ -68,8 +68,8 @@ export const clacInte2Damage = (attacker, target, damageInfo, skill) => {
     let damageAddition = getDamageAddition(attacker, target, damageInfo, skill);
 
     let DamageRate = damageInfo.rate * getLianweiWave(attacker);
-    const treasureIgnore = attacker.Treasure?.id === 'youpiao'
-        ? 10 + (attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0) : 0;
+    const treasureIgnore = attacker.Treasure?.id === 'youpiao' ? 10 + (attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0)
+        : ['chengying', 'jingyangwanren'].includes(attacker.Treasure?.id) && attacker.Treasure.forge === 'yingwu' ? attacker.Treasure.forgeValue : 0;
     let inteEffect = calcInteEffect(target.Attrs.int * (1 - treasureIgnore / 100));
 
     //兵力基础伤害
@@ -205,6 +205,14 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if ([2, 4].includes(type)) special('仁风·先知', -target.Treasure.xianzhi, target);
         if (skill?.type === 2 && target.Treasure.forge === 'jianren') special('仁风·坚忍', -target.Treasure.forgeValue, target);
     }
+    if (target.Treasure?.id === 'bolang') {
+        if (['confusion', 'rage', 'activeLimit', 'attackLimit'].some(name => target.State[name]?.rounds > 0))
+            special('博浪·安贞', -target.Treasure.anzhen, target);
+        if (skill?.type === 2) {
+            special('博浪·坚忍', -target.Treasure.jianren * 2, target);
+            if (target.Treasure.forge === 'jianren') special('博浪·锻造坚忍', -target.Treasure.forgeValue, target);
+        }
+    }
     if (target.Treasure?.id === 'tianwen') {
         if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
         if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
@@ -318,12 +326,32 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (attacker.Treasure?.id === 'fenran' && type === 1 && damageInfo.isBasicAttack &&
         attacker.Treasure.forge === 'xianzhen') special('奋髯·陷阵', attacker.Treasure.forgeValue);
     if (target.Treasure?.id === 'youpiao' && [2, 4].includes(type)) special('游飘·先知', -target.Treasure.xianzhi, target);
+    if (attacker.Treasure?.id === 'chengying' && [2, 4].includes(type) && attacker.Manger.Round >= 1 &&
+        (attacker.Storage.chengyingStrategyHits || 0) < 2) special('承影·机先', 20);
+    if (attacker.Treasure?.id === 'jingyangwanren') {
+        if (skill?.type === 2) special('旌阳万仞·亢厉', attacker.Treasure.kangli);
+        const fire = /燃烧|焚烧/.test(damageInfo.kind || '') || /火攻|火辎|火势风威/.test(skill?.name || '');
+        const curse = /恐慌|妖术/.test(damageInfo.kind || '');
+        if ([2, 4].includes(type) && (fire || curse)) special('旌阳万仞·睥睨', 10);
+    }
+    if (attacker.Treasure?.id === 'xuanyi') {
+        if (type === 1 && skill?.type === 2) special('悬翳·亢厉', 10);
+        if (skill?.id === attacker.Skill && [2, 3].includes(skill.type) && attacker.Treasure.forge === 'kangli')
+            special('悬翳·锻造亢厉', attacker.Treasure.forgeValue);
+    }
     if (attacker.Treasure?.id === 'youpiao' && [2, 4].includes(type)) {
         if (skill?.type === 2) special('游飘·妙算', attacker.Treasure.miaosuan);
         const fire = /燃烧|焚烧/.test(damageInfo.kind || '') || /火攻|火辎|火势风威/.test(skill?.name || '');
         const curse = /恐慌|妖术/.test(damageInfo.kind || '');
         if (fire && attacker.Treasure.forge === 'quhuo') special('游飘·驱火', attacker.Treasure.forgeValue);
         if (curse && attacker.Treasure.forge === 'xuanhuo') special('游飘·炫惑', attacker.Treasure.forgeValue);
+    }
+    if (['chengying', 'jingyangwanren'].includes(attacker.Treasure?.id) && [2, 4].includes(type)) {
+        const name = attacker.Treasure.id === 'chengying' ? '承影' : '旌阳万仞';
+        const fire = /燃烧|焚烧/.test(damageInfo.kind || '') || /火攻|火辎|火势风威/.test(skill?.name || '');
+        const curse = /恐慌|妖术/.test(damageInfo.kind || '');
+        if (fire && attacker.Treasure.forge === 'quhuo') special(`${name}·驱火`, attacker.Treasure.forgeValue);
+        if (curse && attacker.Treasure.forge === 'xuanhuo') special(`${name}·炫惑`, attacker.Treasure.forgeValue);
     }
     if (attacker.Treasure?.id === 'wuhao') {
         const ownMainSkill = skill?.id === attacker.Skill && [2, 3].includes(skill.type);

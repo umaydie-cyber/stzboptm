@@ -159,8 +159,8 @@ export class BattleManger {
 
             if (this.Round === 0) {
                 for (const hero of this.BattleHeros) {
-                    if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'yanri'].includes(hero.Treasure?.id) && hero.Treasure.forge === 'tianzi') {
-                        const name = { yuanrong: '元戎', youpiao: '游飘', wuhao: '乌号', xushibishou: '徐氏匕首', louying: '镂影', tianwen: '天问', jinjiu: '金鸠', weizhisan_gong: '位至三公', shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞', tengshe: '螣蛇', jushu: '钜黍', yanri: '掩日' }[hero.Treasure.id];
+                    if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'yanri', 'chengying', 'jingyangwanren', 'xuanyi'].includes(hero.Treasure?.id) && hero.Treasure.forge === 'tianzi') {
+                        const name = { yuanrong: '元戎', youpiao: '游飘', wuhao: '乌号', xushibishou: '徐氏匕首', louying: '镂影', tianwen: '天问', jinjiu: '金鸠', weizhisan_gong: '位至三公', shenfeng: '神锋', xiuni: '貅猊', longlin: '龙鳞', tengshe: '螣蛇', jushu: '钜黍', yanri: '掩日', chengying: '承影', jingyangwanren: '旌阳万仞', xuanyi: '悬翳' }[hero.Treasure.id];
                         this.Record.pushRecord(hero, `的【${name}·天资】使基础谋略提高${hero.Treasure.forgeValue}%（${hero.Attrs.int}）`, 1);
                     }
                 }
