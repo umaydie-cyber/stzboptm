@@ -213,6 +213,11 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             if (target.Treasure.forge === 'jianren') special('博浪·锻造坚忍', -target.Treasure.forgeValue, target);
         }
     }
+    if (target.Treasure?.id === 'bieming') {
+        special('别鸣·不移', -target.Treasure.buyi, target);
+        if (skill?.type === 2 && target.Treasure.forge === 'jianren')
+            special('别鸣·坚忍', -target.Treasure.forgeValue, target);
+    }
     if (target.Treasure?.id === 'tianwen') {
         if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
         if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
@@ -277,6 +282,22 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
             if (attacker.Treasure.forge === 'xianzhen') special('少府·锻造陷阵', attacker.Treasure.forgeValue);
         }
         if (skill?.type === 3 && attacker.Treasure.forge === 'wuwei') special('少府·无畏', attacker.Treasure.forgeValue);
+    }
+    if (attacker.Treasure?.id === 'qi') {
+        if (type === 1) special('戚·勇猛', 8);
+        if (type === 1 && damageInfo.isBasicAttack && attacker.Treasure.forge === 'xianzhen')
+            special('戚·陷阵', attacker.Treasure.forgeValue);
+        if (skill?.type === 3 && attacker.Treasure.forge === 'wuwei')
+            special('戚·无畏', attacker.Treasure.forgeValue);
+    }
+    if (['kunwu', 'minghong'].includes(attacker.Treasure?.id)) {
+        const name = attacker.Treasure.id === 'kunwu' ? '锟铻' : '铭鸿';
+        if (skill?.id === attacker.Skill && skill.type === 2 && attacker.Treasure.id === 'kunwu')
+            special('锟铻·亢厉', attacker.Treasure.kangli * 2);
+        if (skill?.id === attacker.Skill && [2, 3].includes(skill.type) && attacker.Treasure.id === 'minghong')
+            special('铭鸿·亢厉', 10);
+        if (skill?.id === attacker.Skill && [2, 3].includes(skill.type) && attacker.Treasure.forge === 'kangli')
+            special(`${name}·锻造亢厉`, attacker.Treasure.forgeValue);
     }
     if (attacker.Treasure?.id === 'jinjiu') {
         if (skill?.type === 2) special('金鸠·亢厉', attacker.Treasure.kangli);
