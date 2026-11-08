@@ -195,6 +195,12 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         if (skill?.type === 1 && target.Treasure.forge === 'chenwen') special('泰阿·沉稳', -target.Treasure.forgeValue, target);
         if (type === 1 && damageInfo.isBasicAttack && target.Treasure.forge === 'qiangren') special('泰阿·强韧', -target.Treasure.forgeValue, target);
     }
+    if (target.Treasure?.id === 'dajiang') {
+        if (type === 1 && damageInfo.isBasicAttack) special('大将·强韧', -target.Treasure.qiangren * 2, target);
+        if (type === 1 && damageInfo.isBasicAttack && target.Treasure.forge === 'qiangren') special('大将·锻造强韧', -target.Treasure.forgeValue, target);
+        if (skill?.type === 2 && target.Treasure.forge === 'jianren') special('大将·坚忍', -target.Treasure.forgeValue, target);
+        if (skill?.type === 1 && target.Treasure.forge === 'chenwen') special('大将·沉稳', -target.Treasure.forgeValue, target);
+    }
     if (target.Treasure?.id === 'tianwen') {
         if (type === 1) special('天问·不移', -target.Treasure.buyi, target);
         if (target.Treasure.forge === 'jiebei' && target.Manger.Round >= 1 && target.Manger.Round <= 2) {
