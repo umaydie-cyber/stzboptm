@@ -234,7 +234,7 @@ export class BattleHero {
         this.Manger = Manger;
         this.BattleCamp = battlecamp;
         this.Morale = morale;
-        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu', 'taie', 'dajiang'].includes(config.treasure?.id) ? config.treasure : null;
+        this.Treasure = ['tongsu', 'yuanrong', 'fenran', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'shanjun', 'jinjiu', 'weizhisan_gong', 'xinghan', 'canghai', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'qianjun', 'dalu', 'taie', 'dajiang', 'yanri'].includes(config.treasure?.id) ? config.treasure : null;
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
@@ -370,6 +370,7 @@ export class BattleHero {
         if (this.Treasure?.id === 'weizhisan_gong') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'qianjun') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 3);
         if (this.Treasure?.id === 'canghai') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 2.5);
+        if (this.Treasure?.id === 'yanri') this.Attrs.def = keepTwoDecimal(this.Attrs.def + this.Treasure.wengu * 1.5);
         if (this.Treasure?.id === 'xinghan') this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.wengu / 100));
         if (this.Treasure?.id === 'dajiang') this.Attrs.def = keepTwoDecimal(this.Attrs.def * (1 + this.Treasure.wengu / 100));
         if (['qianjun', 'dalu', 'taie', 'dajiang'].includes(this.Treasure?.id) && this.Treasure.forge === 'wengu') {
@@ -380,7 +381,7 @@ export class BattleHero {
         }
         if (this.Treasure?.id === 'shanjun') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.xiaorui / 100));
         // 同兵种和同阵营属性加成已经计入；天资在指挥阶段之前生效。
-        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
+        if (['yuanrong', 'youpiao', 'wuhao', 'xushibishou', 'louying', 'tianwen', 'jinjiu', 'weizhisan_gong', 'shenfeng', 'xiuni', 'longlin', 'tengshe', 'jushu', 'yanri'].includes(this.Treasure?.id) && this.Treasure.forge === 'tianzi') {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int * (1 + this.Treasure.forgeValue / 100));
         }
         if (this.Treasure?.id === 'youpiao' && this.Treasure.forge === 'lingdong') {
@@ -484,7 +485,7 @@ export class BattleHero {
         if (skill.id !== this.Skill) return 0;
         if (['tianwen', 'qianjun', 'dalu', 'taie', 'dajiang'].includes(this.Treasure?.id) && this.Treasure.forge === 'jimin' && [2, 3].includes(skill.type)) return this.Treasure.forgeValue;
         if (this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' && skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
-        if (['wuhao', 'jinjiu', 'weizhisan_gong', 'tengshe', 'jushu'].includes(this.Treasure?.id) && this.Treasure.forge === 'shulv' &&
+        if (['wuhao', 'jinjiu', 'weizhisan_gong', 'tengshe', 'jushu', 'yanri'].includes(this.Treasure?.id) && this.Treasure.forge === 'shulv' &&
             skill.type === 2 && skill.ready) return this.Treasure.forgeValue;
         if (['youpiao', 'xushibishou'].includes(this.Treasure?.id) && this.Treasure.forge === 'chousuan' &&
             (skill.causesStrategyDamage || /策略攻击|策略伤害|火攻|燃烧|恐慌|妖术/.test(skill.desc || ''))) return this.Treasure.forgeValue;
@@ -525,6 +526,7 @@ export class BattleHero {
                             : this.Treasure?.id === 'weizhisan_gong' && this.Treasure.forge === 'shulv' ? '位至三公·熟虑'
                             : this.Treasure?.id === 'tengshe' && this.Treasure.forge === 'shulv' ? '螣蛇·熟虑'
                             : this.Treasure?.id === 'jushu' && this.Treasure.forge === 'shulv' ? '钜黍·熟虑'
+                            : this.Treasure?.id === 'yanri' && this.Treasure.forge === 'shulv' ? '掩日·熟虑'
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'jimin' ? '天问·机敏'
                             : this.Treasure?.id === 'qianjun' && this.Treasure.forge === 'jimin' ? '千钧·机敏'
                             : this.Treasure?.id === 'dalu' && this.Treasure.forge === 'jimin' ? '大橹·机敏'
@@ -1887,6 +1889,13 @@ export class BattleHero {
             this.callHook('开始准备战法时',from);
             if(this.READY_VAL[from.id]){
                 round += this.READY_VAL[from.id].skip;
+            }
+            if (this.Treasure?.id === 'yanri' && from.id === this.Skill && from.type === 2 && from.ready) {
+                this.Storage.yanriMainReadyCount = (this.Storage.yanriMainReadyCount || 0) + 1;
+                if (this.Storage.yanriMainReadyCount === 2) {
+                    round -= 1;
+                    this.Manger.Record.pushRecord(this, '的【掩日·谋断】第二次发动准备型主战法，跳过1个准备回合', 1);
+                }
             }
             if (this.Storage.zhengshiRepeat || this.Storage.cijianRepeat || this.Storage.weiyuRepeat || round <= 0) {
                 this.Manger.Record.pushRecord(this, `发动【${from.name}】`);
