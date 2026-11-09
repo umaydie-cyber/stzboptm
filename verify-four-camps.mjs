@@ -33,7 +33,9 @@ try {
     assert.deepEqual(maxTeam.hero[0].Attrs, { atk: 120, def: 220, int: 320, spd: 420 });
     assert.equal(maxTeam.hero[0].Storage.ironCampFirstDamageImmunity, true);
     assert.equal(maxTeam.hero[0].Storage.martialCampIgnoreFirstCounter, true);
-    assert.ok(maxTeam.hero.every(unit => unit.Storage.strategyCampInsight));
+    assert.equal(maxTeam.hero[0].Storage.strategyCampInsight, true);
+    assert.equal(maxTeam.hero.slice(1).some(unit => unit.Storage.strategyCampInsight), false);
+    assert.equal(maxTeam.fourCampSpecials.strategy, maxTeam.hero[0]);
     assert.ok(maxTeam.hero.every(unit => unit.Storage.swiftCampFirstRoundSpeed === 10));
 
     const nineTeam = { hero: [hero()] };

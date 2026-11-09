@@ -178,9 +178,10 @@ export class BattleManger {
             target.Storage.ironCampFirstDamageImmunity = true;
             team.fourCampSpecials.iron = target;
         }
-        if (team.fourCampLevels.strategy === 10) {
-            team.hero.forEach(hero => { hero.Storage.strategyCampInsight = true; });
-            team.fourCampSpecials.strategy = true;
+        if (team.fourCampLevels.strategy === 10 && team.hero.length) {
+            const target = randomHero();
+            target.Storage.strategyCampInsight = true;
+            team.fourCampSpecials.strategy = target;
         }
         if (team.fourCampLevels.martial === 10 && team.hero.length) {
             const target = randomHero();
@@ -269,7 +270,7 @@ export class BattleManger {
         const specials = [];
         if (team.fourCampSpecials.swift) specials.push('疾风营：首回合全体速度额外+10');
         if (team.fourCampSpecials.iron) specials.push(`铁壁营：${team.fourCampSpecials.iron.Name}免疫首次受到的伤害`);
-        if (team.fourCampSpecials.strategy) specials.push('军机营：首回合全体洞察，免疫控制');
+        if (team.fourCampSpecials.strategy) specials.push(`军机营：${team.fourCampSpecials.strategy.Name}首回合获得洞察，免疫控制`);
         if (team.fourCampSpecials.martial) specials.push(`尚武营：${team.fourCampSpecials.martial.Name}首次攻击无视兵种相克`);
         return [`四大营：${base}`, specials.length ? `10级特殊效果：${specials.join('；')}` : '10级特殊效果：无'];
     }

@@ -31,7 +31,7 @@ const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
 const fourCampDefinitions = [
     { key: 'swift', name: '疾风营', attr: '速度', special: '10级：首回合全体速度额外+10' },
     { key: 'iron', name: '铁壁营', attr: '防御', special: '10级：单体免疫首次伤害' },
-    { key: 'strategy', name: '军机营', attr: '谋略', special: '10级：首回合全体洞察' },
+    { key: 'strategy', name: '军机营', attr: '谋略', special: '10级：随机单体首回合洞察' },
     { key: 'martial', name: '尚武营', attr: '攻击', special: '10级：单体首次攻击无视相克' }
 ];
 const currentGeneralPlatformLevel = computed(() => {
