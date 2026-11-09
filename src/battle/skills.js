@@ -46,6 +46,80 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1084, name: "枭雄",
+        desc: "战斗前4回合，每回合有90.0%的几率使自身处于洞察状态，免疫混乱、怯战、暴走和挑衅效果，期间无法发动主动战法。曹操发动此战法时，自身攻击、防御、谋略属性提升10.0%（概率受士气影响）",
+        level: "B", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            if (self.Name === '曹操') {
+                for (const attr of ['atk', 'def', 'int']) {
+                    self.Attrs[attr] = keepTwoDecimal(self.Attrs[attr] * 1.1);
+                    self.OriginAttrs[attr] = keepTwoDecimal(self.OriginAttrs[attr] * 1.1);
+                }
+                self.Manger.Record.pushRecord(self, `的【${this.name}】使攻击、防御、谋略提升10%`, 1);
+            }
+            self.addHook('速度排序前', '枭雄逐回合洞察', () => {
+                const round = self.Manger.Round;
+                if (round < 1 || round > 4 || self.Arms <= 0) return;
+                const rate = self.getRealSkillRate(90);
+                const success = getRandomBool(rate);
+                self.Manger.Record.pushRecord(self, `的【${this.name}】洞察判定（${rate}%）：${success ? '成功' : '失败'}`, 1);
+                if (!success) return;
+                self.Storage.xiaoxiongInsightRound = round;
+                for (const name of ['confusion', 'rage', 'attackLimit']) {
+                    if (self.State[name].rounds <= 0) continue;
+                    self.State[name] = { rounds: 0, from: { hero: null, skill: 0 } };
+                    self.StateFlag[name] = false;
+                }
+            }, this, self);
+        }
+    },
+    {
+        id: 1083, name: "疾战",
+        desc: "使自身在本回合可以进行两次普通攻击，并免疫怯战效果",
+        level: "B", type: 2, target: 1, target_type: "self", limit: 1, rate: 40, study: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            if (self.State.doubleAttack.rounds <= 0) {
+                self.State.doubleAttack = { rounds: 1, from: { hero: self, skill: this } };
+                self.Manger.Record.pushRecord(self, `的【${this.name}】获得本回合连击`, 1);
+            }
+            self.Storage.jizhanAttackLimitImmuneRound = self.Manger.Round;
+            if (self.State.attackLimit.rounds > 0) {
+                self.State.attackLimit.rounds = 0;
+                self.Manger.Record.pushRecord(self, `的【${this.name}】清除怯战`, 1);
+            }
+            return true;
+        }
+    },
+    {
+        id: 1082, name: "先声夺人",
+        desc: "前3回合，每回合自身行动时有60.0%几率回合内进入连击状态；有60.0%几率进入分兵状态（伤害率70.0%）；有60.0%几率对敌军单体造成一次攻击伤害（伤害率110.0%）。每种效果独立判定，概率受士气影响",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 5, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('行动时', '先声夺人逐回合判定', () => {
+                if (self.Manger.Round < 1 || self.Manger.Round > 3 || self.Arms <= 0) return;
+                const rate = self.getRealSkillRate(60);
+                if (getRandomBool(rate)) {
+                    if (self.State.doubleAttack.rounds <= 0) {
+                        self.State.doubleAttack = { rounds: 1, from: { hero: self, skill: this } };
+                        self.Manger.Record.pushRecord(self, `的【${this.name}】获得本回合连击`, 1);
+                    }
+                }
+                if (getRandomBool(rate)) self.applySplitAttack(70, 1, this, self);
+                if (getRandomBool(rate) && !self.Manger.Over && self.Arms > 0) {
+                    const target = self.getTarget(this.limit, 1)[0];
+                    if (target) {
+                        self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】对`, '发动攻击');
+                        target.beHurt(self, { type: 1, rate: 110 }, this);
+                    }
+                }
+            }, this, self);
+        }
+    },
+    {
         id: 1081, name: "计险远近",
         desc: "当我军3名武将基础攻击距离均不相同时，大营造成的伤害无视规避，中军攻击、防御、谋略属性增加20.0，前锋每回合受到的首次攻击或策略攻击伤害减少50.0%；且我军全体在发动普通攻击后，使攻击目标本回合受到的所有伤害提高15.0%，可叠加",
         level: "A", type: 1, target: 3, target_type: "team", limit: 5, rate: "--", study: true,

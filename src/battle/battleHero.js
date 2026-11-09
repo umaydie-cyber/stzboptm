@@ -238,6 +238,16 @@ export class BattleHero {
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
+                if (['confusion', 'rage', 'attackLimit'].includes(name) && value?.rounds > 0 &&
+                    this.Storage.xiaoxiongInsightRound === this.Manger.Round) {
+                    this.Manger.Record.pushRecord(this, '的【枭雄】洞察免疫控制', 1);
+                    return true;
+                }
+                if (name === 'attackLimit' && value?.rounds > 0 &&
+                    this.Storage.jizhanAttackLimitImmuneRound === this.Manger.Round) {
+                    this.Manger.Record.pushRecord(this, '的【疾战】免疫怯战', 1);
+                    return true;
+                }
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0 &&
                     this.Storage.strategyCampInsight && this.Manger.Round <= 1) {
                     this.Manger.Record.pushRecord(this, '的【军机营】洞察免疫控制', 1);
@@ -546,6 +556,10 @@ export class BattleHero {
     //执行主动技能
     callActiveSkill() {
         if (this.Storage.cijianDisabled) return;
+        if (this.Storage.xiaoxiongInsightRound === this.Manger.Round) {
+            this.Manger.Record.pushRecord(this, '的【枭雄】洞察期间无法发动主动战法', 1);
+            return;
+        }
         if (!this.isActiveLimit()) {
             this.SkillsOrder.forEach(e => {
                 if (!e) return;
