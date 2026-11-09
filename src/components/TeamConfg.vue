@@ -27,6 +27,16 @@ const emit = defineEmits(['update:show', 'update:team', 'saved']);
 
 const { show, team } = toRefs(props);
 const camp = ref('blue');
+const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
+const currentGeneralPlatformLevel = computed(() => {
+    const level = Number(team.value[camp.value].generalPlatformLevel ?? 10);
+    return Math.max(0, Math.min(10, Math.round(level)));
+});
+const setGeneralPlatformLevel = value => {
+    team.value[camp.value].generalPlatformLevel = Math.max(0, Math.min(10, Math.round(Number(value) || 0)));
+    emit('saved');
+};
+const campBonusRate = count => (count === 3 ? 5 : 3) + currentGeneralPlatformLevel.value * 0.5;
 const testt = ref({
     red: {
         name: '马云潞'
@@ -246,6 +256,10 @@ const changeTreasurePoint = (key, delta) => {
     if (delta > 0 && remainingTreasurePoints.value <= 0) return;
     draft[key] = Math.max(1, Math.min(11, Number(draft[key]) + delta));
 };
+const maxTreasurePoint = key => {
+    const draft = treasureDraft.value;
+    draft[key] = Math.min(11, Number(draft[key]) + remainingTreasurePoints.value);
+};
 const selectForge = option => {
     treasureDraft.value.forge = option.id;
     treasureDraft.value.forgeValue = option.min;
@@ -407,6 +421,14 @@ const addAllPoints = type => {
                 <div></div>
                 <div :class="[{ 'click': camp == 'red' }]" @click="camp = 'red'">守方</div>
             </div>
+            <div class="team-settings">
+                <label>点将台等级
+                    <select aria-label="点将台等级" :value="currentGeneralPlatformLevel" @change="setGeneralPlatformLevel($event.target.value)">
+                        <option v-for="level in generalPlatformLevels" :key="level" :value="level">{{ level }}级</option>
+                    </select>
+                </label>
+                <span>阵营加成：2人同阵营 +{{ campBonusRate(2) }}%，3人同阵营 +{{ campBonusRate(3) }}%</span>
+            </div>
             <div class="h"></div>
             <div class="cards">
                 <div class="card" v-for="(hero, index) in team[camp].heros">
@@ -461,8 +483,8 @@ const addAllPoints = type => {
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
                     <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
-                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'zhengang' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'jingni' ? `受到攻击伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'mingshangouyue' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'qulu' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'zhengjiaoqiang' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'kunwu' ? `防御 +${treasureDraft.wengu * 2}` : treasureDraft.id === 'minghong' || treasureDraft.id === 'bieming' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'qi' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'bolang' ? `控制状态下受到伤害 -${treasureDraft.anzhen}%` : treasureDraft.id === 'jingyangwanren' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'xuanyi' ? `防御属性 +${(treasureDraft.wengu * 1.5).toFixed(1)}%` : treasureDraft.id === 'renfeng' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : treasureDraft.id === 'shaofu' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'yanri' ? `防御 +${(treasureDraft.wengu * 1.5).toFixed(1)}` : treasureDraft.id === 'dajiang' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'taie' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'dalu' ? `受到普通攻击伤害 -${treasureDraft.qiangren}%` : treasureDraft.id === 'qianjun' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jushu' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'tengshe' ? `速度 +${treasureDraft.lingdong}` : treasureDraft.id === 'xiuni' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'shenfeng' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'canghai' ? `防御 +${(treasureDraft.wengu * 2.5).toFixed(1)}` : treasureDraft.id === 'xinghan' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'weizhisan_gong' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jinjiu' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'shanjun' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou', 'longlin'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : treasureDraft.id === 'louying' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'tianwen' ? `受到攻击伤害 -${treasureDraft.buyi}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button></div>
-                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'zhengang' ? `攻击 +${treasureDraft.xiaorui * 3}` : treasureDraft.id === 'jingni' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'mingshangouyue' ? `主动、追击主战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'qulu' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'zhengjiaoqiang' ? `攻击 +${treasureDraft.xiaorui * 3}` : treasureDraft.id === 'kunwu' ? `主动主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'minghong' ? `攻击、谋略 +${(treasureDraft.yingcai * 1.5).toFixed(1)}` : treasureDraft.id === 'bieming' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'qi' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'bolang' ? `受到主动战法伤害 -${treasureDraft.jianren * 2}%` : treasureDraft.id === 'chengying' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : treasureDraft.id === 'jingyangwanren' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'xuanyi' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'renfeng' ? `速度 +${treasureDraft.lingdong * 2}` : treasureDraft.id === 'shaofu' ? `前4回合普攻伤害 +${treasureDraft.xianzhen * 2}%` : treasureDraft.id === 'yanri' ? `主动主战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'dajiang' ? `受到普通攻击伤害 -${treasureDraft.qiangren * 2}%` : treasureDraft.id === 'taie' ? `谋略 +${treasureDraft.mingjing * 2}；初始统率 <3 时防御 +${(treasureDraft.mingjing * 1.5).toFixed(1)}` : treasureDraft.id === 'dalu' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'qianjun' ? `控制状态下受到伤害 -${treasureDraft.anzhen}%` : treasureDraft.id === 'jushu' ? `速度 +${treasureDraft.lingdong}` : treasureDraft.id === 'tengshe' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'xiuni' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'shenfeng' ? `攻击、谋略 +${(treasureDraft.yingcai * 1.5).toFixed(1)}` : treasureDraft.id === 'canghai' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'xinghan' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'weizhisan_gong' ? `火攻、燃烧伤害 +${treasureDraft.yanshi}%` : treasureDraft.id === 'jinjiu' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'shanjun' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'longlin' ? `追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'louying' ? `攻击、谋略 +${treasureDraft.yingcai}` : treasureDraft.id === 'tianwen' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'zhengang' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'jingni' ? `受到攻击伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'mingshangouyue' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'qulu' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'zhengjiaoqiang' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'kunwu' ? `防御 +${treasureDraft.wengu * 2}` : treasureDraft.id === 'minghong' || treasureDraft.id === 'bieming' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'qi' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'bolang' ? `控制状态下受到伤害 -${treasureDraft.anzhen}%` : treasureDraft.id === 'jingyangwanren' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'xuanyi' ? `防御属性 +${(treasureDraft.wengu * 1.5).toFixed(1)}%` : treasureDraft.id === 'renfeng' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : treasureDraft.id === 'shaofu' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'yanri' ? `防御 +${(treasureDraft.wengu * 1.5).toFixed(1)}` : treasureDraft.id === 'dajiang' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'taie' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'dalu' ? `受到普通攻击伤害 -${treasureDraft.qiangren}%` : treasureDraft.id === 'qianjun' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jushu' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'tengshe' ? `速度 +${treasureDraft.lingdong}` : treasureDraft.id === 'xiuni' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'shenfeng' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'canghai' ? `防御 +${(treasureDraft.wengu * 2.5).toFixed(1)}` : treasureDraft.id === 'xinghan' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'weizhisan_gong' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jinjiu' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'shanjun' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou', 'longlin'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : treasureDraft.id === 'louying' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'tianwen' ? `受到攻击伤害 -${treasureDraft.buyi}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button><button class="treasure-max-button" type="button" :disabled="remainingTreasurePoints <= 0 || treasureDraft[treasureSpec.first] >= 11" @click="maxTreasurePoint(treasureSpec.first)">点满</button></div>
+                    <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'zhengang' ? `攻击 +${treasureDraft.xiaorui * 3}` : treasureDraft.id === 'jingni' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'mingshangouyue' ? `主动、追击主战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'qulu' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'zhengjiaoqiang' ? `攻击 +${treasureDraft.xiaorui * 3}` : treasureDraft.id === 'kunwu' ? `主动主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'minghong' ? `攻击、谋略 +${(treasureDraft.yingcai * 1.5).toFixed(1)}` : treasureDraft.id === 'bieming' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'qi' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'bolang' ? `受到主动战法伤害 -${treasureDraft.jianren * 2}%` : treasureDraft.id === 'chengying' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : treasureDraft.id === 'jingyangwanren' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'xuanyi' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'renfeng' ? `速度 +${treasureDraft.lingdong * 2}` : treasureDraft.id === 'shaofu' ? `前4回合普攻伤害 +${treasureDraft.xianzhen * 2}%` : treasureDraft.id === 'yanri' ? `主动主战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'dajiang' ? `受到普通攻击伤害 -${treasureDraft.qiangren * 2}%` : treasureDraft.id === 'taie' ? `谋略 +${treasureDraft.mingjing * 2}；初始统率 <3 时防御 +${(treasureDraft.mingjing * 1.5).toFixed(1)}` : treasureDraft.id === 'dalu' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'qianjun' ? `控制状态下受到伤害 -${treasureDraft.anzhen}%` : treasureDraft.id === 'jushu' ? `速度 +${treasureDraft.lingdong}` : treasureDraft.id === 'tengshe' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'xiuni' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'shenfeng' ? `攻击、谋略 +${(treasureDraft.yingcai * 1.5).toFixed(1)}` : treasureDraft.id === 'canghai' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'xinghan' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'weizhisan_gong' ? `火攻、燃烧伤害 +${treasureDraft.yanshi}%` : treasureDraft.id === 'jinjiu' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'shanjun' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'longlin' ? `追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'louying' ? `攻击、谋略 +${treasureDraft.yingcai}` : treasureDraft.id === 'tianwen' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button><button class="treasure-max-button" type="button" :disabled="remainingTreasurePoints <= 0 || treasureDraft[treasureSpec.second] >= 11" @click="maxTreasurePoint(treasureSpec.second)">点满</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
                     <h3>锻造词条（选择一条）</h3>
                     <div class="forge-options">
@@ -742,6 +764,22 @@ const addAllPoints = type => {
 
         &>.h {
             border-bottom: #505050 solid 0.2vw;
+        }
+
+        &>.team-settings {
+            width: 90%;
+            min-height: 42px;
+            margin: 0 auto 8px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: #e4dd9e;
+            font-family: "FZLBJW_B";
+            font-size: clamp(13px, 1vw, 17px);
+
+            label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+            select { padding: 5px 24px 5px 10px; color: #f3e4ad; background: #292622; border: 1px solid #bca36a; border-radius: 3px; }
+            span { color: #bdb7a5; }
         }
 
         &>.cards {
@@ -1777,6 +1815,8 @@ const addAllPoints = type => {
 .treasure-point > span:first-of-type { flex: 1; }
 .treasure-point button, .forge-options button, .treasure-actions button { cursor: pointer; border: 1px solid #a88956; background: #4c402e; color: #f5e7ba; padding: 5px 12px; }
 .treasure-point button { font-size: 20px; min-width: 34px; }
+.treasure-point .treasure-max-button { min-width: 58px; font-size: 15px; white-space: nowrap; }
+.treasure-point button:disabled { opacity: .45; cursor: default; }
 .forge-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .forge-options button.selected { background: #966b31; border-color: #f6d486; }
 .forge-value { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 14px; }
@@ -1846,6 +1886,7 @@ const addAllPoints = type => {
     .heroinfo-warp > .heroinfo-header > .close,
     .skilllist-warp > .skilllist-header > .close { width: 44px; height: 44px; flex: none; transform: none; }
     .team-config-warp > .box > .tabs { width: 180px; min-height: 50px; font-size: 17px; }
+    .team-config-warp > .box > .team-settings { width: calc(100% - 32px); min-height: 54px; margin-bottom: 4px; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
     .team-config-warp > .box > .cards { height: auto; flex: 1; gap: 12px; padding: 12px 8px 24px 24px; box-sizing: border-box; }
     .team-config-warp > .box > .cards > .card { width: 100%; height: 130px; min-height: 130px; }
     .team-config-warp > .box > .cards > .card > .posname { font-size: 12px; width: 14px; left: -19px; }

@@ -60,12 +60,12 @@ const defaultHero = (id, equipskill, allocation = null) => ({
 	}
 });
 const team = ref({
-	blue: { morale: 120, heros: [
+	blue: { morale: 120, generalPlatformLevel: 10, heros: [
 		defaultHero(1002, [1039, 1043], 'atk'), // 马超：大营
 		defaultHero(1004, [1044, 1014], 'spd'), // 张辽：中军
 		defaultHero(1012, [1023, 1041], 'int')  // 曹操：前锋
 	] },
-	red: { morale: 120, heros: [
+	red: { morale: 120, generalPlatformLevel: 10, heros: [
 		defaultHero(1021, [1062, 1054], 'int'), // 刘秀：大营
 		defaultHero(1022, [1020, 1019]),        // 司马懿：中军
 		defaultHero(1023, [1015, 1014], 'int')  // 冯嫽：前锋（垒实迎击）

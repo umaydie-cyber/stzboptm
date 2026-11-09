@@ -4,8 +4,16 @@
 
 import { BattleHero } from "./battleHero";
 import { Record } from './record';
+import { keepTwoDecimal } from "../uilts";
 
 const BattleRound = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+const TROOP_BONUSES = {
+    1: { name: '弓兵', attrs: [['def', '防御'], ['spd', '速度']] },
+    2: { name: '步兵', attrs: [['def', '防御'], ['atk', '攻击']] },
+    3: { name: '骑兵', attrs: [['atk', '攻击'], ['spd', '速度']] }
+};
+const CAMP_NAMES = { 1: '蜀', 2: '魏', 3: '吴', 4: '汉', 5: '群', 6: '晋' };
+const TEAM_ATTRS = ['atk', 'def', 'int', 'spd'];
 
 export class BattleManger {
     constructor(heroBattleTeam, options = {}){
@@ -113,8 +121,99 @@ export class BattleManger {
             this.RedTeam.total += hero.Arms;
         });
 
+        this.applyTeamBonuses(this.BlueTeam, heroBattleTeam.blue.generalPlatformLevel);
+        this.applyTeamBonuses(this.RedTeam, heroBattleTeam.red.generalPlatformLevel);
+
         this.startBattle();
         this.exitBattle();
+    }
+
+    applyTeamBonuses(team, generalPlatformLevel){
+        team.hero.forEach(hero => {
+            hero.TeamBonusBaseAttrs = Object.fromEntries(TEAM_ATTRS.map(key => [key, hero.Attrs[key]]));
+            hero.TeamBonusRates = Object.fromEntries(TEAM_ATTRS.map(key => [key, 0]));
+        });
+        this.applyTroopBonus(team);
+        this.applyCampBonus(team, generalPlatformLevel);
+    }
+
+    addTeamAttributeBonus(hero, keys, rate){
+        hero.TeamBonusBaseAttrs ||= Object.fromEntries(TEAM_ATTRS.map(key => [key, hero.Attrs[key]]));
+        hero.TeamBonusRates ||= Object.fromEntries(TEAM_ATTRS.map(key => [key, 0]));
+        keys.forEach(key => {
+            hero.TeamBonusRates[key] += rate;
+            hero.Attrs[key] = keepTwoDecimal(hero.TeamBonusBaseAttrs[key] * (1 + hero.TeamBonusRates[key] / 100));
+            hero.OriginAttrs[key] = hero.Attrs[key];
+        });
+    }
+
+    applyTroopBonus(team){
+        const groups = new Map();
+        team.hero.forEach(hero => {
+            if (!groups.has(hero.BisicArm)) groups.set(hero.BisicArm, []);
+            groups.get(hero.BisicArm).push(hero);
+        });
+        const [army, affectedHeroes = []] = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)[0] || [];
+        const count = affectedHeroes.length >= 3 ? 3 : affectedHeroes.length === 2 ? 2 : 0;
+        const definition = TROOP_BONUSES[army];
+        team.troopBonus = count && definition
+            ? { ...definition, count, rate: count === 3 ? 10 : 5 }
+            : null;
+        if (!team.troopBonus) return;
+
+        affectedHeroes.forEach(hero => {
+            this.addTeamAttributeBonus(hero, team.troopBonus.attrs.map(([key]) => key), team.troopBonus.rate);
+        });
+    }
+
+    applyCampBonus(team, generalPlatformLevel){
+        const parsedLevel = Number(generalPlatformLevel);
+        team.generalPlatformLevel = Number.isFinite(parsedLevel)
+            ? Math.max(0, Math.min(10, Math.round(parsedLevel)))
+            : 10;
+        if (team.hero.some(hero => hero.SkillsOrder?.includes(1078))) {
+            team.campBonus = { disabledBySkill: true };
+            return;
+        }
+
+        const groups = new Map();
+        team.hero.forEach(hero => {
+            if (!groups.has(hero.Camp)) groups.set(hero.Camp, []);
+            groups.get(hero.Camp).push(hero);
+        });
+        const [camp, affectedHeroes = []] = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)[0] || [];
+        const count = affectedHeroes.length >= 3 ? 3 : affectedHeroes.length === 2 ? 2 : 0;
+        if (!count) {
+            team.campBonus = null;
+            return;
+        }
+
+        const rate = (count === 3 ? 5 : 3) + team.generalPlatformLevel * 0.5;
+        team.campBonus = { camp, count, rate, affectedHeroes };
+        affectedHeroes.forEach(hero => this.addTeamAttributeBonus(hero, TEAM_ATTRS, rate));
+    }
+
+    getTroopBonusDescription(team){
+        if (!team.troopBonus) return '兵种加成：未触发（需至少2名同兵种武将）';
+        const { count, name, rate, attrs } = team.troopBonus;
+        const detail = attrs.map(([, label]) => `${label}+${rate}%`).join('，');
+        return `${count}${name}加成：${detail}${count === 2 ? `（仅作用于2名${name}武将）` : ''}`;
+    }
+
+    getCampBonusDescription(team){
+        const prefix = `阵营加成（点将台${team.generalPlatformLevel}级）`;
+        if (team.campBonus?.disabledBySkill) return `${prefix}：受【合纵连横】影响，未生效`;
+        if (!team.campBonus) return `${prefix}：未触发（三名武将阵营均不同）`;
+        const { camp, count, rate, affectedHeroes } = team.campBonus;
+        const scope = count === 2 ? `（仅作用于${affectedHeroes.map(hero => hero.Name).join('、')}）` : '';
+        return `${prefix}：${count}名${CAMP_NAMES[camp]}阵营武将，攻击、防御、谋略、速度+${rate}%${scope}`;
+    }
+
+    recordSettledAttrs(label, team){
+        this.Record.pushSysRecord(`【${label}结算后武将属性】`);
+        team.hero.forEach(hero => {
+            this.Record.pushRecord(hero, `（${hero.Posname}）攻击 ${hero.Attrs.atk}，谋略 ${hero.Attrs.int}，防御 ${hero.Attrs.def}，速度 ${hero.Attrs.spd}`, 1);
+        });
     }
 
     startBattle(){
@@ -125,10 +224,14 @@ export class BattleManger {
         [...this.BlueTeam.hero].forEach(e=>{
             this.Record.pushSysRecord(`(${e.Posname}) 【${e.Name}】 ${e.Level}级 兵力：${e.Arms}`,1);
         })
+        this.Record.pushSysRecord(this.getTroopBonusDescription(this.BlueTeam),1);
+        this.Record.pushSysRecord(this.getCampBonusDescription(this.BlueTeam),1);
         this.Record.pushSysRecord('【守方阵容】');
         [...this.RedTeam.hero].forEach(e=>{
             this.Record.pushSysRecord(`(${e.Posname}) 【${e.Name}】 ${e.Level}级 兵力：${e.Arms}`,1);
         })
+        this.Record.pushSysRecord(this.getTroopBonusDescription(this.RedTeam),1);
+        this.Record.pushSysRecord(this.getCampBonusDescription(this.RedTeam),1);
 
         for (let index = 0; index < BattleRound.length; index++) {
             if(this.Over)break;
@@ -220,12 +323,8 @@ export class BattleManger {
             });
 
             if(this.Round == 0){
-                [...this.BlueTeam.hero].forEach(e=>{
-                    this.Record.pushRecord(e,`攻击(${e.Attrs.atk}) 谋略(${e.Attrs.int}) 防御(${e.Attrs.def}) 速度(${e.Attrs.spd})`);
-                });
-                [...this.RedTeam.hero].forEach(e=>{
-                    this.Record.pushRecord(e,`攻击(${e.Attrs.atk}) 谋略(${e.Attrs.int}) 防御(${e.Attrs.def}) 速度(${e.Attrs.spd})`);
-                });
+                this.recordSettledAttrs('攻方', this.BlueTeam);
+                this.recordSettledAttrs('守方', this.RedTeam);
             }
 
             if(this.Round >= 1){
