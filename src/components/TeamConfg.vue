@@ -3,6 +3,7 @@ import { ref, toRefs, computed } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
 import { keepTwoDecimal } from "../uilts"
+import { PRESET_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets } from '../buildPresets';
 
 let SKILLS = {};
 let SKILL_LIST = {1:[],2:[],3:[],4:[]};
@@ -27,6 +28,90 @@ const emit = defineEmits(['update:show', 'update:team', 'saved']);
 
 const { show, team } = toRefs(props);
 const camp = ref('blue');
+const presetName = ref('');
+const presetMessage = ref('');
+const importInput = ref(null);
+const presets = ref([]);
+try {
+    const stored = localStorage.getItem(PRESET_STORAGE_KEY);
+    if (stored) presets.value = parseBuildPresets(stored).map(item => ({ ...item, id: item.id || crypto.randomUUID() }));
+} catch (error) {
+    presetMessage.value = `读取本地构筑失败：${error.message}`;
+}
+const persistPresets = () => {
+    try {
+        localStorage.setItem(PRESET_STORAGE_KEY, serializeBuildPresets(presets.value));
+        return true;
+    } catch (error) {
+        presetMessage.value = `保存失败：${error.message}`;
+        return false;
+    }
+};
+const saveCurrentBuild = () => {
+    const name = presetName.value.trim();
+    if (!name || name.length > 60) { presetMessage.value = '请输入 1 至 60 字的构筑名称'; return; }
+    try {
+        const build = validateBuild(team.value[camp.value]);
+        presets.value.push({ id: crypto.randomUUID(), name, build });
+        if (persistPresets()) { presetName.value = ''; presetMessage.value = `已保存「${name}」`; }
+        else presets.value.pop();
+    } catch (error) { presetMessage.value = error.message; }
+};
+const loadBuild = preset => {
+    team.value[camp.value] = validateBuild(preset.build);
+    emit('saved');
+    presetMessage.value = `已将「${preset.name}」载入${camp.value === 'blue' ? '攻方' : '守方'}，可继续编辑武将、战法和宝物`;
+};
+const updateBuild = preset => {
+    try {
+        const old = preset.build;
+        preset.build = validateBuild(team.value[camp.value]);
+        if (persistPresets()) presetMessage.value = `已更新「${preset.name}」`;
+        else preset.build = old;
+    } catch (error) { presetMessage.value = error.message; }
+};
+const renameBuild = preset => {
+    const name = preset.name.trim();
+    if (!name || name.length > 60) { presetMessage.value = '请输入 1 至 60 字的构筑名称'; return; }
+    preset.name = name;
+    if (persistPresets()) presetMessage.value = `已重命名为「${name}」`;
+};
+const removeBuild = preset => {
+    if (!window.confirm(`删除构筑「${preset.name}」？`)) return;
+    const index = presets.value.indexOf(preset);
+    presets.value.splice(index, 1);
+    if (persistPresets()) presetMessage.value = `已删除「${preset.name}」`;
+    else presets.value.splice(index, 0, preset);
+};
+const exportBuilds = () => {
+    const blob = new Blob([serializeBuildPresets(presets.value)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '我的构筑.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    presetMessage.value = `已导出 ${presets.value.length} 套构筑`;
+};
+const importBuilds = async event => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > 2_000_000) { presetMessage.value = 'JSON 文件不能超过 2 MB'; return; }
+    try {
+        const imported = parseBuildPresets(await file.text());
+        const known = new Set(presets.value.map(item => item.id));
+        const added = imported.map(item => {
+            const id = !item.id || known.has(item.id) ? crypto.randomUUID() : item.id;
+            known.add(id);
+            return { ...item, id };
+        });
+        const previous = presets.value;
+        presets.value = [...previous, ...added];
+        if (persistPresets()) presetMessage.value = `已导入 ${added.length} 套构筑`;
+        else presets.value = previous;
+    } catch (error) { presetMessage.value = `导入失败：${error.message}`; }
+};
 const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
 const fourCampDefinitions = [
     { key: 'swift', name: '疾风营', attr: '速度', special: '10级：首回合全体速度额外+10' },
@@ -436,8 +521,32 @@ const addAllPoints = type => {
                 <div></div>
                 <div :class="[{ 'click': camp == 'red' }]" @click="camp = 'red'">守方</div>
             </div>
+            <section class="my-builds" aria-label="我的构筑">
+                <div class="my-builds-heading"><strong>我的构筑</strong><span>当前编辑：{{ camp === 'blue' ? '攻方' : '守方' }}</span></div>
+                <div class="my-builds-actions">
+                    <input v-model="presetName" maxlength="60" placeholder="给当前阵容取名" aria-label="新构筑名称" @keyup.enter="saveCurrentBuild">
+                    <button type="button" @click="saveCurrentBuild">保存当前阵容</button>
+                    <button type="button" @click="importInput?.click()">导入 JSON</button>
+                    <button type="button" @click="exportBuilds">导出 JSON</button>
+                    <input ref="importInput" class="preset-file" type="file" accept=".json,application/json" aria-label="选择构筑 JSON" @change="importBuilds">
+                </div>
+                <p v-if="presetMessage" class="my-builds-message" role="status">{{ presetMessage }}</p>
+                <div v-if="presets.length" class="my-builds-list">
+                    <div v-for="preset in presets" :key="preset.id" class="my-build-row">
+                        <input v-model="preset.name" maxlength="60" aria-label="构筑名称" @change="renameBuild(preset)">
+                        <span>{{ preset.build.heros.map(hero => HEROS[hero.id]?.name || '未知武将').join(' · ') }}</span>
+                        <button type="button" @click="loadBuild(preset)">载入{{ camp === 'blue' ? '攻方' : '守方' }}</button>
+                        <button type="button" @click="updateBuild(preset)">覆盖保存</button>
+                        <button type="button" @click="removeBuild(preset)">删除</button>
+                    </div>
+                </div>
+                <p v-else class="my-builds-empty">暂无构筑。先配置阵容，再保存为预设。</p>
+            </section>
             <div class="team-settings">
                 <div class="platform-setting">
+                    <label>士气
+                        <input type="number" min="0" max="200" :value="team[camp].morale" aria-label="士气" @change="team[camp].morale = Math.max(0, Math.min(200, Number($event.target.value) || 0)); emit('saved')">
+                    </label>
                     <label>点将台等级
                         <select aria-label="点将台等级" :value="currentGeneralPlatformLevel" @change="setGeneralPlatformLevel($event.target.value)">
                             <option v-for="level in generalPlatformLevels" :key="level" :value="level">{{ level }}级</option>
@@ -1953,5 +2062,26 @@ const addAllPoints = type => {
     .skilllist-warp > .skilllist-box > .skill-group > .title { font-size: 16px; margin-top: 12px; }
     .skilllist-warp > .skilllist-box > .skill-group > .content > .skill { width: calc((100% - 24px) / 3); height: auto; aspect-ratio: 1; margin: 4px; }
     .skilllist-warp > .skilllist-box > .skill-group > .content > .skill > .skill-container > .skill-name { font-size: 12px; text-align: center; }
+}
+.team-config-warp > .box { height: 90%; max-height: 1100px; }
+.team-config-warp .my-builds { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 2px auto 10px; padding: 10px 12px; border: 1px solid #66573d; background: rgba(14, 16, 17, .82); color: #ead6a0; font-size: 14px; }
+.my-builds-heading, .my-builds-actions, .my-build-row { display: flex; align-items: center; gap: 8px; }
+.my-builds-heading { justify-content: space-between; margin-bottom: 8px; }
+.my-builds-heading strong { font-size: 18px; }
+.my-builds-heading span, .my-build-row span, .my-builds-empty { color: #bab9ae; }
+.my-builds-actions, .my-build-row { flex-wrap: wrap; margin: 6px 0; }
+.my-builds-actions input:not(.preset-file), .my-build-row input, .team-config-warp .team-settings input { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
+.my-builds-actions input:not(.preset-file) { width: 180px; }
+.my-build-row { border-top: 1px solid #4b4942; padding-top: 6px; }
+.my-build-row input { width: 150px; }
+.my-build-row span { flex: 1; min-width: 175px; }
+.my-builds button { cursor: pointer; padding: 5px 10px; color: #f6e8bd; background: #4c402e; border: 1px solid #a88956; border-radius: 3px; }
+.my-builds button:hover { background: #6a5535; }
+.my-builds .preset-file { display: none; }
+.my-builds-message { margin: 5px 0; color: #70dda7; }
+.team-config-warp .team-settings input { width: 64px; }
+@media (max-width: 900px) {
+    .team-config-warp .my-builds { width: calc(100% - 24px); max-height: 230px; margin-bottom: 8px; }
+    .team-config-warp .my-builds-heading strong { font-size: 16px; }
 }
 </style>
