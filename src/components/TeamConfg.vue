@@ -597,8 +597,8 @@ const addAllPoints = type => {
                 <div></div>
                 <div :class="[{ 'click': camp == 'red' }]" @click="camp = 'red'">守方</div>
             </div>
-            <section class="my-builds" aria-label="我的构筑">
-                <div class="my-builds-heading"><strong>我的构筑</strong><span>当前编辑：{{ camp === 'blue' ? '攻方' : '守方' }}</span></div>
+            <details class="my-builds">
+                <summary class="my-builds-heading"><strong>我的构筑</strong><span>共 {{ presets.length }} 套 · 当前编辑：{{ camp === 'blue' ? '攻方' : '守方' }}</span></summary>
                 <div class="my-builds-actions">
                     <input v-model="presetName" maxlength="60" placeholder="给当前阵容取名" aria-label="新构筑名称" @keyup.enter="saveCurrentBuild">
                     <button type="button" @click="saveCurrentBuild">保存当前阵容</button>
@@ -617,8 +617,8 @@ const addAllPoints = type => {
                     </div>
                 </div>
                 <p v-else class="my-builds-empty">暂无构筑。先配置阵容，再保存为预设。</p>
-            </section>
-            <details class="environment-teams" open>
+            </details>
+            <details class="environment-teams">
                 <summary>环境队伍 <span>共 {{ environmentTeams.length }} 支，可设置权重 1–100</span></summary>
                 <div class="environment-actions">
                     <input v-model="environmentName" maxlength="60" placeholder="环境队伍名称" aria-label="新环境队伍名称" @keyup.enter="addEnvironmentTeam">
@@ -2171,8 +2171,11 @@ const addAllPoints = type => {
     .team-config-warp > .box > .cards > .card { min-height: 112px; }
 }
 .team-config-warp .my-builds { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 2px auto 10px; padding: 10px 12px; border: 1px solid #66573d; background: rgba(14, 16, 17, .82); color: #ead6a0; font-size: 14px; }
-.my-builds-heading, .my-builds-actions, .my-build-row { display: flex; align-items: center; gap: 8px; }
-.my-builds-heading { justify-content: space-between; margin-bottom: 8px; }
+.my-builds-actions, .my-build-row { display: flex; align-items: center; gap: 8px; }
+.my-builds-heading { cursor: pointer; }
+.my-builds-heading span { float: right; font-size: 13px; }
+.my-builds[open] .my-builds-heading, .environment-teams[open] summary { margin-bottom: 8px; }
+.my-builds summary:focus-visible, .environment-teams summary:focus-visible { outline: 2px solid #ead6a0; outline-offset: 3px; }
 .my-builds-heading strong { font-size: 18px; }
 .my-builds-heading span, .my-build-row span, .my-builds-empty { color: #bab9ae; }
 .my-builds-actions, .my-build-row { flex-wrap: wrap; margin: 6px 0; }
