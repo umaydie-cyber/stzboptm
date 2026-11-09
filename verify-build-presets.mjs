@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
-    const { validateBuild, parseBuildPresets, serializeBuildPresets } = await vite.ssrLoadModule('/src/buildPresets.js');
+    const { validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } = await vite.ssrLoadModule('/src/buildPresets.js');
     const build = {
         morale: 120, generalPlatformLevel: 8,
         fourCampLevels: { swift: 10, iron: 9, strategy: 8, martial: 7 },
@@ -20,6 +20,10 @@ try {
     copy.heros[0].equipskill[0] = 0;
     assert.equal(build.heros[0].equipskill[0], 1041);
     assert.throws(() => parseBuildPresets('{"version":1,"presets":[{"name":"坏数据","build":{}}]}'));
+    const environment = [{ id: 'environment-1', name: '测试环境', weight: 37, build }];
+    assert.deepEqual(parseEnvironmentTeams(serializeEnvironmentTeams(environment)), environment);
+    for (const invalid of [0, 101, 1.5, 'abc']) assert.throws(() => validateEnvironmentWeight(invalid));
+    assert.throws(() => parseEnvironmentTeams(serializeEnvironmentTeams([{ ...environment[0], weight: 0 }])));
     console.log('Verified preset JSON round trip, treasure data, independent copies and import validation');
 } finally {
     await vite.close();

@@ -3,7 +3,7 @@ import { ref, toRefs, computed } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
 import { keepTwoDecimal } from "../uilts"
-import { PRESET_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets } from '../buildPresets';
+import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 
 let SKILLS = {};
 let SKILL_LIST = {1:[],2:[],3:[],4:[]};
@@ -32,11 +32,22 @@ const presetName = ref('');
 const presetMessage = ref('');
 const importInput = ref(null);
 const presets = ref([]);
+const environmentTeams = ref([]);
+const environmentName = ref('');
+const environmentWeight = ref(50);
+const environmentSource = ref('current');
+const environmentMessage = ref('');
 try {
     const stored = localStorage.getItem(PRESET_STORAGE_KEY);
     if (stored) presets.value = parseBuildPresets(stored).map(item => ({ ...item, id: item.id || crypto.randomUUID() }));
 } catch (error) {
     presetMessage.value = `读取本地构筑失败：${error.message}`;
+}
+try {
+    const stored = localStorage.getItem(ENVIRONMENT_STORAGE_KEY);
+    if (stored) environmentTeams.value = parseEnvironmentTeams(stored).map(item => ({ ...item, id: item.id || crypto.randomUUID() }));
+} catch (error) {
+    environmentMessage.value = `读取环境队伍失败：${error.message}`;
 }
 const persistPresets = () => {
     try {
@@ -111,6 +122,71 @@ const importBuilds = async event => {
         if (persistPresets()) presetMessage.value = `已导入 ${added.length} 套构筑`;
         else presets.value = previous;
     } catch (error) { presetMessage.value = `导入失败：${error.message}`; }
+};
+const persistEnvironment = () => {
+    try {
+        localStorage.setItem(ENVIRONMENT_STORAGE_KEY, serializeEnvironmentTeams(environmentTeams.value));
+        return true;
+    } catch (error) {
+        environmentMessage.value = `保存环境队伍失败：${error.message}`;
+        return false;
+    }
+};
+const addEnvironmentTeam = () => {
+    const name = environmentName.value.trim();
+    if (!name || name.length > 60) { environmentMessage.value = '请输入 1 至 60 字的队伍名称'; return; }
+    try {
+        const source = environmentSource.value === 'current'
+            ? team.value[camp.value]
+            : presets.value.find(item => item.id === environmentSource.value)?.build;
+        if (!source) throw new Error('所选构筑不存在');
+        const entry = { id: crypto.randomUUID(), name, weight: validateEnvironmentWeight(environmentWeight.value), build: validateBuild(source) };
+        environmentTeams.value.push(entry);
+        if (persistEnvironment()) { environmentName.value = ''; environmentMessage.value = `已添加「${name}」`; }
+        else environmentTeams.value.pop();
+    } catch (error) { environmentMessage.value = error.message; }
+};
+const loadEnvironmentTeam = entry => {
+    team.value[camp.value] = validateBuild(entry.build);
+    emit('saved');
+    environmentMessage.value = `已将「${entry.name}」载入${camp.value === 'blue' ? '攻方' : '守方'}，编辑后可覆盖保存`;
+};
+const updateEnvironmentTeam = entry => {
+    try {
+        const old = entry.build;
+        entry.build = validateBuild(team.value[camp.value]);
+        if (persistEnvironment()) environmentMessage.value = `已更新「${entry.name}」的队伍配置`;
+        else entry.build = old;
+    } catch (error) { environmentMessage.value = error.message; }
+};
+const renameEnvironmentTeam = entry => {
+    const name = entry.name.trim();
+    if (!name || name.length > 60) { environmentMessage.value = '请输入 1 至 60 字的队伍名称'; return; }
+    entry.name = name;
+    if (persistEnvironment()) environmentMessage.value = `已重命名为「${name}」`;
+};
+const setEnvironmentWeight = (entry, event) => {
+    try {
+        const weight = validateEnvironmentWeight(event.target.value);
+        const old = entry.weight;
+        entry.weight = weight;
+        if (persistEnvironment()) environmentMessage.value = `「${entry.name}」权重已设为 ${weight}`;
+        else entry.weight = old;
+    } catch (error) { environmentMessage.value = error.message; }
+    event.target.value = entry.weight;
+};
+const removeEnvironmentTeam = entry => {
+    if (!window.confirm(`删除环境队伍「${entry.name}」？`)) return;
+    const index = environmentTeams.value.indexOf(entry);
+    environmentTeams.value.splice(index, 1);
+    if (persistEnvironment()) environmentMessage.value = `已删除「${entry.name}」`;
+    else environmentTeams.value.splice(index, 0, entry);
+};
+const copyEnvironmentToBuilds = entry => {
+    const build = validateBuild(entry.build);
+    presets.value.push({ id: crypto.randomUUID(), name: entry.name, build });
+    if (persistPresets()) { presetMessage.value = `已将「${entry.name}」加入我的构筑`; environmentMessage.value = presetMessage.value; }
+    else presets.value.pop();
 };
 const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
 const fourCampDefinitions = [
@@ -542,6 +618,31 @@ const addAllPoints = type => {
                 </div>
                 <p v-else class="my-builds-empty">暂无构筑。先配置阵容，再保存为预设。</p>
             </section>
+            <details class="environment-teams" open>
+                <summary>环境队伍 <span>共 {{ environmentTeams.length }} 支，可设置权重 1–100</span></summary>
+                <div class="environment-actions">
+                    <input v-model="environmentName" maxlength="60" placeholder="环境队伍名称" aria-label="新环境队伍名称" @keyup.enter="addEnvironmentTeam">
+                    <select v-model="environmentSource" aria-label="环境队伍来源">
+                        <option value="current">当前{{ camp === 'blue' ? '攻方' : '守方' }}阵容</option>
+                        <option v-for="preset in presets" :key="preset.id" :value="preset.id">我的构筑：{{ preset.name }}</option>
+                    </select>
+                    <label>权重 <input v-model.number="environmentWeight" type="number" min="1" max="100" step="1" aria-label="新环境队伍权重"></label>
+                    <button type="button" @click="addEnvironmentTeam">添加队伍</button>
+                </div>
+                <p v-if="environmentMessage" class="environment-message" role="status">{{ environmentMessage }}</p>
+                <div v-if="environmentTeams.length" class="environment-list">
+                    <div v-for="entry in environmentTeams" :key="entry.id" class="environment-row">
+                        <input v-model="entry.name" maxlength="60" aria-label="环境队伍名称" @change="renameEnvironmentTeam(entry)">
+                        <span>{{ entry.build.heros.map(hero => HEROS[hero.id]?.name || '未知武将').join(' · ') }}</span>
+                        <label>权重 <input type="number" min="1" max="100" step="1" :value="entry.weight" :aria-label="`${entry.name}权重`" @change="setEnvironmentWeight(entry, $event)"></label>
+                        <button type="button" @click="loadEnvironmentTeam(entry)">载入{{ camp === 'blue' ? '攻方' : '守方' }}</button>
+                        <button type="button" @click="updateEnvironmentTeam(entry)">覆盖保存</button>
+                        <button type="button" @click="copyEnvironmentToBuilds(entry)">加入我的构筑</button>
+                        <button type="button" @click="removeEnvironmentTeam(entry)">删除</button>
+                    </div>
+                </div>
+                <p v-else class="environment-empty">暂无环境队伍，可用当前阵容或我的构筑添加。</p>
+            </details>
             <div class="team-settings">
                 <div class="platform-setting">
                     <label>士气
@@ -2064,6 +2165,11 @@ const addAllPoints = type => {
     .skilllist-warp > .skilllist-box > .skill-group > .content > .skill > .skill-container > .skill-name { font-size: 12px; text-align: center; }
 }
 .team-config-warp > .box { height: 90%; max-height: 1100px; }
+.team-config-warp > .box { overflow-y: auto; }
+@media (min-width: 901px) {
+    .team-config-warp > .box > .cards { flex: none; min-height: 400px; }
+    .team-config-warp > .box > .cards > .card { min-height: 112px; }
+}
 .team-config-warp .my-builds { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 2px auto 10px; padding: 10px 12px; border: 1px solid #66573d; background: rgba(14, 16, 17, .82); color: #ead6a0; font-size: 14px; }
 .my-builds-heading, .my-builds-actions, .my-build-row { display: flex; align-items: center; gap: 8px; }
 .my-builds-heading { justify-content: space-between; margin-bottom: 8px; }
@@ -2080,8 +2186,23 @@ const addAllPoints = type => {
 .my-builds .preset-file { display: none; }
 .my-builds-message { margin: 5px 0; color: #70dda7; }
 .team-config-warp .team-settings input { width: 64px; }
+.team-config-warp .environment-teams { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 0 auto 10px; padding: 8px 12px; border: 1px solid #53665c; background: rgba(14, 22, 19, .84); color: #cce6d5; font-size: 14px; }
+.environment-teams summary { cursor: pointer; font-size: 18px; font-weight: bold; }
+.environment-teams summary span { margin-left: 10px; color: #aebfb5; font-size: 13px; font-weight: normal; }
+.environment-actions, .environment-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.environment-row { padding-top: 8px; border-top: 1px solid #46574d; }
+.environment-actions > input, .environment-row > input { width: 150px; }
+.environment-row > span { flex: 1; min-width: 165px; color: #bfc7be; }
+.environment-teams input, .environment-teams select { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #ebf5ed; background: #252e29; border: 1px solid #748d79; border-radius: 3px; }
+.environment-teams label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.environment-teams label input { width: 60px; }
+.environment-teams button { cursor: pointer; padding: 5px 10px; color: #e7f5e9; background: #355541; border: 1px solid #78a283; border-radius: 3px; }
+.environment-teams button:hover { background: #477052; }
+.environment-message { margin: 5px 0; color: #78dfa4; }
+.environment-empty { color: #bfc7be; }
 @media (max-width: 900px) {
     .team-config-warp .my-builds { width: calc(100% - 24px); max-height: 230px; margin-bottom: 8px; }
     .team-config-warp .my-builds-heading strong { font-size: 16px; }
+    .team-config-warp .environment-teams { width: calc(100% - 24px); max-height: 230px; }
 }
 </style>

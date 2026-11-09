@@ -2,6 +2,7 @@ import { __HEROS__ } from './battle/heros';
 import { __SKILLS__ } from './battle/skills';
 
 export const PRESET_STORAGE_KEY = 'stzboptm.myBuilds.v1';
+export const ENVIRONMENT_STORAGE_KEY = 'stzboptm.environmentTeams.v1';
 const heroIds = new Set(__HEROS__.map(hero => hero.id));
 const skillIds = new Set(__SKILLS__.map(skill => skill.id));
 const camps = ['swift', 'iron', 'strategy', 'martial'];
@@ -43,3 +44,22 @@ export function parseBuildPresets(text) {
 }
 
 export const serializeBuildPresets = presets => JSON.stringify({ version: 1, presets }, null, 2);
+
+export function validateEnvironmentWeight(value) {
+    const weight = Number(value);
+    if (!Number.isInteger(weight) || weight < 1 || weight > 100) throw new Error('环境队伍权重必须是 1–100 的整数');
+    return weight;
+}
+
+export function parseEnvironmentTeams(text) {
+    const data = JSON.parse(text);
+    if (!plain(data) || data.version !== 1 || !Array.isArray(data.teams)) throw new Error('环境队伍数据无效');
+    return data.teams.map(item => {
+        if (!plain(item) || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 60) {
+            throw new Error('环境队伍名称无效');
+        }
+        return { id: typeof item.id === 'string' ? item.id : '', name: item.name.trim(), weight: validateEnvironmentWeight(item.weight), build: validateBuild(item.build) };
+    });
+}
+
+export const serializeEnvironmentTeams = teams => JSON.stringify({ version: 1, teams });
