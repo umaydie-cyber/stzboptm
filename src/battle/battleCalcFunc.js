@@ -144,6 +144,11 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         value += amount;
         entries.push({ name, hero: hero.Name, value: amount });
     };
+    // 基础兵种相克：骑克步、步克弓、弓克骑。被克制方造成的所有伤害降低30%。
+    const counteredBy = { 1: 2, 2: 3, 3: 1 };
+    if (!damageInfo.ignoreTroopCounter && counteredBy[attacker.BisicArm] === target.BisicArm) {
+        special('兵种相克', -30, attacker);
+    }
     if (type == 1 || type == 3) {
         add(attacker, "attackDamageAdd", 1);
         add(attacker, "attackDamageSub", -1);
@@ -545,4 +550,3 @@ export function getRandomBool(probability) {
 export function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-

@@ -8,7 +8,6 @@ import { __SKILLS__ } from "./skills"
 import { keepTwoDecimal, makeSkillTag, roundEightNine } from "../uilts"
 import { clacAttackDamage, getRandomBool, clacInteDamage, clacInte2Damage, getDamageAddition, calcRecover } from "./battleCalcFunc"
 
-const CanAddAttrsKey = ['atk', 'def', 'int', 'spd'];
 const LOUYING_CHUANYING = { id: 'louying-chuanying', name: '镂影·穿影', type: 4 };
 export class BattleHero {
     /*
@@ -240,6 +239,11 @@ export class BattleHero {
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
                 if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0 &&
+                    this.Storage.strategyCampInsight && this.Manger.Round <= 1) {
+                    this.Manger.Record.pushRecord(this, '的【军机营】洞察免疫控制', 1);
+                    return true;
+                }
+                if (['confusion', 'rage', 'attackLimit', 'activeLimit'].includes(name) && value?.rounds > 0 &&
                     ['fenran', 'louying', 'taie', 'dajiang', 'renfeng', 'bolang', 'bieming'].includes(this.Treasure?.id) && this.Treasure.forge === 'qingyi' &&
                     this.Manger.Round >= 5 && this.Manger.Round <= this.Treasure.forgeValue) {
                     this.Manger.Record.pushRecord(this, `的【${{ louying: '镂影', taie: '泰阿', dajiang: '大将', renfeng: '仁风', bolang: '博浪', bieming: '别鸣' }[this.Treasure.id] || '奋髯'}·清毅】洞察免疫控制`, 1);
@@ -357,10 +361,6 @@ export class BattleHero {
             this.Attrs.atk = keepTwoDecimal(this.Attrs.atk * (1 + this.Treasure.forgeValue / 100));
         }
 
-        // 四大营
-        CanAddAttrsKey.forEach((key) => {
-            this.Attrs[key] = keepTwoDecimal(this.Attrs[key] + 20);
-        })
         if (['tongsu', 'fenran', 'chengying'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2.5);
         if (['zhengang', 'zhengjiaoqiang'].includes(this.Treasure?.id)) this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 3);
         if (this.Treasure?.id === 'qulu') this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + this.Treasure.xiaorui * 2);
@@ -1017,6 +1017,16 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (this.Storage.ironCampFirstDamageImmunity) {
+            this.Storage.ironCampFirstDamageImmunity = false;
+            this.Manger.Record.pushRecord(this, '的【铁壁营】免疫了首次受到的伤害', 1);
+            return;
+        }
+        if (attacker.Storage.martialCampIgnoreFirstCounter && [1, 2, 3, 4].includes(damageInfo.type)) {
+            damageInfo = { ...damageInfo, ignoreTroopCounter: true };
+            attacker.Storage.martialCampIgnoreFirstCounter = false;
+            attacker.Manger.Record.pushRecord(attacker, '的【尚武营】使首次攻击无视兵种相克', 1);
+        }
         if (attacker.Storage.jixianIgnoreEvasion) damageInfo = { ...damageInfo, ignoreEvasion: true };
         if (['xushibishou', 'xuanyi', 'kunwu', 'minghong'].includes(attacker.Treasure?.id) && attacker.Treasure.forge === 'shipo' &&
             this.Manger.Round >= 1 && this.Manger.Round <= attacker.Treasure.forgeValue &&

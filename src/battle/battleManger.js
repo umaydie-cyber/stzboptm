@@ -14,6 +14,12 @@ const TROOP_BONUSES = {
 };
 const CAMP_NAMES = { 1: '蜀', 2: '魏', 3: '吴', 4: '汉', 5: '群', 6: '晋' };
 const TEAM_ATTRS = ['atk', 'def', 'int', 'spd'];
+const FOUR_CAMPS = {
+    swift: { name: '疾风营', attr: 'spd', label: '速度' },
+    iron: { name: '铁壁营', attr: 'def', label: '防御' },
+    strategy: { name: '军机营', attr: 'int', label: '谋略' },
+    martial: { name: '尚武营', attr: 'atk', label: '攻击' }
+};
 
 export class BattleManger {
     constructor(heroBattleTeam, options = {}){
@@ -121,20 +127,66 @@ export class BattleManger {
             this.RedTeam.total += hero.Arms;
         });
 
-        this.applyTeamBonuses(this.BlueTeam, heroBattleTeam.blue.generalPlatformLevel);
-        this.applyTeamBonuses(this.RedTeam, heroBattleTeam.red.generalPlatformLevel);
+        this.applyTeamBonuses(this.BlueTeam, heroBattleTeam.blue);
+        this.applyTeamBonuses(this.RedTeam, heroBattleTeam.red);
 
         this.startBattle();
         this.exitBattle();
     }
 
-    applyTeamBonuses(team, generalPlatformLevel){
+    applyTeamBonuses(team, config = {}){
+        const legacyLevel = typeof config === 'number' ? config : null;
+        const generalPlatformLevel = legacyLevel ?? config.generalPlatformLevel;
+        this.applyFourCampBaseAttributes(team, legacyLevel == null ? config.fourCampLevels : {}, legacyLevel == null ? 10 : 0);
         team.hero.forEach(hero => {
             hero.TeamBonusBaseAttrs = Object.fromEntries(TEAM_ATTRS.map(key => [key, hero.Attrs[key]]));
             hero.TeamBonusRates = Object.fromEntries(TEAM_ATTRS.map(key => [key, 0]));
         });
         this.applyTroopBonus(team);
         this.applyCampBonus(team, generalPlatformLevel);
+        this.applyFourCampSpecials(team);
+    }
+
+    normalizeFourCampLevels(levels = {}, fallback = 10){
+        return Object.fromEntries(Object.keys(FOUR_CAMPS).map(key => {
+            const parsed = Number(levels?.[key] ?? fallback);
+            return [key, Number.isFinite(parsed) ? Math.max(0, Math.min(10, Math.round(parsed))) : fallback];
+        }));
+    }
+
+    applyFourCampBaseAttributes(team, levels, fallback = 10){
+        team.fourCampLevels = this.normalizeFourCampLevels(levels, fallback);
+        team.hero.forEach(hero => {
+            Object.entries(FOUR_CAMPS).forEach(([key, definition]) => {
+                hero.Attrs[definition.attr] = keepTwoDecimal(hero.Attrs[definition.attr] + team.fourCampLevels[key] * 2);
+                hero.OriginAttrs[definition.attr] = hero.Attrs[definition.attr];
+            });
+        });
+    }
+
+    applyFourCampSpecials(team){
+        team.fourCampSpecials = {};
+        const randomHero = () => team.hero[Math.floor(Math.random() * team.hero.length)];
+        if (team.fourCampLevels.swift === 10) {
+            team.hero.forEach(hero => {
+                hero.Storage.swiftCampFirstRoundSpeed = 10;
+            });
+            team.fourCampSpecials.swift = true;
+        }
+        if (team.fourCampLevels.iron === 10 && team.hero.length) {
+            const target = randomHero();
+            target.Storage.ironCampFirstDamageImmunity = true;
+            team.fourCampSpecials.iron = target;
+        }
+        if (team.fourCampLevels.strategy === 10) {
+            team.hero.forEach(hero => { hero.Storage.strategyCampInsight = true; });
+            team.fourCampSpecials.strategy = true;
+        }
+        if (team.fourCampLevels.martial === 10 && team.hero.length) {
+            const target = randomHero();
+            target.Storage.martialCampIgnoreFirstCounter = true;
+            team.fourCampSpecials.martial = target;
+        }
     }
 
     addTeamAttributeBonus(hero, keys, rate){
@@ -209,6 +261,19 @@ export class BattleManger {
         return `${prefix}：${count}名${CAMP_NAMES[camp]}阵营武将，攻击、防御、谋略、速度+${rate}%${scope}`;
     }
 
+    getFourCampDescriptions(team){
+        const levels = team.fourCampLevels;
+        const base = Object.entries(FOUR_CAMPS).map(([key, definition]) =>
+            `${definition.name}${levels[key]}级（${definition.label}+${levels[key] * 2}）`
+        ).join('，');
+        const specials = [];
+        if (team.fourCampSpecials.swift) specials.push('疾风营：首回合全体速度额外+10');
+        if (team.fourCampSpecials.iron) specials.push(`铁壁营：${team.fourCampSpecials.iron.Name}免疫首次受到的伤害`);
+        if (team.fourCampSpecials.strategy) specials.push('军机营：首回合全体洞察，免疫控制');
+        if (team.fourCampSpecials.martial) specials.push(`尚武营：${team.fourCampSpecials.martial.Name}首次攻击无视兵种相克`);
+        return [`四大营：${base}`, specials.length ? `10级特殊效果：${specials.join('；')}` : '10级特殊效果：无'];
+    }
+
     recordSettledAttrs(label, team){
         this.Record.pushSysRecord(`【${label}结算后武将属性】`);
         team.hero.forEach(hero => {
@@ -226,12 +291,14 @@ export class BattleManger {
         })
         this.Record.pushSysRecord(this.getTroopBonusDescription(this.BlueTeam),1);
         this.Record.pushSysRecord(this.getCampBonusDescription(this.BlueTeam),1);
+        this.getFourCampDescriptions(this.BlueTeam).forEach(message => this.Record.pushSysRecord(message, 1));
         this.Record.pushSysRecord('【守方阵容】');
         [...this.RedTeam.hero].forEach(e=>{
             this.Record.pushSysRecord(`(${e.Posname}) 【${e.Name}】 ${e.Level}级 兵力：${e.Arms}`,1);
         })
         this.Record.pushSysRecord(this.getTroopBonusDescription(this.RedTeam),1);
         this.Record.pushSysRecord(this.getCampBonusDescription(this.RedTeam),1);
+        this.getFourCampDescriptions(this.RedTeam).forEach(message => this.Record.pushSysRecord(message, 1));
 
         for (let index = 0; index < BattleRound.length; index++) {
             if(this.Over)break;
@@ -240,6 +307,14 @@ export class BattleManger {
             if(index != 0) this.Record.pushRoundRecord(`${roundName}回合`);
 
             if (this.Round >= 1) this.BattleHeros.forEach(hero => hero.applyTreasureRoundStart());
+
+            if (this.Round === 1) {
+                this.BattleHeros.forEach(hero => {
+                    if (!hero.Storage.swiftCampFirstRoundSpeed || hero.Storage.swiftCampFirstRoundSpeedActive) return;
+                    hero.Attrs.spd = keepTwoDecimal(hero.Attrs.spd + hero.Storage.swiftCampFirstRoundSpeed);
+                    hero.Storage.swiftCampFirstRoundSpeedActive = true;
+                });
+            }
 
             this.BattleHeros.forEach(e => e.callHook("速度排序前"));
             this.sortBattleHerosBySpd();
@@ -332,6 +407,13 @@ export class BattleManger {
                     if (e.Arms > 0) e.callHook('回合结束时');
                 });
                 this.BattleHeros.forEach(e => e.finishRound());
+                if (this.Round === 1) {
+                    this.BattleHeros.forEach(hero => {
+                        if (!hero.Storage.swiftCampFirstRoundSpeedActive) return;
+                        hero.Attrs.spd = keepTwoDecimal(hero.Attrs.spd - hero.Storage.swiftCampFirstRoundSpeed);
+                        hero.Storage.swiftCampFirstRoundSpeedActive = false;
+                    });
+                }
                 // 每个正式回合结束递减伤兵
                 this.BattleHeros.forEach(e => {
                     if(e.Arms > 0 && e.HurtArms > 0){

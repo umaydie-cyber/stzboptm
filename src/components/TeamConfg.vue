@@ -28,6 +28,12 @@ const emit = defineEmits(['update:show', 'update:team', 'saved']);
 const { show, team } = toRefs(props);
 const camp = ref('blue');
 const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
+const fourCampDefinitions = [
+    { key: 'swift', name: '疾风营', attr: '速度', special: '10级：首回合全体速度额外+10' },
+    { key: 'iron', name: '铁壁营', attr: '防御', special: '10级：单体免疫首次伤害' },
+    { key: 'strategy', name: '军机营', attr: '谋略', special: '10级：首回合全体洞察' },
+    { key: 'martial', name: '尚武营', attr: '攻击', special: '10级：单体首次攻击无视相克' }
+];
 const currentGeneralPlatformLevel = computed(() => {
     const level = Number(team.value[camp.value].generalPlatformLevel ?? 10);
     return Math.max(0, Math.min(10, Math.round(level)));
@@ -37,6 +43,15 @@ const setGeneralPlatformLevel = value => {
     emit('saved');
 };
 const campBonusRate = count => (count === 3 ? 5 : 3) + currentGeneralPlatformLevel.value * 0.5;
+const fourCampLevel = key => {
+    const level = Number(team.value[camp.value].fourCampLevels?.[key] ?? 10);
+    return Math.max(0, Math.min(10, Math.round(level)));
+};
+const setFourCampLevel = (key, value) => {
+    team.value[camp.value].fourCampLevels ||= {};
+    team.value[camp.value].fourCampLevels[key] = Math.max(0, Math.min(10, Math.round(Number(value) || 0)));
+    emit('saved');
+};
 const testt = ref({
     red: {
         name: '马云潞'
@@ -422,12 +437,23 @@ const addAllPoints = type => {
                 <div :class="[{ 'click': camp == 'red' }]" @click="camp = 'red'">守方</div>
             </div>
             <div class="team-settings">
-                <label>点将台等级
-                    <select aria-label="点将台等级" :value="currentGeneralPlatformLevel" @change="setGeneralPlatformLevel($event.target.value)">
-                        <option v-for="level in generalPlatformLevels" :key="level" :value="level">{{ level }}级</option>
-                    </select>
-                </label>
-                <span>阵营加成：2人同阵营 +{{ campBonusRate(2) }}%，3人同阵营 +{{ campBonusRate(3) }}%</span>
+                <div class="platform-setting">
+                    <label>点将台等级
+                        <select aria-label="点将台等级" :value="currentGeneralPlatformLevel" @change="setGeneralPlatformLevel($event.target.value)">
+                            <option v-for="level in generalPlatformLevels" :key="level" :value="level">{{ level }}级</option>
+                        </select>
+                    </label>
+                    <span>阵营加成：2人同阵营 +{{ campBonusRate(2) }}%，3人同阵营 +{{ campBonusRate(3) }}%</span>
+                </div>
+                <div class="four-camp-settings">
+                    <label v-for="building in fourCampDefinitions" :key="building.key" :title="building.special">
+                        {{ building.name }}
+                        <select :aria-label="`${building.name}等级`" :value="fourCampLevel(building.key)" @change="setFourCampLevel(building.key, $event.target.value)">
+                            <option v-for="level in generalPlatformLevels" :key="level" :value="level">{{ level }}级</option>
+                        </select>
+                        <small>{{ building.attr }}+{{ fourCampLevel(building.key) * 2 }}</small>
+                    </label>
+                </div>
             </div>
             <div class="h"></div>
             <div class="cards">
@@ -771,15 +797,19 @@ const addAllPoints = type => {
             min-height: 42px;
             margin: 0 auto 8px;
             display: flex;
-            align-items: center;
-            gap: 20px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
             color: #e4dd9e;
             font-family: "FZLBJW_B";
             font-size: clamp(13px, 1vw, 17px);
 
+            .platform-setting, .four-camp-settings { display: flex; align-items: center; gap: 20px; }
+            .four-camp-settings { flex-wrap: wrap; gap: 8px 16px; }
             label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
             select { padding: 5px 24px 5px 10px; color: #f3e4ad; background: #292622; border: 1px solid #bca36a; border-radius: 3px; }
             span { color: #bdb7a5; }
+            small { color: #bdb7a5; font-size: .82em; }
         }
 
         &>.cards {
@@ -1886,7 +1916,9 @@ const addAllPoints = type => {
     .heroinfo-warp > .heroinfo-header > .close,
     .skilllist-warp > .skilllist-header > .close { width: 44px; height: 44px; flex: none; transform: none; }
     .team-config-warp > .box > .tabs { width: 180px; min-height: 50px; font-size: 17px; }
-    .team-config-warp > .box > .team-settings { width: calc(100% - 32px); min-height: 54px; margin-bottom: 4px; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+    .team-config-warp > .box > .team-settings { width: calc(100% - 32px); min-height: 54px; margin-bottom: 4px; gap: 6px; font-size: 13px; }
+    .team-config-warp > .box > .team-settings .platform-setting,
+    .team-config-warp > .box > .team-settings .four-camp-settings { flex-wrap: wrap; gap: 4px 10px; }
     .team-config-warp > .box > .cards { height: auto; flex: 1; gap: 12px; padding: 12px 8px 24px 24px; box-sizing: border-box; }
     .team-config-warp > .box > .cards > .card { width: 100%; height: 130px; min-height: 130px; }
     .team-config-warp > .box > .cards > .card > .posname { font-size: 12px; width: 14px; left: -19px; }
