@@ -545,7 +545,7 @@ export const __SKILLS__ = [
                 manger.Record.pushRecord(self, '发动【先驱突击】');
 
                 self.State.firstAction = {
-                    rounds: 3, //因为效果的持续回合数在行动前递减+是指挥技能 所以给4回合才能实际生效3次 || ... 突然又正常了 不用给4回合了 ？？？ 有点懵逼 貌似是之前把先手效果改成持续到多少回合 而不是每回合开始减少持续回合了 ... 
+                    rounds: 3, // 先手按当前回合数判断，不在行动前递减。
                     from: {
                         hero: self,
                         skill: this
@@ -557,7 +557,7 @@ export const __SKILLS__ = [
                 manger.Record.pushRecord(self, `[${self.Name}] 的攻击属性提高了30(${self.Attrs.atk})`, 1);
 
                 self.State.doubleAttack = {
-                    rounds: 3,
+                    rounds: 4, // 连击在行动前递减，设为4才能覆盖第1至第3回合。
                     from: {
                         hero: self,
                         skill: this
