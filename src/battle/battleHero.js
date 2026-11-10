@@ -1283,10 +1283,10 @@ export class BattleHero {
     //受到恢复
     revocer(recoverNum, source, name) {
         if (source?.Storage.cijianRepeat?.skill?.name === name || source?.Storage.weiyuRepeat?.skill?.name === name) recoverNum = Math.floor(recoverNum * 0.5);
-        if (this.Arms == 0) return;
+        if (this.Arms == 0) return 0;
         if (this.State.noRecoverUntil > this.Manger.Round) {
             this.Manger.Record.pushRecord(this, `受到【${name}】的恢复被禁疗阻止`, 1);
-            return;
+            return 0;
         }
         const recoveryBonuses = Object.values(this.Storage.recoveryBonuses || {})
             .filter(bonus => Number.isFinite(bonus?.value) && bonus.value > 0)
@@ -1324,6 +1324,7 @@ export class BattleHero {
         const skill = Object.values(source?.Skills || {}).find(e => e?.name === name);
         this.Manger.addStat(source, skill || { id: name, name }, 0, recoverNum);
         this.Manger.Record.pushActionRecord(source, this, `【${name}】的效果使`, `恢复了${recoverNum}兵力(${this.Arms})`, 1);
+        return recoverNum;
     }
 
     getDamageStateValue(name) {

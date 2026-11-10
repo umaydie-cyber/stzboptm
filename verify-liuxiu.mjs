@@ -50,10 +50,10 @@ try {
     skill(1048).callskill(liuxiu, 100);
     assert.ok(ally.Arms > 0);
     assert.ok(records.some(row => row.some(value => String(value).includes('光武中兴'))));
-    // 额外三选一必须紧跟各自的恢复，即使某次恢复实际增加了 0 兵力。
+    // 只有实际恢复至少1伤兵，才触发额外三选一；固定三选一仍保留。
     const order = [];
-    const first = { Arms: 1000, revocer: () => { order.push('恢复一'); first.Arms = 3000; } };
-    const second = { Arms: 2000, revocer: () => { order.push('恢复二'); } };
+    const first = { Arms: 1000, revocer: () => { order.push('恢复一'); first.Arms = 3000; return 1; } };
+    const second = { Arms: 2000, revocer: () => { order.push('恢复二'); return 0; } };
     liuxiu.getTarget = () => [first, second];
     liuxiu.getRealSkillRate = () => 100;
     liuxiu.Skills[1045] = { id: 1045, callskill: () => { order.push('三选一'); return true; } };
@@ -65,7 +65,14 @@ try {
     } finally {
         Math.random = originalRandom;
     }
-    assert.deepEqual(order, ['恢复一', '三选一', '恢复二', '三选一', '三选一']);
+    assert.deepEqual(order, ['恢复一', '三选一', '恢复二', '三选一']);
+    ally.HurtArms = 0;
+    assert.equal(ally.revocer(100, liuxiu, '光武中兴'), 0);
+    ally.HurtArms = 100;
+    ally.State.noRecoverUntil = manager.Round + 1;
+    assert.equal(ally.revocer(100, liuxiu, '光武中兴'), 0);
+    ally.State.noRecoverUntil = 0;
+    assert.equal(ally.revocer(100, liuxiu, '光武中兴'), 100);
     console.log('Verified Liu Xiu and three linked skills');
 } finally {
     await vite.close();
