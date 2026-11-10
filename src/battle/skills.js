@@ -46,6 +46,24 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1085, name: "击势",
+        desc: "战斗中，每回合自身行动时有65.0%几率使自身攻击时的伤害提升50.0%，持续1回合；有65.0%几率使自身攻击时无视敌方60.0%防御属性，持续1回合。每个效果独立判定，概率受士气影响",
+        level: "S", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('行动时', '击势逐回合判定', () => {
+                if (self.Manger.Round < 1 || self.Arms <= 0) return;
+                const rate = self.getRealSkillRate(65);
+                const damage = getRandomBool(rate);
+                const ignoreDefense = getRandomBool(rate);
+                if (damage) self.Storage.jishiDamageRound = self.Manger.Round;
+                if (ignoreDefense) self.Storage.jishiIgnoreDefenseRound = self.Manger.Round;
+                self.Manger.Record.pushRecord(self, `的【击势】攻击增伤判定（${rate}%）：${damage ? '成功' : '失败'}`, 1);
+                self.Manger.Record.pushRecord(self, `的【击势】无视防御判定（${rate}%）：${ignoreDefense ? '成功' : '失败'}`, 1);
+            }, this, self);
+        }
+    },
+    {
         id: 1084, name: "枭雄",
         desc: "战斗前4回合，每回合有90.0%的几率使自身处于洞察状态，免疫混乱、怯战、暴走和挑衅效果，期间无法发动主动战法。曹操发动此战法时，自身攻击、防御、谋略属性提升10.0%（概率受士气影响）",
         level: "B", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,

@@ -35,6 +35,7 @@ export const clacAttackDamage = (attacker, target, damageInfo, skill) => {
     if (skill && skill.id == 1011) {
         targetDef = 0;
     }
+    if (attacker.Storage.jishiIgnoreDefenseRound === attacker.Manger.Round) targetDef *= 0.4;
     let atkdefdiff = calcAtkDefDiff(attacker.Attrs.atk, targetDef);
     let mainDamage = (((300 * attacker.Arms) / (3500 + attacker.Arms)) * (DamageRate / 100) * damageAddition) * atkdefdiff;
     console.log(attacker.Name, "兵力基础伤害:", armsDamage, "兵力:", attacker.Arms, "基础伤害:", basicDamage, "主要伤害:", mainDamage, "总伤害:", Math.round(armsDamage + basicDamage + mainDamage));
@@ -150,6 +151,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         special('兵种相克', -30, attacker);
     }
     if (type == 1 || type == 3) {
+        if (attacker.Storage.jishiDamageRound === attacker.Manger.Round) special('击势', 50, attacker);
         add(attacker, "attackDamageAdd", 1);
         add(attacker, "attackDamageSub", -1);
         add(target, "beAttackDamageAdd", 1);
