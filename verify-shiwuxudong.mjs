@@ -35,6 +35,17 @@ try {
   assert.equal(target.Storage.evadeNextDamage, true, '被无视的规避保留');
   target.beHurtByNum(source, info, source.Skills[1038], 100);
   assert.equal(target.Arms, 9900, '随后的一次伤害被规避');
+  const qiqin = { source: target, count: 0, completed: false };
+  target.Storage.qiqinQizong = qiqin;
+  source.Storage.shiwuIgnoreNextDamage = true;
+  Math.random = () => 0;
+  target.beHurtByNum(source, info, source.Skills[1038], 100);
+  assert.equal(target.Arms, 9800, '势无虚动应先于七擒七纵判定并无视其规避');
+  assert.equal(qiqin.count, 0, '被无视的七擒七纵规避不消耗判定次数');
+  target.beHurtByNum(source, info, source.Skills[1038], 100);
+  assert.equal(target.Arms, 9800, '没有势无虚动时仍可被七擒七纵规避');
+  assert.equal(qiqin.count, 1);
+  target.Storage.qiqinQizong = null;
   Math.random = () => 0;
   source.callPursuitSkill(target);
   assert.equal(source.Storage.shiwuStacks, 0, '成功发动后消耗叠层');

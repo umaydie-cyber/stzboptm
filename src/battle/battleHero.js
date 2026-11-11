@@ -1057,12 +1057,12 @@ export class BattleHero {
                 attacker.Manger.Record.pushRecord(attacker, `的【奋髯·奋武】增伤累计${bonus}%，本次普攻无视规避`, 1);
             }
         }
-        if (!damageInfo.ignoreEvasion && this.tryQiqinDefense('伤害', attacker)) return;
         if (attacker.Storage.shiwuIgnoreNextDamage) {
             damageInfo = { ...damageInfo, ignoreEvasion: true };
             attacker.Storage.shiwuIgnoreNextDamage = false;
             attacker.Manger.Record.pushRecord(attacker, '的【势无虚动】使本次伤害无视规避', 1);
         }
+        if (!damageInfo.ignoreEvasion && this.tryQiqinDefense('伤害', attacker)) return;
         if (this.Storage.panzhenEvasion?.round === this.Manger.Round) {
             this.Storage.panzhenEvasion = null;
             if (!damageInfo.ignoreEvasion && getRandomBool(100)) {
