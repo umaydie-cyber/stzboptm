@@ -307,6 +307,9 @@ export class BattleManger {
             let roundName = this.Round == 0 ? '准备' : '第'+this.Round;
             if(index != 0) this.Record.pushRoundRecord(`${roundName}回合`);
 
+            // 七擒七纵的7次判定结束后，最终效果延迟到下一回合开始时结算。
+            if (this.Round >= 1) this.BattleHeros.forEach(hero => hero.resolveQiqinQizong());
+
             if (this.Round >= 1) this.BattleHeros.forEach(hero => hero.applyTreasureRoundStart());
 
             if (this.Round === 1) {

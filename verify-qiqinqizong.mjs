@@ -37,10 +37,15 @@ try {
   }
   assert.equal(effect.count, 7);
   assert.equal(effect.completed, true);
+  assert.equal(effect.pendingRound, 2);
   assert(protectedAllies.every(unit => unit.Arms === 10000));
+  assert.equal(topEnemy.Storage.qiqinAllDamageSub, undefined, '第7次判定结束当回合不能立即施加减伤');
+  battle.Round = 2;
+  protectedAllies[0].resolveQiqinQizong();
   assert.equal(topEnemy.Storage.qiqinAllDamageSub.value, 9999);
   assert.equal(topEnemy.Storage.qiqinAllDamageSub.round, 2);
   const snapshot = { type: 2, rate: 100, troopBaseDamage: 100 };
+  battle.Round = 1;
   const before = getDamageAddition(topEnemy, caster, snapshot);
   battle.Round = 2;
   assert.equal(getDamageAddition(topEnemy, caster, { type: 1, rate: 100 }), 0.1);

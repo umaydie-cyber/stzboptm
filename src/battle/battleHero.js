@@ -994,16 +994,17 @@ export class BattleHero {
             `的【七擒七纵】第${effect.count}/7次${kind}判定（${chance}%）：${blocked ? (kind === '伤害' ? '规避' : '抵御') : '未触发'}`, 1);
         if (effect.count === 7) {
             effect.completed = true;
-            effect.pending = true;
-            if (blocked || kind !== '伤害') this.resolveQiqinQizong();
+            effect.pendingRound = this.Manger.Round + 1;
+            this.Manger.Record.pushRecord(effect.source,
+                `的【七擒七纵】7次判定结束，最终效果将在第${effect.pendingRound}回合开始时判定`, 1);
         }
         return blocked;
     }
 
     resolveQiqinQizong() {
         const effect = this.Storage.qiqinQizong;
-        if (!effect?.pending) return;
-        effect.pending = false;
+        if (!effect?.completed || effect.resolved || effect.pendingRound !== this.Manger.Round) return;
+        effect.resolved = true;
         const chance = effect.source.getRealSkillRate(50);
         if (!getRandomBool(chance)) {
             this.Manger.Record.pushRecord(effect.source, `的【七擒七纵】最终判定（${chance}%）：未触发`, 1);
@@ -1016,10 +1017,9 @@ export class BattleHero {
             .reduce((sum, [, entry]) => sum + entry.damage, 0);
         const target = living.sort((a, b) => damage(b) - damage(a))[0];
         if (!target) return;
-        const round = this.Manger.Round + 1;
-        target.Storage.qiqinAllDamageSub = { round, value: 9999, source: effect.source };
+        target.Storage.qiqinAllDamageSub = { round: this.Manger.Round, value: 9999, source: effect.source };
         this.Manger.Record.pushActionRecord(effect.source, target, '的【七擒七纵】使',
-            `下回合造成所有伤害降低9999%（${chance}%判定成功）`, 1);
+            `本回合造成所有伤害降低9999%（${chance}%判定成功）`, 1);
     }
 
     //受到伤害
@@ -1219,8 +1219,6 @@ export class BattleHero {
         if (realDamage > 0 && resolvedInfo.yuanrongXuanfengApplied) {
             attacker.Storage.yuanrongXuanfengReady = false;
         }
-        this.resolveQiqinQizong();
-
         if (damageInfo.type == 2 && taoyuan && this.Manger.Round >= 1 && this.Manger.Round <= 3 && taoyuan.remaining > 0) {
             taoyuan.remaining--;
         }
