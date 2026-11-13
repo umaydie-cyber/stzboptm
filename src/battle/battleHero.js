@@ -566,7 +566,9 @@ export class BattleHero {
                 let skill = this.Skills[e];
                 if (skill.type == 2) {
                     console.log(this.RATE_VAL);
-                    let currentRate = this.getRealSkillRate(skill.rate) + (this.RATE_VAL[skill.id] ? this.RATE_VAL[skill.id].value : 0);
+                    const lingwuBonus = this.Storage.lingwukongxuanRateRound === this.Manger.Round &&
+                        /伤害率|造成.*伤害|发动.*攻击/.test(skill.desc || '') ? 10 : 0;
+                    let currentRate = this.getRealSkillRate(skill.rate + lingwuBonus) + (this.RATE_VAL[skill.id] ? this.RATE_VAL[skill.id].value : 0);
                     currentRate += this.getTreasureMainRateBonus(skill);
                     console.log(this.canAddReadySkill(skill));
                     if (this.canAddReadySkill(skill)) {
@@ -595,6 +597,7 @@ export class BattleHero {
                             : this.Treasure?.id === 'tianwen' && this.Treasure.forge === 'shulv' ? '天问·熟虑' : '';
                         const rateDetail = rateTreasureName && treasureBonus
                             ? `（基础${skill.rate}%，士气修正${moraleBonus >= 0 ? '+' : ''}${moraleBonus}%，${rateTreasureName}+${treasureBonus}%）` : '';
+                        if (lingwuBonus) this.Manger.Record.pushRecord(this, `的【令无空悬】使【${skill.name}】基础发动率提升至${skill.rate + lingwuBonus}%，士气修正后为${this.getRealSkillRate(skill.rate + lingwuBonus)}%`, 1);
                         this.Manger.Record.pushRecord(this, `的【${skill.name}】发动率为${currentRate}%${rateDetail}`)
                         this.Storage.weiyuBuff?.strategyDamageSkills?.delete(skill);
                         const firstMainCast = this.Treasure?.id === 'tianwen' && e === this.Skill && !this.Storage.tianwenFirstMainUsed
@@ -854,6 +857,14 @@ export class BattleHero {
     }
 
     resolveBasicAttackGuard(target) {
+        if (this.Manger.Round >= 1 && this.Manger.Round <= 2 && target.Arms > 0) {
+            const team = target.BattleCamp === 'blue' ? this.Manger.BlueTeam.hero : this.Manger.RedTeam.hero;
+            const guard = team.find(hero => hero !== target && hero.Arms > 0 && hero.Storage.yifudangguan);
+            if (guard) {
+                this.Manger.Record.pushRecord(guard, `的【一夫当关】援护${target.Name}，代其承受普通攻击`, 1);
+                return guard;
+            }
+        }
         if (this.Manger.Round < 1 || this.Manger.Round > 2 || target.Posname !== '大营' || target.Arms <= 0) return target;
         const team = target.BattleCamp === 'blue' ? this.Manger.BlueTeam.hero : this.Manger.RedTeam.hero;
         const guard = team.find(hero => hero !== target && hero.Arms > 0 && hero.Treasure?.id === 'dajiang');
@@ -1183,6 +1194,10 @@ export class BattleHero {
         }
 
         this.Manger.addStat(attacker, skill, realDamage, 0);
+        if (realDamage > 0 && [1, 2].includes(damageInfo.type) && skill?.type === 2 && attacker.Storage.lingwukongxuanStacks) {
+            attacker.Storage.lingwukongxuanStacks = 0;
+            attacker.Manger.Record.pushRecord(attacker, '的【令无空悬】下次主动战法伤害加成已消耗', 1);
+        }
         if (realDamage > 0 && panzhenReduction) panzhen[panzhenKind] = true;
         if (realDamage > 0 && jixianReduction) jixianFront.used = true;
         if (realDamage > 0 && this.Storage.madaiDefenseStacks) this.Storage.madaiDefenseStacks = 0;

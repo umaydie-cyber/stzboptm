@@ -151,6 +151,10 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         special('兵种相克', -30, attacker);
     }
     if (type == 1 || type == 3) {
+        if (target.Storage.yifudangguan && target.Posname === '前锋' &&
+            target.Manger.Round >= 1 && target.Manger.Round <= 2) {
+            special('一夫当关', -(19 + target.Attrs.def * 0.38), target);
+        }
         if (attacker.Storage.jishiDamageRound === attacker.Manger.Round) special('击势', 50, attacker);
         add(attacker, "attackDamageAdd", 1);
         add(attacker, "attackDamageSub", -1);
@@ -193,6 +197,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     }
 
     if (skill && skill.type == 2){
+        if ([1, 2].includes(type) && attacker.Storage.lingwukongxuanStacks) special('令无空悬', attacker.Storage.lingwukongxuanStacks * 30, attacker);
         add(attacker, "activeDamageAdd", 1);
         add(attacker, "activeDamageSub", -1);
         add(target, "beActiveDamageAdd", 1);

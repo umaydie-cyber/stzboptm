@@ -46,6 +46,100 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1089, name: "一夫当关",
+        desc: "战斗开始后前2回合，援护友军全体，使自身受到攻击时的伤害降低50.0%（受防御属性影响），仅对自身处于前锋位置时生效",
+        level: "A", type: 1, target: 1, target_type: "self", limit: 3, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.Storage.yifudangguan = { skill: this };
+        }
+    },
+    {
+        id: 1088, name: "令无空悬",
+        desc: "战斗中，自身每次试图发动主动战法时，使主动战法造成的下一次伤害提升30.0%，此效果最多叠加4次；第1、3、5、7回合自身行动时，本回合内造成攻击或策略攻击伤害的主动战法发动率提升10.0%（与战法发动率相加后受士气影响）",
+        level: "A", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('行动时', '令无空悬奇数回合发动率', () => {
+                self.Storage.lingwukongxuanRateRound = [1, 3, 5, 7].includes(self.Manger.Round) ? self.Manger.Round : 0;
+            }, this, self);
+            self.addHook('尝试发动战法前', '令无空悬蓄势', (skill) => {
+                if (skill?.type !== 2) return;
+                self.Storage.lingwukongxuanStacks = Math.min(4, (self.Storage.lingwukongxuanStacks || 0) + 1);
+                self.Manger.Record.pushRecord(self, `的【${this.name}】下次主动战法伤害提升${self.Storage.lingwukongxuanStacks * 30}%`, 1);
+            }, this, self);
+        }
+    },
+    {
+        id: 1087, name: "强势",
+        desc: "使敌军群体进行攻击时的伤害降低48.0%（受谋略属性影响），并使其陷入犹豫状态，无法发动主动战法，持续2回合",
+        level: "A", type: 2, target: 2, target_type: "enemy", limit: 5, rate: 40, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const reduction = keepTwoDecimal(48 + (self.Attrs.int - 80) * 18 / 80);
+            for (const target of self.getTarget(this.limit, this.target)) {
+                target.addState('attackDamageSub', reduction, 2, this, self);
+                if (target.State.activeLimit.rounds > 0) {
+                    self.Manger.Record.pushRecord(target, '已存在犹豫效果', 1);
+                    continue;
+                }
+                target.State.activeLimit = { rounds: 2, from: { hero: self, skill: this } };
+                if (target.State.activeLimit.from?.hero !== self) continue;
+                target.StateFlag.activeLimit = false;
+                self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, `陷入犹豫${target.State.activeLimit.rounds}回合`, 1);
+            }
+            return true;
+        }
+    },
+    {
+        id: 1086, name: "奇佐鬼谋",
+        desc: "使自身和友军单体谋略属性提高22.0%，并使敌军群体随机陷入混乱、暴走、怯战、犹豫状态中的1种，持续2回合",
+        level: "S", type: 2, target: 2, target_type: "enemy", limit: 5, rate: 35, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const allies = [self, ...self.getTarget(5, 1, 3)];
+            for (const ally of allies) {
+                const previous = ally.Storage.qizuoguimou;
+                if (previous) previous.restore();
+                const bonus = keepTwoDecimal(ally.Attrs.int * 0.22);
+                ally.Attrs.int = keepTwoDecimal(ally.Attrs.int + bonus);
+                const expiresRound = self.Manger.Round + 1;
+                let restored = false;
+                const restore = () => {
+                    if (restored) return;
+                    restored = true;
+                    ally.Attrs.int = keepTwoDecimal(ally.Attrs.int - bonus);
+                    if (ally.Storage.qizuoguimou?.restore === restore) delete ally.Storage.qizuoguimou;
+                };
+                ally.Storage.qizuoguimou = { restore };
+                const tag = ally.addHook('回合结束时', '奇佐鬼谋谋略恢复', () => {
+                    if (self.Manger.Round < expiresRound) return;
+                    restore();
+                    ally.clearHook('回合结束时', tag);
+                }, this, self, 'buff', true, restore);
+                self.Manger.Record.pushRecord(ally, `的谋略属性提高${bonus}(${ally.Attrs.int})`, 1);
+            }
+            const effects = [
+                ['confusion', '混乱'], ['rage', '暴走'],
+                ['attackLimit', '怯战'], ['activeLimit', '犹豫']
+            ];
+            for (const target of self.getTarget(this.limit, this.target)) {
+                const [state, label] = effects[getRandomInt(0, effects.length - 1)];
+                if (target.State[state].rounds > 0) {
+                    self.Manger.Record.pushRecord(target, `已存在${label}效果`, 1);
+                    continue;
+                }
+                target.State[state] = { rounds: 2, from: { hero: self, skill: this } };
+                if (target.State[state].from?.hero !== self) continue;
+                target.StateFlag[state] = false;
+                self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, `陷入${label}${target.State[state].rounds}回合`, 1);
+            }
+            return true;
+        }
+    },
+    {
         id: 1085, name: "击势",
         desc: "战斗中，每回合自身行动时有65.0%几率使自身攻击时的伤害提升50.0%，持续1回合；有65.0%几率使自身攻击时无视敌方60.0%防御属性，持续1回合。每个效果独立判定，概率受士气影响",
         level: "S", type: 4, target: 1, target_type: "self", limit: 1, rate: "--", study: true,
