@@ -3,6 +3,8 @@ import { ref, toRefs, computed } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
 import { INFANTRY_TYPES } from '../battle/infantryTypes';
+import { CAVALRY_TYPES } from '../battle/cavalryTypes';
+import { BOW_TYPES } from '../battle/bowTypes';
 import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 
@@ -496,6 +498,8 @@ const editHero = (selectedCamp, index) => {
         ...current,
         arms: current.arms ?? 10000,
         infantryType: HEROS[current.id]?.army === 2 ? (current.infantryType || 'basic') : 'basic',
+        cavalryType: HEROS[current.id]?.army === 3 ? (current.cavalryType || 'basic') : 'basic',
+        bowType: HEROS[current.id]?.army === 1 ? (current.bowType || 'basic') : 'basic',
         extraAttrsAlloc: { ...current.extraAttrsAlloc }
     };
     showHeroInfo.value = true;
@@ -522,6 +526,8 @@ const ConfigHeroInfo = (id) => {
         },
         up: 5,
         infantryType: 'basic',
+        cavalryType: 'basic',
+        bowType: 'basic',
         arms: 10000
     }
 }
@@ -536,6 +542,8 @@ const saveConfig = () =>{
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
     team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
     team.value[c_camp].heros[c_hindex].infantryType = HEROS[HeroConfig.value.id].army === 2 ? HeroConfig.value.infantryType : 'basic';
+    team.value[c_camp].heros[c_hindex].cavalryType = HEROS[HeroConfig.value.id].army === 3 ? HeroConfig.value.cavalryType : 'basic';
+    team.value[c_camp].heros[c_hindex].bowType = HEROS[HeroConfig.value.id].army === 1 ? HeroConfig.value.bowType : 'basic';
     const arms = Number(HeroConfig.value.arms);
     team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.floor(arms)) : 10000;
     team.value[c_camp].heros[c_hindex].animation = false;
@@ -765,7 +773,7 @@ const addAllPoints = type => {
                 </div>
                 <div class="range">
                     <div class="army"><img :src="`https://cbg-stzb.res.netease.com/mvvm/rc6f73b651ed47551555446b20/images/bz/${hero.army}.png`"></div>
-                    <span class="icon-text">{{ hero.limit  }}</span>
+                    <span class="icon-text">{{ hero.limit }}</span>
                 </div>
                 <div class="cost">
                     <div class="cost-icon"></div>
@@ -798,7 +806,7 @@ const addAllPoints = type => {
                 </div>
                 <div class="range">
                     <div class="army"><img :src="`https://cbg-stzb.res.netease.com/mvvm/rc6f73b651ed47551555446b20/images/bz/${hero.army}.png`"></div>
-                    <span class="icon-text">{{ hero.limit  }}</span>
+                    <span class="icon-text">{{ hero.limit + (HeroConfig.bowType === 'longbow' ? 1 : HeroConfig.bowType === 'deadly' ? -1 : 0) }}</span>
                 </div>
                 <div class="cost">
                     <div class="cost-icon"></div>
@@ -815,17 +823,17 @@ const addAllPoints = type => {
                 </div>
                 <div class="army-type-box">
                     <div class="left">兵种</div>
-                    <div class="right infantry-choices" v-if="HEROS[HeroConfig.id].army === 2">
+                    <div class="right infantry-choices" v-if="[1, 2, 3].includes(HEROS[HeroConfig.id].army)">
                         <div>
-                            <button v-for="type in INFANTRY_TYPES" :key="type.id" type="button"
-                                class="infantry-option" :class="{ selected: HeroConfig.infantryType === type.id }"
-                                :title="type.desc" :aria-pressed="HeroConfig.infantryType === type.id"
-                                @click="HeroConfig.infantryType = type.id">
+                            <button v-for="type in HEROS[HeroConfig.id].army === 1 ? BOW_TYPES : HEROS[HeroConfig.id].army === 2 ? INFANTRY_TYPES : CAVALRY_TYPES" :key="type.id" type="button"
+                                class="infantry-option" :class="{ selected: (HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType : HeroConfig.cavalryType) === type.id }"
+                                :title="type.desc" :aria-pressed="(HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType : HeroConfig.cavalryType) === type.id"
+                                @click="HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType = type.id : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType = type.id : HeroConfig.cavalryType = type.id">
                                 <img v-if="type.image" :src="type.image" :alt="type.name">
                                 <template v-else><span class="infantry-icon">{{ type.icon }}</span>{{ type.name }}</template>
                             </button>
                         </div>
-                        <small>{{ INFANTRY_TYPES.find(type => type.id === HeroConfig.infantryType)?.desc }}</small>
+                        <small>{{ (HEROS[HeroConfig.id].army === 1 ? BOW_TYPES : HEROS[HeroConfig.id].army === 2 ? INFANTRY_TYPES : CAVALRY_TYPES).find(type => type.id === (HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType : HeroConfig.cavalryType))?.desc }}</small>
                     </div>
                     <div class="right" v-else>
                         <img :src="`https://cbg-stzb.res.netease.com/mvvm/rc6f73b651ed47551555446b20/images/bz/${HEROS[HeroConfig.id].army}.png`" alt="">
@@ -850,7 +858,7 @@ const addAllPoints = type => {
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
                         <div class="sub-btn" @click="changeConfig('atk',2)"></div>
                         <div class="attr-num">
-                            {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.atk + HEROS[HeroConfig.id].attrs_grow.atk * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.atk }}
+                            {{ (keepTwoDecimal(HEROS[HeroConfig.id].attrs.atk + HEROS[HeroConfig.id].attrs_grow.atk * (HeroConfig.level - 1)) + (HeroConfig.bowType === 'deadly' ? 18 : 0)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.atk }}
                         </div>
                         <div class="add-btn" @click="changeConfig('atk',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('atk')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
@@ -862,7 +870,7 @@ const addAllPoints = type => {
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
                         <div class="sub-btn" @click="changeConfig('def',2)"></div>
                         <div class="attr-num">
-                            {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.def + HEROS[HeroConfig.id].attrs_grow.def * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.def }}
+                            {{ (keepTwoDecimal(HEROS[HeroConfig.id].attrs.def + HEROS[HeroConfig.id].attrs_grow.def * (HeroConfig.level - 1)) + (HeroConfig.bowType === 'deadly' ? 18 : 0)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.def }}
                         </div>
                         <div class="add-btn" @click="changeConfig('def',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('def')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
@@ -874,7 +882,7 @@ const addAllPoints = type => {
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
                         <div class="sub-btn" @click="changeConfig('int',2)"></div>
                         <div class="attr-num">
-                            {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.int + HEROS[HeroConfig.id].attrs_grow.int * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.int }}
+                            {{ (keepTwoDecimal(HEROS[HeroConfig.id].attrs.int + HEROS[HeroConfig.id].attrs_grow.int * (HeroConfig.level - 1)) + (HeroConfig.bowType === 'deadly' ? 18 : 0)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.int }}
                         </div>
                         <div class="add-btn" @click="changeConfig('int',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('int')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
@@ -886,7 +894,7 @@ const addAllPoints = type => {
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
                         <div class="sub-btn" @click="changeConfig('spd',2)"></div>
                         <div class="attr-num">
-                            {{ (keepTwoDecimal(HEROS[HeroConfig.id].attrs.spd + HEROS[HeroConfig.id].attrs_grow.spd * (HeroConfig.level - 1)) - (HeroConfig.infantryType === 'heavy' ? 15 : 0)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.spd }}
+                            {{ (keepTwoDecimal(HEROS[HeroConfig.id].attrs.spd + HEROS[HeroConfig.id].attrs_grow.spd * (HeroConfig.level - 1)) + (HeroConfig.cavalryType === 'light' ? 15 : 0)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.spd }}
                         </div>
                         <div class="add-btn" @click="changeConfig('spd',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('spd')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->

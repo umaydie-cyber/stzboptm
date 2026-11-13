@@ -46,7 +46,17 @@ try {
     const battle = { Over: false, Record: { pushRecord() {} } };
     const basic = new BattleHero({ ...config, infantryType: 'basic' }, 'blue', battle, 100);
     const converted = new BattleHero(config, 'blue', battle, 100);
+    assert.equal(converted.Attrs.spd, basic.Attrs.spd);
+    assert.equal(converted.OriginAttrs.spd, basic.OriginAttrs.spd);
+    battle.Round = 0;
+    converted.callHook('速度排序前');
+    assert.equal(converted.Attrs.spd, basic.Attrs.spd);
+    battle.Round = 1;
+    converted.callHook('速度排序前');
     assert(Math.abs(converted.Attrs.spd - (basic.Attrs.spd - 15)) < 0.001);
+    converted.callHook('速度排序前');
+    assert(Math.abs(converted.Attrs.spd - (basic.Attrs.spd - 15)) < 0.001);
+    assert.equal(converted.OriginAttrs.spd, basic.OriginAttrs.spd);
     converted.callHook('行动前');
     assert.equal(converted.Storage.heavyInfantryActions, 1);
     console.log('Verified infantry traits, counter relationships, report entries, and build validation');

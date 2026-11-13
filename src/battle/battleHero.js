@@ -346,15 +346,18 @@ export class BattleHero {
         this.Animation = config?.animation == true;
         // this.Camp = ['蜀', '魏', '吴', '汉', '群','晋'][hero.camp-1]
         this.Camp = hero.camp;
-        this.BasicLimit = hero.limit;
+        this.BowType = hero.army === 1 ? (config.bowType || 'basic') : 'basic';
+        const bowRange = this.BowType === 'longbow' ? 1 : this.BowType === 'deadly' ? -1 : 0;
+        this.BasicLimit = hero.limit + bowRange;
         this.BisicArm = hero.army;
         this.InfantryType = hero.army === 2 ? (config.infantryType || 'basic') : 'basic';
+        this.CavalryType = hero.army === 3 ? (config.cavalryType || 'basic') : 'basic';
         this.Skill = hero.skill;
         this.CommandPriority = hero.commandPriority || 0;
         this.Level = level;
         this.Arms = Math.max(1, Math.floor(Number(config.arms) || 10000));
         this.HurtArms = 0;
-        this.Limit = hero.limit + (this.Treasure?.id === 'jushu' ? 1 : 0);
+        this.Limit = this.BasicLimit + (this.Treasure?.id === 'jushu' ? 1 : 0);
 
         // 属性成长
         for (let key in hero.attrs_grow) {
@@ -463,7 +466,13 @@ export class BattleHero {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.yingcai * 1.5);
         }
         if (this.Treasure?.id === 'tianwen') this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.tianzi * 2.5);
-        if (this.InfantryType === 'heavy') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd - 15);
+        if (this.CavalryType === 'light') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd + 15);
+        if (this.BowType === 'deadly') {
+            for (const attr of ['atk', 'def', 'int']) this.Attrs[attr] = keepTwoDecimal(this.Attrs[attr] + 18);
+        }
+        if (this.BowType === 'longbow') {
+            this.State.firstAction = { rounds: 2, from: { hero: this, skill: { name: '长弓兵', type: 4 } } };
+        }
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -475,10 +484,34 @@ export class BattleHero {
         this.OriginAttrs.spd = this.Attrs.spd;
         this.OriginAttrs.arms = this.Arms;
         if (this.InfantryType === 'heavy') {
+            this.addHook('速度排序前', '重步兵战斗速度降低', () => {
+                if (this.Manger.Round !== 1 || this.Storage.heavyInfantrySpeedApplied) return;
+                this.Storage.heavyInfantrySpeedApplied = true;
+                this.Attrs.spd = keepTwoDecimal(this.Attrs.spd - 15);
+                this.Manger.Record.pushRecord(this, `的【重步兵】战斗中速度降低15(${this.Attrs.spd})`, 1);
+            }, { name: '重步兵', type: 4 }, this);
             this.addHook('行动前', '重步兵逐回合减伤', () => {
                 this.Storage.heavyInfantryActions = (this.Storage.heavyInfantryActions || 0) + 1;
                 this.Manger.Record.pushRecord(this, `的【重步兵】受到主动战法伤害额外降低${this.Storage.heavyInfantryActions * 8}%`, 1);
             }, { name: '重步兵', type: 4 }, this);
+        }
+        if (this.CavalryType === 'light') {
+            this.addHook('造成伤害后', '轻骑兵伤害次数', (_attacker, _target, _info, _skill, damage) => {
+                if (damage > 0 && (this.Storage.lightCavalryHits || 0) < 4) {
+                    this.Storage.lightCavalryHits = (this.Storage.lightCavalryHits || 0) + 1;
+                    this.Manger.Record.pushRecord(this, `的【轻骑兵】已造成${this.Storage.lightCavalryHits}/4次伤害`, 1);
+                }
+            }, { name: '轻骑兵', type: 4 }, this);
+        }
+        if (this.CavalryType === 'heavy') {
+            this.addHook('受伤时', '重骑兵反击', (attacker, damageInfo, _skill, damage) => {
+                if (this.Manger.Round < 1 || this.Manger.Round > 2 || this.Arms <= 0 ||
+                    attacker.Arms <= 0 || damage <= 0 || !damageInfo.isBasicAttack ||
+                    damageInfo.isSplitAttack || damageInfo.isCounterattack) return;
+                this.Manger.Record.pushRecord(this, '的【重骑兵】受到普通攻击，发动反击（伤害率75%）', 1);
+                attacker.beHurt(this, { type: 1, rate: 75, isCounterattack: true },
+                    { id: 'heavy-cavalry-counter', name: '重骑兵反击', type: 4 });
+            }, { name: '重骑兵', type: 4 }, this);
         }
     }
 
@@ -501,12 +534,15 @@ export class BattleHero {
         this.SkillsOrder = [];
         const mainSkill = SKILLS[this.Skill];
         // 每位装备者独立持有加距后的主战法，避免改动共享的战法定义。
-        this.Skills[this.Skill] = this.Treasure?.id === 'tengshe' && mainSkill?.type === 2
-            ? { ...mainSkill, limit: mainSkill.limit + 1 } : mainSkill;
+        const cavalryRange = this.CavalryType === 'archer' ? 1 : 0;
+        const mainRange = cavalryRange + (this.Treasure?.id === 'tengshe' && mainSkill?.type === 2 ? 1 : 0);
+        this.Skills[this.Skill] = mainSkill && mainRange
+            ? { ...mainSkill, limit: mainSkill.limit + mainRange } : mainSkill;
         this.SkillsOrder.push(this.Skill);
         if (config.equipskill != undefined && config.equipskill.length != 0) {
             config.equipskill.forEach(e => {
-                this.Skills[e] = SKILLS[e];
+                this.Skills[e] = SKILLS[e] && cavalryRange
+                    ? { ...SKILLS[e], limit: SKILLS[e].limit + cavalryRange } : SKILLS[e];
                 this.SkillsOrder.push(e);
             })
         }

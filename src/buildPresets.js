@@ -1,6 +1,8 @@
 import { __HEROS__ } from './battle/heros';
 import { __SKILLS__ } from './battle/skills';
 import { INFANTRY_TYPE_IDS } from './battle/infantryTypes';
+import { CAVALRY_TYPE_IDS } from './battle/cavalryTypes';
+import { BOW_TYPE_IDS } from './battle/bowTypes';
 
 export const PRESET_STORAGE_KEY = 'stzboptm.myBuilds.v1';
 export const ENVIRONMENT_STORAGE_KEY = 'stzboptm.environmentTeams.v1';
@@ -32,6 +34,14 @@ export function validateBuild(build) {
         if (hero.infantryType != null && (!INFANTRY_TYPE_IDS.has(hero.infantryType) ||
             (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 2 && hero.infantryType !== 'basic'))) {
             throw new Error('构筑中的步兵兵种数据无效');
+        }
+        if (hero.cavalryType != null && (!CAVALRY_TYPE_IDS.has(hero.cavalryType) ||
+            (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 3 && hero.cavalryType !== 'basic'))) {
+            throw new Error('构筑中的骑兵兵种数据无效');
+        }
+        if (hero.bowType != null && (!BOW_TYPE_IDS.has(hero.bowType) ||
+            (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 1 && hero.bowType !== 'basic'))) {
+            throw new Error('构筑中的弓兵兵种数据无效');
         }
     }
     return JSON.parse(JSON.stringify(build));

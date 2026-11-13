@@ -470,11 +470,11 @@ export class BattleManger {
 
         //先手排序
         this.SortSpdHeros.sort((a,b)=>{
-            let af = a.State.firstAction.rounds > 0;
-            let bf = b.State.firstAction.rounds > 0;
-            if(af == true && bf == false && this.Round <= a.State.firstAction.rounds){
+            let af = this.Round >= 1 && this.Round <= a.State.firstAction.rounds;
+            let bf = this.Round >= 1 && this.Round <= b.State.firstAction.rounds;
+            if(af == true && bf == false){
                 return -1;
-            }else if(af == false && bf == true && this.Round <= b.State.firstAction.rounds){
+            }else if(af == false && bf == true){
                 return 1;
             }
             return 0;

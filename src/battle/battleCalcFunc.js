@@ -157,7 +157,14 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     }
     if (attacker.InfantryType === 'pike') special('长枪兵', 8, attacker);
     if (attacker.InfantryType === 'tribal') special('蛮兵', 18, attacker);
+    if (attacker.CavalryType === 'light' && (attacker.Storage.lightCavalryHits || 0) < 4) special('轻骑兵', 18, attacker);
+    if (attacker.BowType === 'crossbow') special('弩兵', 8, attacker);
     if (target.InfantryType === 'guard') special('禁卫', -6, target);
+    if (target.CavalryType === 'iron') {
+        const controls = ['confusion', 'rage', 'attackLimit', 'activeLimit']
+            .filter(name => target.State[name]?.rounds > 0).length;
+        if (controls) special('铁骑兵', -25 * controls, target);
+    }
     if (skill?.type === 2 && target.InfantryType === 'heavy') {
         special('重步兵', -(12 + (target.Storage.heavyInfantryActions || 0) * 8), target);
     }
