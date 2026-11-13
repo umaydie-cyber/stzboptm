@@ -2,6 +2,7 @@
 import { ref, toRefs, computed } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
+import { INFANTRY_TYPES } from '../battle/infantryTypes';
 import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 
@@ -494,6 +495,7 @@ const editHero = (selectedCamp, index) => {
     HeroConfig.value = {
         ...current,
         arms: current.arms ?? 10000,
+        infantryType: HEROS[current.id]?.army === 2 ? (current.infantryType || 'basic') : 'basic',
         extraAttrsAlloc: { ...current.extraAttrsAlloc }
     };
     showHeroInfo.value = true;
@@ -519,6 +521,7 @@ const ConfigHeroInfo = (id) => {
             spd: 0
         },
         up: 5,
+        infantryType: 'basic',
         arms: 10000
     }
 }
@@ -532,6 +535,7 @@ const saveConfig = () =>{
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.int = HeroConfig.value.extraAttrsAlloc.int;
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
     team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
+    team.value[c_camp].heros[c_hindex].infantryType = HEROS[HeroConfig.value.id].army === 2 ? HeroConfig.value.infantryType : 'basic';
     const arms = Number(HeroConfig.value.arms);
     team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.floor(arms)) : 10000;
     team.value[c_camp].heros[c_hindex].animation = false;
@@ -809,6 +813,25 @@ const addAllPoints = type => {
                     </div>
                     <div class="add-btn" @click="changeConfig('up',1)"></div>
                 </div>
+                <div class="army-type-box">
+                    <div class="left">兵种</div>
+                    <div class="right infantry-choices" v-if="HEROS[HeroConfig.id].army === 2">
+                        <div>
+                            <button v-for="type in INFANTRY_TYPES" :key="type.id" type="button"
+                                class="infantry-option" :class="{ selected: HeroConfig.infantryType === type.id }"
+                                :title="type.desc" :aria-pressed="HeroConfig.infantryType === type.id"
+                                @click="HeroConfig.infantryType = type.id">
+                                <img v-if="type.image" :src="type.image" :alt="type.name">
+                                <template v-else><span class="infantry-icon">{{ type.icon }}</span>{{ type.name }}</template>
+                            </button>
+                        </div>
+                        <small>{{ INFANTRY_TYPES.find(type => type.id === HeroConfig.infantryType)?.desc }}</small>
+                    </div>
+                    <div class="right" v-else>
+                        <img :src="`https://cbg-stzb.res.netease.com/mvvm/rc6f73b651ed47551555446b20/images/bz/${HEROS[HeroConfig.id].army}.png`" alt="">
+                        <span>{{ { 1: '弓兵', 2: '步兵', 3: '骑兵' }[HEROS[HeroConfig.id].army] }}</span>
+                    </div>
+                </div>
                 <div class="level-box">
                     <div class="left">等级</div>
                     <div class="right">
@@ -863,7 +886,7 @@ const addAllPoints = type => {
                         <!-- <div class="stbtn" style="margin-right: .2vw;">MIN</div> -->
                         <div class="sub-btn" @click="changeConfig('spd',2)"></div>
                         <div class="attr-num">
-                            {{ keepTwoDecimal(HEROS[HeroConfig.id].attrs.spd + HEROS[HeroConfig.id].attrs_grow.spd * (HeroConfig.level - 1)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.spd }}
+                            {{ (keepTwoDecimal(HEROS[HeroConfig.id].attrs.spd + HEROS[HeroConfig.id].attrs_grow.spd * (HeroConfig.level - 1)) - (HeroConfig.infantryType === 'heavy' ? 15 : 0)).toFixed(2) }} + {{ HeroConfig.extraAttrsAlloc.spd }}
                         </div>
                         <div class="add-btn" @click="changeConfig('spd',1)" title="加 1 点"></div><button class="add-all" type="button" @click="addAllPoints('spd')">全加</button>
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
@@ -1690,6 +1713,58 @@ const addAllPoints = type => {
             width: 60vw;
             height: 90%;
             flex-direction: column;
+
+            .army-type-box .right {
+                gap: .5vw;
+
+                > img {
+                    width: 1.6vw;
+                    height: 1.6vw;
+                    object-fit: contain;
+                }
+            }
+
+            .infantry-option {
+                display: inline-flex;
+                align-items: center;
+                gap: .2vw;
+                padding: .25vw .4vw;
+                border: 1px solid #8b806b;
+                background: #292a2a;
+                color: #ddd;
+                cursor: pointer;
+                font-size: .8vw;
+                white-space: nowrap;
+
+                &.selected {
+                    border-color: #e1bc68;
+                    background: #5a4227;
+                    color: #ffe4a5;
+                }
+
+                .infantry-icon {
+                    font-size: 1vw;
+                    font-weight: bold;
+                }
+
+                img {
+                    width: 4.8vw;
+                    height: 1.45vw;
+                    object-fit: contain;
+                }
+            }
+
+            .infantry-choices {
+                flex-direction: column;
+                align-items: flex-end !important;
+
+                > div {
+                    display: flex;
+                    gap: .25vw;
+                }
+
+                small { color: #d8cba9; font-size: .7vw; }
+            }
 
             input{
                 background-color: transparent;

@@ -348,6 +348,7 @@ export class BattleHero {
         this.Camp = hero.camp;
         this.BasicLimit = hero.limit;
         this.BisicArm = hero.army;
+        this.InfantryType = hero.army === 2 ? (config.infantryType || 'basic') : 'basic';
         this.Skill = hero.skill;
         this.CommandPriority = hero.commandPriority || 0;
         this.Level = level;
@@ -462,6 +463,7 @@ export class BattleHero {
             this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.yingcai * 1.5);
         }
         if (this.Treasure?.id === 'tianwen') this.Attrs.int = keepTwoDecimal(this.Attrs.int + this.Treasure.tianzi * 2.5);
+        if (this.InfantryType === 'heavy') this.Attrs.spd = keepTwoDecimal(this.Attrs.spd - 15);
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -472,6 +474,12 @@ export class BattleHero {
         this.OriginAttrs.int = this.Attrs.int;
         this.OriginAttrs.spd = this.Attrs.spd;
         this.OriginAttrs.arms = this.Arms;
+        if (this.InfantryType === 'heavy') {
+            this.addHook('行动前', '重步兵逐回合减伤', () => {
+                this.Storage.heavyInfantryActions = (this.Storage.heavyInfantryActions || 0) + 1;
+                this.Manger.Record.pushRecord(this, `的【重步兵】受到主动战法伤害额外降低${this.Storage.heavyInfantryActions * 8}%`, 1);
+            }, { name: '重步兵', type: 4 }, this);
+        }
     }
 
     initSkills(config) {

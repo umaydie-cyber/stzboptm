@@ -1,5 +1,6 @@
 import { __HEROS__ } from './battle/heros';
 import { __SKILLS__ } from './battle/skills';
+import { INFANTRY_TYPE_IDS } from './battle/infantryTypes';
 
 export const PRESET_STORAGE_KEY = 'stzboptm.myBuilds.v1';
 export const ENVIRONMENT_STORAGE_KEY = 'stzboptm.environmentTeams.v1';
@@ -27,6 +28,10 @@ export function validateBuild(build) {
         }
         if (hero.treasure != null && (!plain(hero.treasure) || typeof hero.treasure.id !== 'string')) {
             throw new Error('构筑中的宝物数据无效');
+        }
+        if (hero.infantryType != null && (!INFANTRY_TYPE_IDS.has(hero.infantryType) ||
+            (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 2 && hero.infantryType !== 'basic'))) {
+            throw new Error('构筑中的步兵兵种数据无效');
         }
     }
     return JSON.parse(JSON.stringify(build));

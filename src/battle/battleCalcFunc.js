@@ -147,9 +147,21 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     };
     // 基础兵种相克：骑克步、步克弓、弓克骑。被克制方造成的所有伤害降低30%。
     const counteredBy = { 1: 2, 2: 3, 3: 1 };
-    if (!damageInfo.ignoreTroopCounter && counteredBy[attacker.BisicArm] === target.BisicArm) {
-        special('兵种相克', -30, attacker);
+    const pikeInvolved = attacker.InfantryType === 'pike' || target.InfantryType === 'pike';
+    const countered = pikeInvolved
+        ? (attacker.InfantryType === 'pike' && target.BisicArm === 1) ||
+            (attacker.BisicArm === 3 && target.InfantryType === 'pike')
+        : counteredBy[attacker.BisicArm] === target.BisicArm;
+    if (!damageInfo.ignoreTroopCounter && countered) {
+        special(pikeInvolved ? '长枪兵克制' : '兵种相克', -30, attacker);
     }
+    if (attacker.InfantryType === 'pike') special('长枪兵', 8, attacker);
+    if (attacker.InfantryType === 'tribal') special('蛮兵', 18, attacker);
+    if (target.InfantryType === 'guard') special('禁卫', -6, target);
+    if (skill?.type === 2 && target.InfantryType === 'heavy') {
+        special('重步兵', -(12 + (target.Storage.heavyInfantryActions || 0) * 8), target);
+    }
+    if (skill?.type === 3 && target.InfantryType === 'guard') special('禁卫·追击防护', -20, target);
     if (type == 1 || type == 3) {
         if (target.Storage.yifudangguan && target.Posname === '前锋' &&
             target.Manger.Round >= 1 && target.Manger.Round <= 2) {
