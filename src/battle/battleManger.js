@@ -80,6 +80,7 @@ export class BattleManger {
 
             let hero = new BattleHero(e,'blue',this,heroBattleTeam.blue.morale);
             hero.Posname = Posname;
+            hero.applyBowTraitPositionBonuses();
             hero.Index = blueindex;
             // hero.Name = hero.Name+hero.Index;
             hero.Name = hero.Name;
@@ -118,6 +119,7 @@ export class BattleManger {
 
             let hero = new BattleHero(e,'red',this,heroBattleTeam.red.morale);
             hero.Posname = Posname;
+            hero.applyBowTraitPositionBonuses();
             hero.Index = redindex;
             // hero.Name = hero.Name+hero.Index;
             hero.Name = hero.Name;

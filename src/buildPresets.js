@@ -1,8 +1,11 @@
 import { __HEROS__ } from './battle/heros';
 import { __SKILLS__ } from './battle/skills';
 import { INFANTRY_TYPE_IDS } from './battle/infantryTypes';
+import { INFANTRY_TRAIT_IDS } from './battle/infantryTraits';
 import { CAVALRY_TYPE_IDS } from './battle/cavalryTypes';
+import { CAVALRY_TRAIT_IDS } from './battle/cavalryTraits';
 import { BOW_TYPE_IDS } from './battle/bowTypes';
+import { BOW_TRAIT_IDS } from './battle/bowTraits';
 
 export const PRESET_STORAGE_KEY = 'stzboptm.myBuilds.v1';
 export const ENVIRONMENT_STORAGE_KEY = 'stzboptm.environmentTeams.v1';
@@ -35,13 +38,34 @@ export function validateBuild(build) {
             (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 2 && hero.infantryType !== 'basic'))) {
             throw new Error('构筑中的步兵兵种数据无效');
         }
+        if (hero.infantryTraits != null && (!Array.isArray(hero.infantryTraits) || hero.infantryTraits.length > 2 ||
+            new Set(hero.infantryTraits).size !== hero.infantryTraits.length ||
+            hero.infantryTraits.some(id => !INFANTRY_TRAIT_IDS.has(id)) ||
+            (hero.infantryTraits.length > 0 && (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 2 ||
+                !hero.infantryType || hero.infantryType === 'basic')))) {
+            throw new Error('构筑中的步兵特性数据无效');
+        }
         if (hero.cavalryType != null && (!CAVALRY_TYPE_IDS.has(hero.cavalryType) ||
             (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 3 && hero.cavalryType !== 'basic'))) {
             throw new Error('构筑中的骑兵兵种数据无效');
         }
+        if (hero.cavalryTraits != null && (!Array.isArray(hero.cavalryTraits) || hero.cavalryTraits.length > 2 ||
+            new Set(hero.cavalryTraits).size !== hero.cavalryTraits.length ||
+            hero.cavalryTraits.some(id => !CAVALRY_TRAIT_IDS.has(id)) ||
+            (hero.cavalryTraits.length > 0 && (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 3 ||
+                !hero.cavalryType || hero.cavalryType === 'basic')))) {
+            throw new Error('构筑中的骑兵特性数据无效');
+        }
         if (hero.bowType != null && (!BOW_TYPE_IDS.has(hero.bowType) ||
             (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 1 && hero.bowType !== 'basic'))) {
             throw new Error('构筑中的弓兵兵种数据无效');
+        }
+        if (hero.bowTraits != null && (!Array.isArray(hero.bowTraits) || hero.bowTraits.length > 2 ||
+            new Set(hero.bowTraits).size !== hero.bowTraits.length ||
+            hero.bowTraits.some(id => !BOW_TRAIT_IDS.has(id)) ||
+            (hero.bowTraits.length > 0 && (__HEROS__.find(item => item.id === Number(hero.id))?.army !== 1 ||
+                !hero.bowType || hero.bowType === 'basic')))) {
+            throw new Error('构筑中的弓兵特性数据无效');
         }
     }
     return JSON.parse(JSON.stringify(build));

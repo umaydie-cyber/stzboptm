@@ -159,6 +159,28 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     if (attacker.InfantryType === 'tribal') special('蛮兵', 18, attacker);
     if (attacker.CavalryType === 'light' && (attacker.Storage.lightCavalryHits || 0) < 4) special('轻骑兵', 18, attacker);
     if (attacker.BowType === 'crossbow') special('弩兵', 8, attacker);
+    if (target.BowTraits?.includes('detour')) special('弓兵·迂回', -8, target);
+    if (target.InfantryTraits?.includes('defense')) special('步兵·守备', target.BattleCamp === 'red' ? -16 : -6, target);
+    if (target.CavalryTraits?.includes('surprise') && target.Manger.Round === 1) special('骑兵·出奇', -60, target);
+    if (target.CavalryTraits?.includes('guarded') && (damageInfo.isBasicAttack || skill?.type === 3))
+        special('骑兵·难测', -25, target);
+    if (attacker.CavalryTraits?.includes('break')) {
+        const enemies = attacker.BattleCamp === 'blue' ? attacker.Manger.RedTeam?.hero : attacker.Manger.BlueTeam?.hero;
+        const maximum = Math.max(0, ...(enemies || []).filter(hero => hero.Arms > 0).map(hero => hero.Arms));
+        if (target.Arms > 0 && target.Arms === maximum) special('骑兵·挫锐', 18, attacker);
+    }
+    if (attacker.CavalryTraits?.includes('rear') && target.BattleCamp !== attacker.BattleCamp &&
+        ['中军', '大营'].includes(target.Posname)) special('骑兵·扰后', 10, attacker);
+    if (skill?.type === 2 && attacker.InfantryTraits?.includes('formation')) special('步兵·列阵', 10, attacker);
+    if (attacker.InfantryTraits?.includes('strategy') && [2, 4].includes(type) &&
+        attacker.Manger.Round >= 3 && attacker.Storage.wentaoUsedRound !== attacker.Manger.Round)
+        special('步兵·文韬', 15, attacker);
+    if (target.InfantryTraits?.includes('brave') && [1, 2].includes(attacker.BisicArm) && [2, 4].includes(type))
+        special('步兵·勇毅', -15, target);
+    if (attacker.BowTraits?.includes('volley') && attacker.Manger.Round >= 1 && attacker.Manger.Round <= 3)
+        special('弓兵·齐射', 15, attacker);
+    if (attacker.BowTraits?.includes('direct') && attacker.Manger.Round >= 1)
+        special('弓兵·直射', 10 - 2 * Math.max(0, Math.abs(attacker.Index - target.Index) - 1), attacker);
     if (target.InfantryType === 'guard') special('禁卫', -6, target);
     if (target.CavalryType === 'iron') {
         const controls = ['confusion', 'rage', 'attackLimit', 'activeLimit']

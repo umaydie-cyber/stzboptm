@@ -347,11 +347,14 @@ export class BattleHero {
         // this.Camp = ['蜀', '魏', '吴', '汉', '群','晋'][hero.camp-1]
         this.Camp = hero.camp;
         this.BowType = hero.army === 1 ? (config.bowType || 'basic') : 'basic';
+        this.BowTraits = hero.army === 1 && this.BowType !== 'basic' ? (config.bowTraits || []).slice(0, 2) : [];
         const bowRange = this.BowType === 'longbow' ? 1 : this.BowType === 'deadly' ? -1 : 0;
         this.BasicLimit = hero.limit + bowRange;
         this.BisicArm = hero.army;
         this.InfantryType = hero.army === 2 ? (config.infantryType || 'basic') : 'basic';
+        this.InfantryTraits = hero.army === 2 && this.InfantryType !== 'basic' ? (config.infantryTraits || []).slice(0, 2) : [];
         this.CavalryType = hero.army === 3 ? (config.cavalryType || 'basic') : 'basic';
+        this.CavalryTraits = hero.army === 3 && this.CavalryType !== 'basic' ? (config.cavalryTraits || []).slice(0, 2) : [];
         this.Skill = hero.skill;
         this.CommandPriority = hero.commandPriority || 0;
         this.Level = level;
@@ -473,6 +476,9 @@ export class BattleHero {
         if (this.BowType === 'longbow') {
             this.State.firstAction = { rounds: 2, from: { hero: this, skill: { name: '长弓兵', type: 4 } } };
         }
+        if (this.CavalryTraits.includes('swift')) {
+            this.State.firstAction = { rounds: 3, from: { hero: this, skill: { name: '骑兵·疾行', type: 4 } } };
+        }
 
         // // 疾风营强化
         // this.Attrs['spd'] = keepTwoDecimal(this.Attrs['spd'] + 10);
@@ -515,6 +521,18 @@ export class BattleHero {
         }
     }
 
+    applyBowTraitPositionBonuses() {
+        if (!this.BowTraits.includes('terrain')) return;
+        const bonuses = this.Posname === '前锋' ? { def: 24 }
+            : this.Posname === '中军' ? { def: 10, int: 10 }
+            : { atk: 6, def: 6, int: 6 };
+        for (const [attr, value] of Object.entries(bonuses)) {
+            this.Attrs[attr] = keepTwoDecimal(this.Attrs[attr] + value);
+            this.OriginAttrs[attr] = keepTwoDecimal(this.OriginAttrs[attr] + value);
+        }
+        this.Manger.Record.pushRecord(this, `的【弓兵·地利】${this.Posname}位置属性加成生效`, 1);
+    }
+
     initSkills(config) {
         /* this.Skills = {};
         this.SkillsOrder = [];
@@ -545,6 +563,12 @@ export class BattleHero {
                     ? { ...SKILLS[e], limit: SKILLS[e].limit + cavalryRange } : SKILLS[e];
                 this.SkillsOrder.push(e);
             })
+        }
+        if (this.InfantryTraits.includes('sharp')) {
+            const count = this.SkillsOrder.filter(id => this.Skills[id] && this.Skills[id].type !== 2).length;
+            const bonus = count * 22;
+            this.Attrs.atk = keepTwoDecimal(this.Attrs.atk + bonus);
+            this.OriginAttrs.atk = keepTwoDecimal(this.OriginAttrs.atk + bonus);
         }
         // console.log(SKILLS, this.Skills);
     }
@@ -876,6 +900,9 @@ export class BattleHero {
     //普通攻击
     basicAttack(target) {
         target = this.resolveBasicAttackGuard(target);
+        const scatter = this.BowTraits.includes('scatter') && !this.Storage.bowScatterUsed;
+        const scatterTargets = scatter ? this.getAdjacentEnemyTargets(target) : [];
+        if (scatter) this.Storage.bowScatterUsed = true;
         if (this.Treasure?.id === 'fenran') {
             this.Storage.fenranAttackedThisRound = true;
             this.Storage.fenranCangfengCurrentAttack = this.Treasure.forge === 'cangfeng' && !!this.Storage.fenranCangfengReady;
@@ -889,6 +916,14 @@ export class BattleHero {
             rate: 100,
             isBasicAttack: true
         });
+        if (scatter && !this.Manger.Over && this.Arms > 0) {
+            for (const adjacent of scatterTargets) {
+                if (adjacent.Arms <= 0 || this.Manger.Over) continue;
+                this.Manger.Record.pushRecord(this, `的【弓兵·散射】对${adjacent.Name}造成相邻伤害`, 1);
+                adjacent.beHurt(this, { type: 1, rate: 40, isBasicAttack: true, isSplitAttack: true },
+                    { id: 'bow-scatter', name: '弓兵·散射', type: 4 });
+            }
+        }
         if (this.Storage.madaiAttackStacks) this.Storage.madaiAttackStacks = 0;
         this.callHook('普通攻击后', target);
         if (this.Treasure?.id === 'qianjun' && target.Arms > 0) target.clearOneActiveBuff(this);
@@ -945,6 +980,13 @@ export class BattleHero {
         const line = [...this.Manger.BlueTeam.hero, ...[...this.Manger.RedTeam.hero].reverse()].filter(h => h.Arms > 0);
         const index = line.indexOf(target);
         return line.filter((h, i) => Math.abs(i - index) === 1 && (this.isRage() || h.BattleCamp !== this.BattleCamp));
+    }
+
+    getAdjacentEnemyTargets(target) {
+        const line = [...this.Manger.BlueTeam.hero, ...[...this.Manger.RedTeam.hero].reverse()];
+        const index = line.indexOf(target);
+        return index < 0 ? [] : line.filter((hero, i) => hero !== target && hero.Arms > 0 &&
+            hero.BattleCamp === target.BattleCamp && Math.abs(i - index) === 1);
     }
 
     performSplitAttack(targets) {
@@ -1238,6 +1280,12 @@ export class BattleHero {
         }
 
         this.Manger.addStat(attacker, skill, realDamage, 0);
+        if (realDamage > 0 && attacker.InfantryTraits?.includes('strategy') &&
+            [2, 4].includes(damageInfo.type) && attacker.Manger.Round >= 3 &&
+            attacker.Storage.wentaoUsedRound !== attacker.Manger.Round) {
+            attacker.Storage.wentaoUsedRound = attacker.Manger.Round;
+            attacker.Manger.Record.pushRecord(attacker, '的【步兵·文韬】本回合首次策略伤害已触发', 1);
+        }
         if (realDamage > 0 && [1, 2].includes(damageInfo.type) && skill?.type === 2 && attacker.Storage.lingwukongxuanStacks) {
             attacker.Storage.lingwukongxuanStacks = 0;
             attacker.Manger.Record.pushRecord(attacker, '的【令无空悬】下次主动战法伤害加成已消耗', 1);

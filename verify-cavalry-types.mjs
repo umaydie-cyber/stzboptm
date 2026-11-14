@@ -54,13 +54,52 @@ try {
     heavy.callHook('受伤时', attacker, { type: 1, isBasicAttack: true }, null, 100);
     assert.equal(counters.length, 1);
 
+    manager.Round = 1;
+    const traitConfig = (traits) => ({ ...config(horse.id, 'light'), cavalryTraits: traits });
+    const swift = new BattleHero(traitConfig(['swift', 'surprise']), 'blue', manager, 100);
+    assert.equal(swift.State.firstAction.rounds, 3);
+    assert.equal(swift.State.firstAction.from.skill.name, '骑兵·疾行');
+    assert(contains(entries(basic, swift), '骑兵·出奇', -60));
+    manager.Round = 2;
+    assert(!entries(basic, swift).some(entry => entry.name === '骑兵·出奇'));
+
+    const guarded = new BattleHero(traitConfig(['guarded', 'break']), 'blue', manager, 100);
+    assert(contains(entries(basic, guarded, { type: 3 }), '骑兵·难测', -25));
+    const basicInfo = { type: 1, isBasicAttack: true };
+    getDamageAddition(basic, guarded, basicInfo, null);
+    assert(contains(basicInfo.damageModifiers.entries, '骑兵·难测', -25));
+    assert(!entries(basic, guarded, { type: 2 }).some(entry => entry.name === '骑兵·难测'));
+
+    const front = new BattleHero(config(horse.id), 'red', manager, 100);
+    const middle = new BattleHero(config(horse.id), 'red', manager, 100);
+    const back = new BattleHero(config(horse.id), 'red', manager, 100);
+    front.Posname = '前锋'; middle.Posname = '中军'; back.Posname = '大营';
+    front.Arms = 9000; middle.Arms = 8000; back.Arms = 7000;
+    manager.RedTeam = { hero: [front, middle, back] };
+    manager.BlueTeam = { hero: [guarded] };
+    assert(contains(entries(guarded, front), '骑兵·挫锐', 18));
+    assert(!entries(guarded, middle).some(entry => entry.name === '骑兵·挫锐'));
+    middle.Arms = 9500;
+    assert(contains(entries(guarded, middle), '骑兵·挫锐', 18));
+    const rear = new BattleHero(traitConfig(['rear']), 'blue', manager, 100);
+    assert(!entries(rear, front).some(entry => entry.name === '骑兵·扰后'));
+    assert(contains(entries(rear, middle), '骑兵·扰后', 10));
+    assert(contains(entries(rear, back), '骑兵·扰后', 10));
+
     const build = { morale: 100, generalPlatformLevel: 10,
         fourCampLevels: { swift: 10, iron: 10, strategy: 10, martial: 10 },
         heros: [config(horse.id, 'light'), config(foot.id), config(horse.id)] };
     assert.equal(validateBuild(build).heros[0].cavalryType, 'light');
+    build.heros[0].cavalryTraits = ['swift', 'surprise'];
+    assert.deepEqual(validateBuild(build).heros[0].cavalryTraits, ['swift', 'surprise']);
+    build.heros[0].cavalryTraits = ['swift', 'swift'];
+    assert.throws(() => validateBuild(build), /骑兵特性/);
+    build.heros[0].cavalryTraits = ['swift', 'invalid'];
+    assert.throws(() => validateBuild(build), /骑兵特性/);
+    build.heros[0].cavalryTraits = ['swift', 'surprise'];
     build.heros[1].cavalryType = 'iron';
     assert.throws(() => validateBuild(build), /骑兵兵种/);
-    console.log('Verified cavalry speed, damage charges, counterattack, skill ranges, iron defense, and builds');
+    console.log('Verified cavalry types, five selectable traits, damage sources, and builds');
 } finally {
     await vite.close();
 }

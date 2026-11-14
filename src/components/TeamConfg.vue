@@ -5,6 +5,9 @@ import { __SKILLS__ } from '../battle/skills';
 import { INFANTRY_TYPES } from '../battle/infantryTypes';
 import { CAVALRY_TYPES } from '../battle/cavalryTypes';
 import { BOW_TYPES } from '../battle/bowTypes';
+import { BOW_TRAITS } from '../battle/bowTraits';
+import { INFANTRY_TRAITS } from '../battle/infantryTraits';
+import { CAVALRY_TRAITS } from '../battle/cavalryTraits';
 import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 
@@ -225,6 +228,36 @@ const testt = ref({
     },
 })
 const showHeroList = ref(false);
+const heroSort = ref('default');
+const heroSortDescending = ref(false);
+const selectedHeroArmies = ref([]);
+const selectedHeroCamps = ref([]);
+const heroArmyOptions = [{ id: 1, name: '弓兵' }, { id: 2, name: '步兵' }, { id: 3, name: '骑兵' }];
+const heroCampOptions = [{ id: 1, name: '蜀' }, { id: 2, name: '魏' }, { id: 3, name: '吴' },
+    { id: 4, name: '汉' }, { id: 5, name: '群' }, { id: 6, name: '晋' }];
+const visibleHeroes = computed(() => {
+    const heroes = __HEROS__.filter(hero =>
+        (!selectedHeroArmies.value.length || selectedHeroArmies.value.includes(hero.army)) &&
+        (!selectedHeroCamps.value.length || selectedHeroCamps.value.includes(hero.camp)));
+    if (heroSort.value !== 'default') {
+        const direction = heroSortDescending.value ? -1 : 1;
+        heroes.sort((a, b) => direction * (a[heroSort.value] - b[heroSort.value]) || a.id - b.id);
+    }
+    return heroes;
+});
+const setHeroSort = field => {
+    if (heroSort.value === field && field !== 'default') heroSortDescending.value = !heroSortDescending.value;
+    else {
+        heroSort.value = field;
+        heroSortDescending.value = field === 'cost';
+    }
+};
+const toggleHeroFilter = (field, id) => {
+    const selection = field === 'army' ? selectedHeroArmies : selectedHeroCamps;
+    selection.value = selection.value.includes(id)
+        ? selection.value.filter(value => value !== id)
+        : [...selection.value, id];
+};
 const showSkillList = ref(false);
 const showHeroInfo = ref(false);
 const showTreasure = ref(false);
@@ -498,8 +531,11 @@ const editHero = (selectedCamp, index) => {
         ...current,
         arms: current.arms ?? 10000,
         infantryType: HEROS[current.id]?.army === 2 ? (current.infantryType || 'basic') : 'basic',
+        infantryTraits: HEROS[current.id]?.army === 2 ? [...(current.infantryTraits || [])] : [],
         cavalryType: HEROS[current.id]?.army === 3 ? (current.cavalryType || 'basic') : 'basic',
+        cavalryTraits: HEROS[current.id]?.army === 3 ? [...(current.cavalryTraits || [])] : [],
         bowType: HEROS[current.id]?.army === 1 ? (current.bowType || 'basic') : 'basic',
+        bowTraits: HEROS[current.id]?.army === 1 ? [...(current.bowTraits || [])] : [],
         extraAttrsAlloc: { ...current.extraAttrsAlloc }
     };
     showHeroInfo.value = true;
@@ -508,6 +544,33 @@ defineExpose({ editHero });
 
 const ConfigHeroId = ref(0);
 const HeroConfig = ref({})
+const selectBowType = id => {
+    HeroConfig.value.bowType = id;
+    if (id === 'basic') HeroConfig.value.bowTraits = [];
+};
+const selectInfantryType = id => {
+    HeroConfig.value.infantryType = id;
+    if (id === 'basic') HeroConfig.value.infantryTraits = [];
+};
+const selectCavalryType = id => {
+    HeroConfig.value.cavalryType = id;
+    if (id === 'basic') HeroConfig.value.cavalryTraits = [];
+};
+const toggleCavalryTrait = id => {
+    const traits = HeroConfig.value.cavalryTraits;
+    if (traits.includes(id)) HeroConfig.value.cavalryTraits = traits.filter(value => value !== id);
+    else if (traits.length < 2) HeroConfig.value.cavalryTraits = [...traits, id];
+};
+const toggleInfantryTrait = id => {
+    const traits = HeroConfig.value.infantryTraits;
+    if (traits.includes(id)) HeroConfig.value.infantryTraits = traits.filter(value => value !== id);
+    else if (traits.length < 2) HeroConfig.value.infantryTraits = [...traits, id];
+};
+const toggleBowTrait = id => {
+    const traits = HeroConfig.value.bowTraits;
+    if (traits.includes(id)) HeroConfig.value.bowTraits = traits.filter(value => value !== id);
+    else if (traits.length < 2) HeroConfig.value.bowTraits = [...traits, id];
+};
 var c_camp;
 var c_hindex;
 
@@ -526,13 +589,31 @@ const ConfigHeroInfo = (id) => {
         },
         up: 5,
         infantryType: 'basic',
+        infantryTraits: [],
         cavalryType: 'basic',
+        cavalryTraits: [],
         bowType: 'basic',
+        bowTraits: [],
         arms: 10000
     }
 }
 
 const saveConfig = () =>{
+    if (HEROS[HeroConfig.value.id].army === 2 && HeroConfig.value.infantryType !== 'basic' &&
+        HeroConfig.value.infantryTraits.length !== 2) {
+        window.alert('请选择2个步兵特性');
+        return;
+    }
+    if (HEROS[HeroConfig.value.id].army === 1 && HeroConfig.value.bowType !== 'basic' &&
+        HeroConfig.value.bowTraits.length !== 2) {
+        window.alert('请选择2个弓兵特性');
+        return;
+    }
+    if (HEROS[HeroConfig.value.id].army === 3 && HeroConfig.value.cavalryType !== 'basic' &&
+        HeroConfig.value.cavalryTraits.length !== 2) {
+        window.alert('请选择2个骑兵特性');
+        return;
+    }
     console.log(team.value[c_camp].heros[c_hindex]);
     team.value[c_camp].heros[c_hindex].id = HeroConfig.value.id;
     team.value[c_camp].heros[c_hindex].level = HeroConfig.value.level;
@@ -542,8 +623,14 @@ const saveConfig = () =>{
     team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
     team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
     team.value[c_camp].heros[c_hindex].infantryType = HEROS[HeroConfig.value.id].army === 2 ? HeroConfig.value.infantryType : 'basic';
+    team.value[c_camp].heros[c_hindex].infantryTraits = HEROS[HeroConfig.value.id].army === 2 && HeroConfig.value.infantryType !== 'basic'
+        ? [...HeroConfig.value.infantryTraits] : [];
     team.value[c_camp].heros[c_hindex].cavalryType = HEROS[HeroConfig.value.id].army === 3 ? HeroConfig.value.cavalryType : 'basic';
+    team.value[c_camp].heros[c_hindex].cavalryTraits = HEROS[HeroConfig.value.id].army === 3 && HeroConfig.value.cavalryType !== 'basic'
+        ? [...HeroConfig.value.cavalryTraits] : [];
     team.value[c_camp].heros[c_hindex].bowType = HEROS[HeroConfig.value.id].army === 1 ? HeroConfig.value.bowType : 'basic';
+    team.value[c_camp].heros[c_hindex].bowTraits = HEROS[HeroConfig.value.id].army === 1 && HeroConfig.value.bowType !== 'basic'
+        ? [...HeroConfig.value.bowTraits] : [];
     const arms = Number(HeroConfig.value.arms);
     team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.floor(arms)) : 10000;
     team.value[c_camp].heros[c_hindex].animation = false;
@@ -754,8 +841,32 @@ const addAllPoints = type => {
             <div class="title">武将卡</div>
             <div class="close" @click="showHeroList = false"></div>
         </div>
+        <div class="hero-list-controls">
+            <div class="hero-sort-options" role="group" aria-label="武将排序">
+                <span>排序</span>
+                <button v-for="option in [{ id: 'default', name: '默认' }, { id: 'army', name: '兵种' }, { id: 'camp', name: '阵营' }, { id: 'cost', name: '统帅' }]"
+                    :key="option.id" type="button" :class="{ selected: heroSort === option.id }"
+                    :aria-pressed="heroSort === option.id" @click="setHeroSort(option.id)">
+                    {{ option.name }}<span v-if="heroSort === option.id && option.id !== 'default'">{{ heroSortDescending ? ' ↓' : ' ↑' }}</span>
+                </button>
+            </div>
+            <div class="hero-filter-options" role="group" aria-label="兵种筛选">
+                <span>兵种</span>
+                <button type="button" :class="{ selected: !selectedHeroArmies.length }" :aria-pressed="!selectedHeroArmies.length" @click="selectedHeroArmies = []">全部</button>
+                <button v-for="option in heroArmyOptions" :key="option.id" type="button"
+                    :class="{ selected: selectedHeroArmies.includes(option.id) }" :aria-pressed="selectedHeroArmies.includes(option.id)"
+                    @click="toggleHeroFilter('army', option.id)">{{ option.name }}</button>
+            </div>
+            <div class="hero-filter-options" role="group" aria-label="阵营筛选">
+                <span>阵营</span>
+                <button type="button" :class="{ selected: !selectedHeroCamps.length }" :aria-pressed="!selectedHeroCamps.length" @click="selectedHeroCamps = []">全部</button>
+                <button v-for="option in heroCampOptions" :key="option.id" type="button"
+                    :class="{ selected: selectedHeroCamps.includes(option.id) }" :aria-pressed="selectedHeroCamps.includes(option.id)"
+                    @click="toggleHeroFilter('camp', option.id)">{{ option.name }}</button>
+            </div>
+        </div>
         <div class="herolist-box">
-            <div class="card" v-for="hero in [...__HEROS__]" @click="ConfigHeroInfo(hero.id)">
+            <div class="card" v-for="hero in visibleHeroes" :key="hero.id" @click="ConfigHeroInfo(hero.id)">
                 <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
@@ -828,7 +939,7 @@ const addAllPoints = type => {
                             <button v-for="type in HEROS[HeroConfig.id].army === 1 ? BOW_TYPES : HEROS[HeroConfig.id].army === 2 ? INFANTRY_TYPES : CAVALRY_TYPES" :key="type.id" type="button"
                                 class="infantry-option" :class="{ selected: (HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType : HeroConfig.cavalryType) === type.id }"
                                 :title="type.desc" :aria-pressed="(HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType : HeroConfig.cavalryType) === type.id"
-                                @click="HEROS[HeroConfig.id].army === 1 ? HeroConfig.bowType = type.id : HEROS[HeroConfig.id].army === 2 ? HeroConfig.infantryType = type.id : HeroConfig.cavalryType = type.id">
+                                @click="HEROS[HeroConfig.id].army === 1 ? selectBowType(type.id) : HEROS[HeroConfig.id].army === 2 ? selectInfantryType(type.id) : selectCavalryType(type.id)">
                                 <img v-if="type.image" :src="type.image" :alt="type.name">
                                 <template v-else><span class="infantry-icon">{{ type.icon }}</span>{{ type.name }}</template>
                             </button>
@@ -838,6 +949,36 @@ const addAllPoints = type => {
                     <div class="right" v-else>
                         <img :src="`https://cbg-stzb.res.netease.com/mvvm/rc6f73b651ed47551555446b20/images/bz/${HEROS[HeroConfig.id].army}.png`" alt="">
                         <span>{{ { 1: '弓兵', 2: '步兵', 3: '骑兵' }[HEROS[HeroConfig.id].army] }}</span>
+                    </div>
+                </div>
+                <div class="bow-traits-box" v-if="HEROS[HeroConfig.id].army === 1 && HeroConfig.bowType !== 'basic'">
+                    <div class="left">弓兵特性（{{ HeroConfig.bowTraits.length }}/2）</div>
+                    <div class="right bow-trait-choices">
+                        <button v-for="trait in BOW_TRAITS" :key="trait.id" type="button"
+                            :class="{ selected: HeroConfig.bowTraits.includes(trait.id) }"
+                            :disabled="HeroConfig.bowTraits.length >= 2 && !HeroConfig.bowTraits.includes(trait.id)"
+                            :title="trait.desc" :aria-pressed="HeroConfig.bowTraits.includes(trait.id)"
+                            @click="toggleBowTrait(trait.id)">{{ trait.name }}</button>
+                    </div>
+                </div>
+                <div class="bow-traits-box" v-if="HEROS[HeroConfig.id].army === 2 && HeroConfig.infantryType !== 'basic'">
+                    <div class="left">步兵特性（{{ HeroConfig.infantryTraits.length }}/2）</div>
+                    <div class="right bow-trait-choices">
+                        <button v-for="trait in INFANTRY_TRAITS" :key="trait.id" type="button"
+                            :class="{ selected: HeroConfig.infantryTraits.includes(trait.id) }"
+                            :disabled="HeroConfig.infantryTraits.length >= 2 && !HeroConfig.infantryTraits.includes(trait.id)"
+                            :title="trait.desc" :aria-pressed="HeroConfig.infantryTraits.includes(trait.id)"
+                            @click="toggleInfantryTrait(trait.id)">{{ trait.name }}</button>
+                    </div>
+                </div>
+                <div class="bow-traits-box" v-if="HEROS[HeroConfig.id].army === 3 && HeroConfig.cavalryType !== 'basic'">
+                    <div class="left">骑兵特性（{{ HeroConfig.cavalryTraits.length }}/2）</div>
+                    <div class="right bow-trait-choices">
+                        <button v-for="trait in CAVALRY_TRAITS" :key="trait.id" type="button"
+                            :class="{ selected: HeroConfig.cavalryTraits.includes(trait.id) }"
+                            :disabled="HeroConfig.cavalryTraits.length >= 2 && !HeroConfig.cavalryTraits.includes(trait.id)"
+                            :title="trait.desc" :aria-pressed="HeroConfig.cavalryTraits.includes(trait.id)"
+                            @click="toggleCavalryTrait(trait.id)">{{ trait.name }}</button>
                     </div>
                 </div>
                 <div class="level-box">
@@ -1322,13 +1463,51 @@ const addAllPoints = type => {
         }
     }
 
+    &>.hero-list-controls {
+        width: 85%;
+        box-sizing: border-box;
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        background: rgba(20, 20, 22, .88);
+        border: 1px solid #6e624c;
+        color: #ead49b;
+        font-size: clamp(14px, 1.1vw, 18px);
+
+        .hero-sort-options, .hero-filter-options {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+
+            > span { width: 3em; flex: none; }
+            > button {
+                min-width: 4.5em;
+                padding: 5px 10px;
+                border: 1px solid #5e5e5e;
+                background: #3d3e40;
+                color: #f1f1f1;
+                font: inherit;
+                cursor: pointer;
+            }
+            > button.selected {
+                border-color: #d7bc77;
+                background: #665a40;
+                color: #ffe2a2;
+            }
+            > button:focus-visible { outline: 2px solid #ffe2a2; }
+        }
+    }
+
     &>.herolist-box {
         display: flex;
         flex-wrap: wrap;
         position: relative;
         align-content: flex-start;
         width: 85%;
-        height: 80%;
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
 
         &::-webkit-scrollbar{
@@ -1772,6 +1951,20 @@ const addAllPoints = type => {
                 }
 
                 small { color: #d8cba9; font-size: .7vw; }
+            }
+
+            .bow-trait-choices {
+                gap: .3vw;
+                button {
+                    padding: .3vw .5vw;
+                    border: 1px solid #8b806b;
+                    background: #292a2a;
+                    color: #ddd;
+                    cursor: pointer;
+                    font-size: .8vw;
+                    &.selected { border-color: #e1bc68; background: #5a4227; color: #ffe4a5; }
+                    &:disabled { opacity: .5; cursor: default; }
+                }
             }
 
             input{
@@ -2226,6 +2419,11 @@ const addAllPoints = type => {
     .team-config-warp .treasure-label { font-size: clamp(9px, 2.4vw, 13px); }
     .herolist-warp > .herolist-header, .heroinfo-warp > .heroinfo-header, .skilllist-warp > .skilllist-header { height: 58px; min-height: 58px; }
     .herolist-warp > .herolist-header > .title, .heroinfo-warp > .heroinfo-header > .title, .skilllist-warp > .skilllist-header > .title { width: 70%; font-size: 22px; }
+    .herolist-warp > .hero-list-controls { width: 100%; padding: 8px; font-size: 13px; }
+    .herolist-warp > .hero-list-controls .hero-sort-options > span,
+    .herolist-warp > .hero-list-controls .hero-filter-options > span { width: 2.5em; }
+    .herolist-warp > .hero-list-controls .hero-sort-options > button,
+    .herolist-warp > .hero-list-controls .hero-filter-options > button { min-width: 3.5em; padding: 5px 6px; }
     .herolist-warp > .herolist-box { width: 100%; height: auto; flex: 1; padding: 8px; box-sizing: border-box; justify-content: center; }
     .herolist-warp > .herolist-box .card { width: calc((100vw - 40px) / 3); height: auto; aspect-ratio: 12 / 17; margin: 5px; }
     .herolist-warp > .herolist-box .card .hero-name, .herolist-warp > .herolist-box .card > .level { font-size: 11px; }
