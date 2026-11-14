@@ -46,6 +46,40 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1090, name: '辕门射戟',
+        desc: '对敌军群体发动2～3次无视兵种相克的攻击（伤害率140.0%），每次攻击独立选择目标；第一次受击的敌军造成攻击伤害降低9999%，持续至该武将下一回合行动前',
+        level: 'S', type: 2, target: [2, 3], target_type: 'enemy', limit: 5, rate: 35, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const count = getRandomInt(2, 3);
+            for (let i = 0; i < count && !self.Manger.Over && self.Arms > 0; i++) {
+                const target = self.getTarget(this.limit, 1)[0];
+                if (!target) break;
+                target.beHurt(self, { type: 1, rate: 140, ignoreTroopCounter: true }, this);
+                if (i !== 0 || target.Arms <= 0) continue;
+                const round = self.Manger.Round;
+                // 同一目标隔一回合才能再次中此效果，八回合最多被施加四次。
+                if (target.Storage.yuanmenShejiDebuff ||
+                    (target.Storage.yuanmenShejiLastAppliedRound != null &&
+                        target.Storage.yuanmenShejiLastAppliedRound >= round - 1)) continue;
+                const state = target.addState('attackDamageSub', 9999, -1, this, self);
+                if (!state || state.from !== this || state.hero !== self) continue;
+                target.Storage.yuanmenShejiLastAppliedRound = round;
+                const expire = () => {
+                    if (target.State.attackDamageSub.active === state) target.delState('attackDamageSub', this);
+                    if (target.Storage.yuanmenShejiDebuff?.state === state) delete target.Storage.yuanmenShejiDebuff;
+                    target.clearHook('行动前', tag);
+                };
+                const tag = target.addHook('行动前', '辕门射戟降伤到期', () => {
+                    if (target.Manger.Round > round) expire();
+                }, this, self, 'debuff', true, expire);
+                target.Storage.yuanmenShejiDebuff = { state, round };
+            }
+            return true;
+        }
+    },
+    {
         id: 1089, name: "一夫当关",
         desc: "战斗开始后前2回合，援护友军全体，使自身受到攻击时的伤害降低50.0%（受防御属性影响），仅对自身处于前锋位置时生效",
         level: "A", type: 1, target: 1, target_type: "self", limit: 3, rate: "--", study: true,

@@ -770,8 +770,8 @@ const addAllPoints = type => {
                     <div class="posname">{{ posname[index] }}</div>
                     <div class="name" :class="heroCampclass[HEROS[hero.id].camp - 1]">{{ HEROS[hero.id].name }}</div>
                     <div class="image" @click="editHero(camp, index)" title="编辑武将属性">
-                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
-                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032].includes(hero.id) }"
+                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
+                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) }"
                             @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                     </div>
                     <button class="replace-hero" type="button" @click="selectHero(camp, index)">更换武将</button>
@@ -867,7 +867,7 @@ const addAllPoints = type => {
         </div>
         <div class="herolist-box">
             <div class="card" v-for="hero in visibleHeroes" :key="hero.id" @click="ConfigHeroInfo(hero.id)">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -900,7 +900,7 @@ const addAllPoints = type => {
         </div>
         <div class="heroinfo-box">
             <div class="card" v-for="hero in [HEROS[HeroConfig.id]]">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -1177,6 +1177,7 @@ const addAllPoints = type => {
         &>.team-settings {
             width: 90%;
             min-height: 42px;
+            flex-shrink: 0;
             margin: 0 auto 8px;
             display: flex;
             flex-direction: column;
@@ -1186,7 +1187,7 @@ const addAllPoints = type => {
             font-family: "FZLBJW_B";
             font-size: clamp(13px, 1vw, 17px);
 
-            .platform-setting, .four-camp-settings { display: flex; align-items: center; gap: 20px; }
+            .platform-setting, .four-camp-settings { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; }
             .four-camp-settings { flex-wrap: wrap; gap: 8px 16px; }
             label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
             select { padding: 5px 24px 5px 10px; color: #f3e4ad; background: #292622; border: 1px solid #bca36a; border-radius: 3px; }
@@ -2405,8 +2406,8 @@ const addAllPoints = type => {
     .team-config-warp > .box > .team-settings { width: calc(100% - 32px); min-height: 54px; margin-bottom: 4px; gap: 6px; font-size: 13px; }
     .team-config-warp > .box > .team-settings .platform-setting,
     .team-config-warp > .box > .team-settings .four-camp-settings { flex-wrap: wrap; gap: 4px 10px; }
-    .team-config-warp > .box > .cards { height: auto; flex: 1; gap: 12px; padding: 12px 8px 24px 24px; box-sizing: border-box; }
-    .team-config-warp > .box > .cards > .card { width: 100%; height: 130px; min-height: 130px; }
+    .team-config-warp > .box > .cards { height: auto; flex: none; gap: 14px; justify-content: flex-start; padding: 16px 8px 24px 24px; box-sizing: border-box; }
+    .team-config-warp > .box > .cards > .card { width: 100%; height: 170px; min-height: 170px; flex: none; }
     .team-config-warp > .box > .cards > .card > .posname { font-size: 12px; width: 14px; left: -19px; }
     .team-config-warp > .box > .cards > .card > .name { font-size: 13px; width: 15px; }
     .team-config-warp > .box > .cards > .card > .image { width: 32%; }
@@ -2448,8 +2449,8 @@ const addAllPoints = type => {
 .team-config-warp > .box { height: 90%; max-height: 1100px; }
 .team-config-warp > .box { overflow-y: auto; }
 @media (min-width: 901px) {
-    .team-config-warp > .box > .cards { flex: none; min-height: 400px; }
-    .team-config-warp > .box > .cards > .card { min-height: 112px; }
+    .team-config-warp > .box > .cards { flex: none; min-height: 0; height: auto; gap: clamp(16px, 2vh, 28px); justify-content: flex-start; padding: 20px 0 28px 1vw; }
+    .team-config-warp > .box > .cards > .card { flex: none; height: clamp(220px, 28vh, 360px); min-height: 220px; }
 }
 .team-config-warp .my-builds { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 2px auto 10px; padding: 10px 12px; border: 1px solid #66573d; background: rgba(14, 16, 17, .82); color: #ead6a0; font-size: 14px; }
 .my-builds-actions, .my-build-row { display: flex; align-items: center; gap: 8px; }
