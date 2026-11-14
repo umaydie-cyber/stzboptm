@@ -16,7 +16,14 @@ import { clacAttackDamage, getRandomBool, calcRecover, getRandomInt, clacSkillAd
 import { keepTwoDecimal, makeSkillTag } from "../uilts";
 import { BattleHero } from "./battleHero";
 
+function applyNoRecover(target, until, source) {
+    if (typeof target.applyNoRecoverUntil === 'function') return target.applyNoRecoverUntil(until, source);
+    target.State.noRecoverUntil = Math.max(target.State.noRecoverUntil || 0, until);
+    return true;
+}
+
 function reduceAttributesTemporarily(target, source, skill, values, rounds) {
+    target.tryChengyuDebuff?.('special', source);
     const expiresRound = target.Manger.Round + rounds;
     target.Storage.attributeReductionId = (target.Storage.attributeReductionId || 0) + 1;
     for (const [attribute, reduction] of Object.entries(values)) target.Attrs[attribute] -= reduction;
@@ -45,6 +52,33 @@ const HENEI_DERIVED = [
 
 
 export const __SKILLS__ = [
+    {
+        id: 1092, name: '审时定计',
+        desc: '敌军全体被施加特殊负面效果前，有50.0%概率使其本回合受到所有伤害提高30.0%（受谋略属性影响），并恢复我军单体一定兵力（恢复率65.0%，受谋略属性影响）；我军全体被施加挑衅、围困或控制效果时，有50.0%概率抵御该效果',
+        level: 'S', type: 1, target: 3, target_type: 'enemy', limit: 5, rate: '--', study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            const enemies = self.BattleCamp === 'blue' ? self.Manger.RedTeam.hero : self.Manger.BlueTeam.hero;
+            for (const ally of allies) ally.Storage.chengyuDefense = { source: self, skill: this };
+            for (const enemy of enemies) enemy.Storage.chengyuOffense = { source: self, skill: this };
+        }
+    },
+    {
+        id: 1091, name: '九锡黄龙',
+        desc: '移除我军全体有害效果，并使其进入规避状态，各免疫接下来受到的2次伤害',
+        level: 'S', type: 2, target: 3, target_type: 'team', limit: 3, rate: 35, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            for (const ally of self.getTarget(this.limit, 3, 2)) {
+                ally.clearAllHarmfulEffects(this);
+                ally.Storage.jiuxiHuanglongEvades = 2;
+                self.Manger.Record.pushRecord(ally, `的【${this.name}】获得2次规避`, 1);
+            }
+            return true;
+        }
+    },
     {
         id: 1090, name: '辕门射戟',
         desc: '对敌军群体发动2～3次无视兵种相克的攻击（伤害率140.0%），每次攻击独立选择目标；第一次受击的敌军造成攻击伤害降低9999%，持续至该武将下一回合行动前',
@@ -362,8 +396,8 @@ export const __SKILLS__ = [
                     if (!target || target.Arms <= 0 || target.Camp === ally.Camp) return;
                     const rate = ally.getRealSkillRate(40);
                     if (!getRandomBool(rate)) return;
-                    target.State.noRecoverUntil = Math.max(target.State.noRecoverUntil || 0, self.Manger.Round + 1);
-                    self.Manger.Record.pushActionRecord(ally, target, `的【${this.name}】使`, '陷入围困，1回合内无法恢复兵力', 1);
+                    if (applyNoRecover(target, self.Manger.Round + 1, ally))
+                        self.Manger.Record.pushActionRecord(ally, target, `的【${this.name}】使`, '陷入围困，1回合内无法恢复兵力', 1);
                 }, this, self);
             }
         }
@@ -1393,8 +1427,8 @@ export const __SKILLS__ = [
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
             self.getTarget(this.limit, this.target).forEach(enemy => {
                 enemy.clearActiveBuffs();
-                enemy.State.noRecoverUntil = Math.max(enemy.State.noRecoverUntil || 0, self.Manger.Round + 1);
-                self.Manger.Record.pushActionRecord(self, enemy, `的【${this.name}】使`, '无法恢复兵力，持续1回合', 1);
+                if (applyNoRecover(enemy, self.Manger.Round + 1, self))
+                    self.Manger.Record.pushActionRecord(self, enemy, `的【${this.name}】使`, '无法恢复兵力，持续1回合', 1);
             });
             return true;
         }
@@ -2181,8 +2215,8 @@ export const __SKILLS__ = [
             const alreadyBlocked = enemies.some(e => e.Arms > 0 && e.State.noRecoverUntil > self.Manger.Round);
             enemies.filter(e => e.Arms > 0).forEach(e => {
                 e.beHurt(self, { type: 2, rate: 153 }, this);
-                e.State.noRecoverUntil = Math.max(e.State.noRecoverUntil || 0, self.Manger.Round + 2);
-                self.Manger.Record.pushRecord(e, '无法恢复兵力，持续2回合', 1);
+                if (applyNoRecover(e, self.Manger.Round + 2, self))
+                    self.Manger.Record.pushRecord(e, '无法恢复兵力，持续2回合', 1);
             });
             if (alreadyBlocked) {
                 const target = self.getTarget(this.limit, 1)[0];
@@ -2423,8 +2457,8 @@ export const __SKILLS__ = [
                 self.getTarget(range, 2).forEach(target => {
                     target.beHurt(self, { type: 2, rate: clacSkillAdditionRate(230, 2.25, self.Attrs.int) }, this);
                     if (target.Arms > 0) {
-                        target.State.noRecoverUntil = Math.max(target.State.noRecoverUntil || 0, self.Manger.Round + 1);
-                        self.Manger.Record.pushRecord(target, '无法恢复兵力，持续1回合', 1);
+                        if (applyNoRecover(target, self.Manger.Round + 1, self))
+                            self.Manger.Record.pushRecord(target, '无法恢复兵力，持续1回合', 1);
                     }
                 });
             };

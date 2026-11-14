@@ -145,6 +145,8 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         value += amount;
         entries.push({ name, hero: hero.Name, value: amount });
     };
+    if (target.Storage.chengyuDamageTaken?.round === target.Manger.Round)
+        special('审时定计', target.Storage.chengyuDamageTaken.value, target.Storage.chengyuDamageTaken.source);
     // 基础兵种相克：骑克步、步克弓、弓克骑。被克制方造成的所有伤害降低30%。
     const counteredBy = { 1: 2, 2: 3, 3: 1 };
     const pikeInvolved = attacker.InfantryType === 'pike' || target.InfantryType === 'pike';

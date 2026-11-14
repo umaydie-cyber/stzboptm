@@ -238,6 +238,8 @@ export class BattleHero {
         // 统一拦截直接赋值的混乱、暴走、怯战与犹豫状态。
         this.State = new Proxy(this.State, {
             set: (states, name, value) => {
+                if (['confusion', 'rage', 'attackLimit', 'activeLimit', 'taunt'].includes(name) && value?.rounds > 0 &&
+                    this.tryChengyuDebuff('defense', value.from?.hero)) return true;
                 if (['confusion', 'rage', 'attackLimit'].includes(name) && value?.rounds > 0 &&
                     this.Storage.xiaoxiongInsightRound === this.Manger.Round) {
                     this.Manger.Record.pushRecord(this, '的【枭雄】洞察免疫控制', 1);
@@ -1081,6 +1083,36 @@ export class BattleHero {
         }
     }
 
+    tryChengyuDebuff(kind, source) {
+        if (!source || source.BattleCamp === this.BattleCamp || this.Arms <= 0) return false;
+        if (kind === 'defense' || kind === 'siege') {
+            const effect = this.Storage.chengyuDefense;
+            if (!effect?.source || effect.source.Arms <= 0) return false;
+            const chance = effect.source.getRealSkillRate(50);
+            if (!getRandomBool(chance)) return false;
+            this.Manger.Record.pushRecord(this, `的【审时定计】抵御了${kind === 'siege' ? '围困' : '控制'}效果`, 1);
+            return true;
+        }
+        if (kind !== 'special') return false;
+        const effect = this.Storage.chengyuOffense;
+        const chengyu = effect?.source;
+        if (!chengyu || chengyu.Arms <= 0 || chengyu.BattleCamp === this.BattleCamp) return false;
+        const chance = chengyu.getRealSkillRate(50);
+        if (!getRandomBool(chance)) return false;
+        const bonus = keepTwoDecimal(30 + (chengyu.Attrs.int - 80) * 0.15);
+        this.Storage.chengyuDamageTaken = { round: this.Manger.Round, value: bonus, source: chengyu };
+        this.Manger.Record.pushActionRecord(chengyu, this, '的【审时定计】使', `本回合受到所有伤害提高${bonus}%`, 1);
+        const target = chengyu.getTarget(5, 1, chengyu.isRage() ? 1 : 2)[0];
+        if (target) target.revocer(calcRecover(chengyu, 65, 0.325, 2), chengyu, '审时定计');
+        return true;
+    }
+
+    applyNoRecoverUntil(until, source) {
+        if (this.tryChengyuDebuff('siege', source)) return false;
+        this.State.noRecoverUntil = Math.max(this.State.noRecoverUntil || 0, until);
+        return true;
+    }
+
     tryQiqinDefense(kind, attacker) {
         const effect = this.Storage.qiqinQizong;
         if (!effect || effect.completed || this.Manger.Round < 1 || !attacker) return false;
@@ -1166,6 +1198,11 @@ export class BattleHero {
                 this.Manger.Record.pushRecord(this, '的【磐阵善守】规避了本次伤害', 1);
                 return;
             }
+        }
+        if (this.Storage.jiuxiHuanglongEvades > 0 && !damageInfo.ignoreEvasion) {
+            this.Storage.jiuxiHuanglongEvades--;
+            this.Manger.Record.pushRecord(this, `的【九锡黄龙】规避了本次伤害（剩余${this.Storage.jiuxiHuanglongEvades}次）`, 1);
+            return;
         }
         if (this.Storage.evadeNextDamage && !damageInfo.ignoreEvasion) {
             this.Storage.evadeNextDamage = false;
@@ -1448,6 +1485,7 @@ export class BattleHero {
 
     // 同名持续伤害仅保留较强的一份；重新施加强效果时刷新持续时间。
     applyContinuousDamage(kind, source, skill, rate, rounds, onPursuit = false) {
+        this.tryChengyuDebuff('special', source);
         if (this.tryQiqinDefense('控制', source)) return false;
         const damageInfo = { type: 4, rate, kind };
         const damage = clacInte2Damage(source, this, damageInfo, skill);
@@ -2049,6 +2087,8 @@ export class BattleHero {
         type 类型 为2时 回合改为次数
     */
     addState(name, value, round, from, hero, stack = false, type = 1) {
+        if (['attackDamageSub', 'inteDamageSub', 'activeDamageSub', 'beAttackDamageAdd', 'beInteDamageAdd', 'beActiveDamageAdd'].includes(name))
+            this.tryChengyuDebuff('special', hero);
         let typename = this.getSkillTypeName(from.type);
         if (this.State[name][typename]) {
             let limit = this.getStateLimit(name);

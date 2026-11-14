@@ -24,6 +24,8 @@ jobs:
       - run: node verify-infantry-types.mjs
       - run: node verify-cavalry-types.mjs
       - run: node verify-lvbu.mjs
+      - run: node verify-sunquan.mjs
+      - run: node verify-chengyu.mjs
       - run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:

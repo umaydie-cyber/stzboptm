@@ -770,8 +770,8 @@ const addAllPoints = type => {
                     <div class="posname">{{ posname[index] }}</div>
                     <div class="name" :class="heroCampclass[HEROS[hero.id].camp - 1]">{{ HEROS[hero.id].name }}</div>
                     <div class="image" @click="editHero(camp, index)" title="编辑武将属性">
-                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
-                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) }"
+                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
+                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035].includes(hero.id) }"
                             @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                     </div>
                     <button class="replace-hero" type="button" @click="selectHero(camp, index)">更换武将</button>
@@ -867,7 +867,7 @@ const addAllPoints = type => {
         </div>
         <div class="herolist-box">
             <div class="card" v-for="hero in visibleHeroes" :key="hero.id" @click="ConfigHeroInfo(hero.id)">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -900,7 +900,7 @@ const addAllPoints = type => {
         </div>
         <div class="heroinfo-box">
             <div class="card" v-for="hero in [HEROS[HeroConfig.id]]">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
