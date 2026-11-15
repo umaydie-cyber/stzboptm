@@ -53,6 +53,37 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1094, name: '雅虑适时',
+        desc: '第3、5、7回合开始时，我军全体受到所有伤害降低24.0%（受谋略属性影响）并进入同心状态；同心武将受伤时，其余同心武将各分担其受到伤害的15%，持续1回合',
+        level: 'A', type: 1, target: 1, target_type: 'self', limit: 5, rate: '--', study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.Storage.maliangCommand = true;
+        }
+    },
+    {
+        id: 1093, name: '自擅江表',
+        desc: '对友军群体发动一次攻击（伤害率60.0%）并恢复自身兵力（恢复率120.0%，受谋略属性影响），随后对敌军群体发动策略攻击（伤害率160.0%，受谋略属性影响）；每次发动后，此策略攻击伤害率提高30.0%（受谋略属性影响），可叠加至战斗结束',
+        level: 'S', type: 2, target: 2, target_type: 'both', limit: 5, rate: 50, study: false,
+        causesStrategyDamage: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const scale = Math.max(0, 1 + (self.Attrs.int - 80) / 93.75);
+            const strategyRate = keepTwoDecimal((160 + 30 * (self.Storage.zishanJiangbiaoCasts || 0)) * scale);
+            for (const ally of self.getTarget(this.limit, 2, 3)) {
+                ally.beHurt(self, { type: 1, rate: 60 }, this);
+            }
+            self.revocer(calcRecover(self, 120 * scale, 0, 2), self, this.name);
+            for (const enemy of self.getTarget(this.limit, 2, 1)) {
+                enemy.beHurt(self, { type: 2, rate: strategyRate }, this);
+            }
+            self.Storage.zishanJiangbiaoCasts = (self.Storage.zishanJiangbiaoCasts || 0) + 1;
+            self.Manger.Record.pushRecord(self, `的【${this.name}】下次策略攻击伤害率提高${keepTwoDecimal(30 * scale)}%（累计发动${self.Storage.zishanJiangbiaoCasts}次）`, 1);
+            return true;
+        }
+    },
+    {
         id: 1092, name: '审时定计',
         desc: '敌军全体被施加特殊负面效果前，有50.0%概率使其本回合受到所有伤害提高30.0%（受谋略属性影响），并恢复我军单体一定兵力（恢复率65.0%，受谋略属性影响）；我军全体被施加挑衅、围困或控制效果时，有50.0%概率抵御该效果',
         level: 'S', type: 1, target: 3, target_type: 'enemy', limit: 5, rate: '--', study: false,

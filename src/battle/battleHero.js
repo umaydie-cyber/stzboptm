@@ -1083,6 +1083,17 @@ export class BattleHero {
         }
     }
 
+    activateMaliangRound() {
+        if (!this.Storage.maliangCommand || ![3, 5, 7].includes(this.Manger.Round) || this.Arms <= 0) return;
+        const allies = this.BattleCamp === 'blue' ? this.Manger.BlueTeam.hero : this.Manger.RedTeam.hero;
+        const reduction = keepTwoDecimal(24 * (1 + (this.Attrs.int - 80) / 156.96));
+        for (const ally of allies.filter(hero => hero.Arms > 0)) {
+            ally.Storage.maliangSharedRound = this.Manger.Round;
+            ally.Storage.maliangReduction = { round: this.Manger.Round, value: reduction, source: this };
+            this.Manger.Record.pushRecord(ally, `的【雅虑适时】进入同心状态，本回合受到所有伤害降低${reduction}%`, 1);
+        }
+    }
+
     tryChengyuDebuff(kind, source) {
         if (!source || source.BattleCamp === this.BattleCamp || this.Arms <= 0) return false;
         if (kind === 'defense' || kind === 'siege') {
@@ -1305,6 +1316,13 @@ export class BattleHero {
         }
 
         if (attacker.Storage.cijianRepeat?.skill === skill || attacker.Storage.weiyuRepeat?.skill === skill) damage = Math.floor(damage * 0.5);
+        // 同心分担以本次结算后的实际伤害为基数，不再经过各分担者的增减伤计算。
+        const sharedAllies = this.Storage.maliangSharedRound === this.Manger.Round
+            ? (this.BattleCamp === 'blue' ? this.Manger.BlueTeam.hero : this.Manger.RedTeam.hero)
+                .filter(hero => hero !== this && hero.Arms > 0 && hero.Storage.maliangSharedRound === this.Manger.Round)
+            : [];
+        const sharedAmount = sharedAllies.length ? Math.floor(Math.min(Math.max(0, damage), this.Arms) * 0.15) : 0;
+        if (sharedAmount) damage = Math.max(0, damage - sharedAmount * sharedAllies.length);
         if (damage >= this.Arms) {
             if (damageInfo.type == 2) this.State.nextInteDamageSub = null;
             // 如果伤害大于剩余的兵力 将兵力改为0
@@ -1317,6 +1335,16 @@ export class BattleHero {
         }
 
         this.Manger.addStat(attacker, skill, realDamage, 0);
+        for (const ally of sharedAllies) {
+            const loss = Math.min(sharedAmount, ally.Arms);
+            if (!loss) continue;
+            ally.Arms -= loss;
+            ally.HurtArms += Math.floor(loss * 0.95);
+            if (ally.Arms === 0) ally.HurtArms = Math.floor(ally.HurtArms * 0.6);
+            this.Manger.addStat(attacker, skill, loss, 0);
+            this.Manger.Record.pushRecord(ally, `的【雅虑适时·同心】分担${[1, 3].includes(damageInfo.type) ? '攻击' : '策略'}伤害，损失 ${loss} 兵力(${ally.Arms})（不受增减伤影响，不再分摊）`, 1);
+            if (ally.Posname === '大营' && ally.Arms <= 0) this.Manger.Over = true;
+        }
         if (realDamage > 0 && attacker.InfantryTraits?.includes('strategy') &&
             [2, 4].includes(damageInfo.type) && attacker.Manger.Round >= 3 &&
             attacker.Storage.wentaoUsedRound !== attacker.Manger.Round) {

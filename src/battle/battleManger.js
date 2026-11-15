@@ -327,6 +327,8 @@ export class BattleManger {
 
             // console.log(`${roundName}回合 速度排序`,this.SortSpdHeros);
 
+            // 雅虑适时先于本回合任何持续伤害生效。
+            if (this.Round > 0) this.BattleHeros.forEach(hero => hero.activateMaliangRound());
             // 先执行回合开始时的效果
             this.SortSpdHeros.forEach((e) => {
                 if(e.Arms > 0 && this.Round > 0){
