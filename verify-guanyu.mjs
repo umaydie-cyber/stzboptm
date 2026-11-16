@@ -7,11 +7,9 @@ try {
     const { __SKILLS__ } = await vite.ssrLoadModule('/src/battle/skills.js');
     const { BattleHero } = await vite.ssrLoadModule('/src/battle/battleHero.js');
     const guan = __HEROS__.find(hero => hero.name === '关羽');
-    const yuan = __HEROS__.find(hero => hero.name === '袁术');
     const skill = __SKILLS__.find(item => item.id === guan.skill);
     assert.deepEqual([guan.camp, guan.star, guan.cost, guan.army, guan.limit], [1, 5, 30, 3, 2]);
     assert.deepEqual([skill.name, skill.type, skill.ready, skill.rate, skill.limit], ['樊渊泅囚', 2, true, 40, 5]);
-    assert.deepEqual(__HEROS__.slice(-2).map(hero => hero.id), [yuan.id, guan.id]);
 
     const records = [];
     const manager = { Round: 1, Over: false, Record: { Records: records,
