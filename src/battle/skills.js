@@ -53,6 +53,20 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1098, name: '长坂之吼',
+        ready: true,
+        desc: '2回合准备，对有效距离4内的敌军群体2～3目标发动一次无视兵种相克的猛烈攻击（伤害率450.0%）',
+        level: 'A', type: 2, target: [2, 3], target_type: 'enemy', limit: 4, rate: 75, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            return self.addReadySkill(this, 2, () => {
+                for (const target of self.getTarget(this.limit, getRandomInt(2, 3))) {
+                    target.beHurt(self, { type: 1, rate: 450, ignoreTroopCounter: true }, this);
+                }
+            });
+        }
+    },
+    {
         id: 1097, name: '樊渊泅囚',
         ready: true,
         desc: '1回合准备，对敌军全体发动一次猛攻（伤害率190.0%），并使其陷入犹豫状态，持续1回合',

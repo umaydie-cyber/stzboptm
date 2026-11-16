@@ -30,6 +30,7 @@ jobs:
       - run: node verify-maliang.mjs
       - run: node verify-yuanshu.mjs
       - run: node verify-guanyu.mjs
+      - run: node verify-zhangfei.mjs
       - run: node verify-shengdi-yiqiang.mjs
       - run: npm run build
       - uses: actions/upload-pages-artifact@v4
