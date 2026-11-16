@@ -28,6 +28,8 @@ jobs:
       - run: node verify-chengyu.mjs
       - run: node verify-xp-sunquan.mjs
       - run: node verify-maliang.mjs
+      - run: node verify-yuanshu.mjs
+      - run: node verify-shengdi-yiqiang.mjs
       - run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:

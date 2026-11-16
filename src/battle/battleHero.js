@@ -1162,6 +1162,28 @@ export class BattleHero {
             `本回合造成所有伤害降低9999%（${chance}%判定成功）`, 1);
     }
 
+    absorbYuxiDamage(damage) {
+        const seal = this.Storage.yuxi;
+        if (!seal || damage <= 0 || seal.source.Arms <= 0) return damage;
+        const absorbed = Math.min(damage, Math.round(damage * seal.rate / 100));
+        seal.source.Storage.yuxiAbsorbed = (seal.source.Storage.yuxiAbsorbed || 0) + absorbed;
+        this.Manger.Record.pushRecord(this, `的【玉玺】承担${absorbed}伤害，剩余${damage - absorbed}伤害`, 1);
+        return damage - absorbed;
+    }
+
+    settleYuxiDamage(source, skill, damage) {
+        if (this.Manger.Over || this.Arms <= 0 || damage <= 0) return;
+        // 玉玺伤害不走攻击、策略或通用增减伤，也无视规避；仅玉玺自身可以再次承担。
+        const remaining = this.absorbYuxiDamage(damage);
+        const loss = Math.min(this.Arms, remaining);
+        this.Arms -= loss;
+        this.HurtArms += Math.floor(loss * 0.95);
+        if (this.Arms === 0) this.HurtArms = Math.floor(this.HurtArms * 0.6);
+        this.Manger.addStat(source, skill, loss, 0);
+        this.Manger.Record.pushRecord(this, `受到【玉玺】伤害，损失 ${loss} 兵力(${this.Arms})`, 1);
+        if (this.Posname === '大营' && this.Arms === 0) this.Manger.Over = true;
+    }
+
     //受到伤害
     /*
         damageInfo {
@@ -1171,6 +1193,7 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (damageInfo.yuxiSettlement) return this.settleYuxiDamage(attacker, skill, num);
         if (this.Storage.ironCampFirstDamageImmunity) {
             this.Storage.ironCampFirstDamageImmunity = false;
             this.Manger.Record.pushRecord(this, '的【铁壁营】免疫了首次受到的伤害', 1);
@@ -1316,6 +1339,7 @@ export class BattleHero {
         }
 
         if (attacker.Storage.cijianRepeat?.skill === skill || attacker.Storage.weiyuRepeat?.skill === skill) damage = Math.floor(damage * 0.5);
+        damage = this.absorbYuxiDamage(damage);
         // 同心分担以本次结算后的实际伤害为基数，不再经过各分担者的增减伤计算。
         const sharedAllies = this.Storage.maliangSharedRound === this.Manger.Round
             ? (this.BattleCamp === 'blue' ? this.Manger.BlueTeam.hero : this.Manger.RedTeam.hero)
@@ -1336,7 +1360,7 @@ export class BattleHero {
 
         this.Manger.addStat(attacker, skill, realDamage, 0);
         for (const ally of sharedAllies) {
-            const loss = Math.min(sharedAmount, ally.Arms);
+            const loss = Math.min(ally.absorbYuxiDamage(sharedAmount), ally.Arms);
             if (!loss) continue;
             ally.Arms -= loss;
             ally.HurtArms += Math.floor(loss * 0.95);

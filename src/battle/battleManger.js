@@ -314,6 +314,20 @@ export class BattleManger {
 
             if (this.Round >= 1) this.BattleHeros.forEach(hero => hero.applyTreasureRoundStart());
 
+            if (this.Round >= 2) {
+                for (const hero of this.BattleHeros) {
+                    if (this.Over) break;
+                    const absorbed = hero.Storage.yuxiAbsorbed || 0;
+                    hero.Storage.yuxiAbsorbed = 0;
+                    if (!absorbed || hero.Arms <= 0) continue;
+                    const ratio = Math.min(100, 50 + (this.Round - 2) * 10);
+                    const damage = Math.round(absorbed * ratio / 100);
+                    const skill = hero.Skills[1095];
+                    this.Record.pushRecord(hero, `的【玉玺】结算上一回合承担的${absorbed}伤害，本回合伤害比例${ratio}%`, 1);
+                    hero.beHurt(hero, { type: 5, yuxiSettlement: true, ignoreEvasion: true }, skill, damage);
+                }
+            }
+
             if (this.Round === 1) {
                 this.BattleHeros.forEach(hero => {
                     if (!hero.Storage.swiftCampFirstRoundSpeed || hero.Storage.swiftCampFirstRoundSpeedActive) return;

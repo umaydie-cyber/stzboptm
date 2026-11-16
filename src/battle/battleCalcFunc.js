@@ -552,6 +552,15 @@ export const calcRecover = (self, rate, growRate, type = 1, snapshotInt = self.O
     }
 }
 
+// 受防御影响的恢复，沿用普通恢复的兵力基数与取整顺序。
+export const calcDefenseRecover = (self, rate, growRate, type = 2) => {
+    const arms = type === 1 ? self.OriginAttrs.arms : self.Arms;
+    const defense = type === 1 ? self.OriginAttrs.def : self.Attrs.def;
+    const base = Math.round(arms * 300 / (3500 + arms));
+    const adjustedRate = keepTwoDecimal((rate + Math.floor((defense - 80) * growRate)) / 100);
+    return Math.max(0, Math.floor(base * adjustedRate));
+}
+
 const calcRecoverRate = (int, rate, growRate) => {
     // let int = self.OriginAttrs.int;
     // 给定的恢复率为80谋略时的值 所以减去80

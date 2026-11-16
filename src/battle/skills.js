@@ -12,7 +12,7 @@
  * Study: 是否可学习
  */
 
-import { clacAttackDamage, getRandomBool, calcRecover, getRandomInt, clacSkillAdditionRate, clacInteDamage, clacInte2Damage } from "./battleCalcFunc"
+import { clacAttackDamage, getRandomBool, calcRecover, calcDefenseRecover, getRandomInt, clacSkillAdditionRate, clacInteDamage, clacInte2Damage } from "./battleCalcFunc"
 import { keepTwoDecimal, makeSkillTag } from "../uilts";
 import { BattleHero } from "./battleHero";
 
@@ -52,6 +52,38 @@ const HENEI_DERIVED = [
 
 
 export const __SKILLS__ = [
+    {
+        id: 1096, name: '胜敌益强',
+        desc: '每回合行动时使自身恢复兵力（恢复率120.0%，受防御属性影响）；第2、4、6回合起，每回合恢复次数依次提升至2、3、4次，持续到战斗结束',
+        level: 'A', type: 4, target: 1, target_type: 'self', limit: 1, rate: '--', study: true,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('行动时', '胜敌益强逐回合恢复', () => {
+                const count = Math.min(4, 1 + Math.floor(self.Manger.Round / 2));
+                for (let i = 0; i < count; i++) {
+                    // 3500兵力时基础值150；防御250恢复400要求修正恢复率267%，
+                    // 即 floor((250-80)*g)=147，取区间内的 g=0.865。
+                    const recovery = calcDefenseRecover(self, 120, 0.865, 2);
+                    self.revocer(recovery, self, this.name);
+                }
+            }, this, self);
+        }
+    },
+    {
+        id: 1095, name: '僭号天子',
+        desc: '战斗开始后获得玉玺：我军全体受到的所有伤害的32.0%（受防御属性影响）由玉玺承担；第二回合起，每回合开始时玉玺对袁术造成其上一回合承担所有伤害，袁术仅受到来自玉玺伤害的50%，该比例每回合上升10%。玉玺造成的伤害无视规避，不受袁术属性及增减伤影响，且可再次被玉玺承担',
+        level: 'S', type: 1, target: 3, target_type: 'team', limit: 3, rate: '--', study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const rate = Math.min(100, 32 + self.Attrs.def * 0.1);
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            self.Storage.yuxiAbsorbed = 0;
+            for (const ally of allies) {
+                ally.Storage.yuxi = { source: self, skill: this, rate };
+                self.Manger.Record.pushActionRecord(self, ally, '的【僭号天子·玉玺】使', `受到的所有伤害由玉玺承担${keepTwoDecimal(rate)}%`, 1);
+            }
+        }
+    },
     {
         id: 1094, name: '雅虑适时',
         desc: '第3、5、7回合开始时，我军全体受到所有伤害降低24.0%（受谋略属性影响）并进入同心状态；同心武将受伤时，其余同心武将各分担其受到伤害的15%，持续1回合',
