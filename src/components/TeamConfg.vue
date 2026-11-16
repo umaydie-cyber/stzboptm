@@ -228,6 +228,7 @@ const testt = ref({
     },
 })
 const showHeroList = ref(false);
+const heroSearch = ref('');
 const heroSort = ref('default');
 const heroSortDescending = ref(false);
 const selectedHeroArmies = ref([]);
@@ -236,7 +237,9 @@ const heroArmyOptions = [{ id: 1, name: '弓兵' }, { id: 2, name: '步兵' }, {
 const heroCampOptions = [{ id: 1, name: '蜀' }, { id: 2, name: '魏' }, { id: 3, name: '吴' },
     { id: 4, name: '汉' }, { id: 5, name: '群' }, { id: 6, name: '晋' }];
 const visibleHeroes = computed(() => {
+    const query = heroSearch.value.trim();
     const heroes = __HEROS__.filter(hero =>
+        (!query || hero.name.includes(query)) &&
         (!selectedHeroArmies.value.length || selectedHeroArmies.value.includes(hero.army)) &&
         (!selectedHeroCamps.value.length || selectedHeroCamps.value.includes(hero.camp)));
     if (heroSort.value !== 'default') {
@@ -770,8 +773,8 @@ const addAllPoints = type => {
                     <div class="posname">{{ posname[index] }}</div>
                     <div class="name" :class="heroCampclass[HEROS[hero.id].camp - 1]">{{ HEROS[hero.id].name }}</div>
                     <div class="image" @click="editHero(camp, index)" title="编辑武将属性">
-                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
-                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038].includes(hero.id) }"
+                        <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}_long.jpg`"
+                            :class="{ 'portrait-card-art': [1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039].includes(hero.id) }"
                             @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                     </div>
                     <button class="replace-hero" type="button" @click="selectHero(camp, index)">更换武将</button>
@@ -842,6 +845,7 @@ const addAllPoints = type => {
             <div class="close" @click="showHeroList = false"></div>
         </div>
         <div class="hero-list-controls">
+            <label class="hero-search">查找武将 <input v-model="heroSearch" type="search" placeholder="输入武将姓名，如袁术、关羽"></label>
             <div class="hero-sort-options" role="group" aria-label="武将排序">
                 <span>排序</span>
                 <button v-for="option in [{ id: 'default', name: '默认' }, { id: 'army', name: '兵种' }, { id: 'camp', name: '阵营' }, { id: 'cost', name: '统帅' }]"
@@ -867,7 +871,7 @@ const addAllPoints = type => {
         </div>
         <div class="herolist-box">
             <div class="card" v-for="hero in visibleHeroes" :key="hero.id" @click="ConfigHeroInfo(hero.id)">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -900,7 +904,7 @@ const addAllPoints = type => {
         </div>
         <div class="heroinfo-box">
             <div class="card" v-for="hero in [HEROS[HeroConfig.id]]">
-                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+                <img :src="[1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039].includes(hero.id) ? `/stzboptm/assets/card/${hero.id}.png` : `/stzboptm/assets/card/${hero.id}.jpg`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
                 <img src="/assets/ui/card.png" class="card-border">
                 <div class="camp">
                     <img :src="`/stzboptm/assets/ui/camp${hero.camp}.png`">
@@ -1478,6 +1482,9 @@ const addAllPoints = type => {
         border: 1px solid #6e624c;
         color: #ead49b;
         font-size: clamp(14px, 1.1vw, 18px);
+
+        .hero-search { display: flex; align-items: center; gap: 10px; }
+        .hero-search input { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid #6e624c; background: #252628; color: #fff; font: inherit; }
 
         .hero-sort-options, .hero-filter-options {
             display: flex;

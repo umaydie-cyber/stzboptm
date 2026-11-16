@@ -386,11 +386,6 @@ export const __HEROS__ = [
         attrs: { atk: 71, def: 98, int: 91, spd: 42, des: 20 },
         attrs_grow: { atk: 1.35, def: 2.15, int: 1.83, spd: 0.61, des: 1.74 }
     },
-    {
-        id: 1038, name: "袁术", camp: 5, star: 5, cost: 35, army: 2, limit: 2, skill: 1095,
-        attrs: { atk: 68, def: 98, int: 50, spd: 38, des: 16 },
-        attrs_grow: { atk: 1.35, def: 2.12, int: 0.67, spd: 0.88, des: 1.42 }
-    },
     { 
         id: 1021, name: "刘秀", camp: 4, star: 5, cost: 35, army: 3, limit: 3, skill: 1048,
         attrs: { atk: 89, def: 80, int: 95, spd: 92, des: 6 },
@@ -475,5 +470,15 @@ export const __HEROS__ = [
         id: 1037, name: "马良", camp: 1, star: 5, cost: 25, army: 2, limit: 2, skill: 1094,
         attrs: { atk: 46, def: 80, int: 87, spd: 40, des: 16 },
         attrs_grow: { atk: 0.76, def: 1.70, int: 1.71, spd: 0.57, des: 1.39 }
+    },
+    {
+        id: 1038, name: "袁术", camp: 5, star: 5, cost: 35, army: 2, limit: 2, skill: 1095,
+        attrs: { atk: 68, def: 98, int: 50, spd: 38, des: 16 },
+        attrs_grow: { atk: 1.35, def: 2.12, int: 0.67, spd: 0.88, des: 1.42 }
+    },
+    {
+        id: 1039, name: "关羽", camp: 1, star: 5, cost: 30, army: 3, limit: 2, skill: 1097,
+        attrs: { atk: 102, def: 90, int: 83, spd: 95, des: 5 },
+        attrs_grow: { atk: 2.54, def: 1.58, int: 1.08, spd: 1.81, des: 0.44 }
     }
 ]

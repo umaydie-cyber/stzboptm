@@ -53,6 +53,30 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1097, name: '樊渊泅囚',
+        ready: true,
+        desc: '1回合准备，对敌军全体发动一次猛攻（伤害率190.0%），并使其陷入犹豫状态，持续1回合',
+        level: 'S', type: 2, target: 3, target_type: 'enemy', limit: 5, rate: 40, study: false,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            return self.addReadySkill(this, 1, () => {
+                for (const target of self.getTarget(this.limit, 3)) {
+                    target.beHurt(self, { type: 1, rate: 190 }, this);
+                    if (target.Arms <= 0) continue;
+                    if (target.State.activeLimit.rounds > 0) {
+                        self.Manger.Record.pushRecord(target, '已存在犹豫效果', 1);
+                        continue;
+                    }
+                    target.State.activeLimit = { rounds: 1, from: { hero: self, skill: this } };
+                    if (target.State.activeLimit.from?.hero === self) {
+                        target.StateFlag.activeLimit = false;
+                        self.Manger.Record.pushActionRecord(self, target, `的【${this.name}】使`, '陷入犹豫1回合', 1);
+                    }
+                }
+            });
+        }
+    },
+    {
         id: 1096, name: '胜敌益强',
         desc: '每回合行动时使自身恢复兵力（恢复率120.0%，受防御属性影响）；第2、4、6回合起，每回合恢复次数依次提升至2、3、4次，持续到战斗结束',
         level: 'A', type: 4, target: 1, target_type: 'self', limit: 1, rate: '--', study: true,
