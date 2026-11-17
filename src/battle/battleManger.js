@@ -476,17 +476,13 @@ export class BattleManger {
 
     //根据速度对武将进行排序
     sortBattleHerosBySpd(){
-        this.SortSpdHeros = [];
+        this.SortSpdHeros = [...this.BlueTeam.hero, ...this.RedTeam.hero];
+        // 每回合随机打乱原始顺序；稳定排序会保留同速且先手状态相同者的随机先后。
+        for (let i = this.SortSpdHeros.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.SortSpdHeros[i], this.SortSpdHeros[j]] = [this.SortSpdHeros[j], this.SortSpdHeros[i]];
+        }
 
-        [...[...this.BlueTeam.hero],...[...this.RedTeam.hero]].forEach((e) => {
-            this.SortSpdHeros.push(e);
-        })
-
-        this.SortSpdHeros.sort((a,b)=>{
-            return b.Attrs.spd - a.Attrs.spd;
-        })
-
-        //先手排序
         this.SortSpdHeros.sort((a,b)=>{
             let af = this.Round >= 1 && this.Round <= a.State.firstAction.rounds;
             let bf = this.Round >= 1 && this.Round <= b.State.firstAction.rounds;
@@ -495,7 +491,7 @@ export class BattleManger {
             }else if(af == false && bf == true){
                 return 1;
             }
-            return 0;
+            return b.Attrs.spd - a.Attrs.spd;
         })
     }
 }
