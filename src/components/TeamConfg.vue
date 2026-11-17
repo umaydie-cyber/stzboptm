@@ -195,6 +195,26 @@ const copyEnvironmentToBuilds = entry => {
     if (persistPresets()) { presetMessage.value = `已将「${entry.name}」加入我的构筑`; environmentMessage.value = presetMessage.value; }
     else presets.value.pop();
 };
+const copyBuildToEnvironment = preset => {
+    try {
+        const name = preset.name.trim();
+        if (!name || name.length > 60) throw new Error('请先设置 1 至 60 字的构筑名称');
+        const entry = {
+            id: crypto.randomUUID(),
+            name,
+            weight: validateEnvironmentWeight(environmentWeight.value),
+            build: validateBuild(preset.build)
+        };
+        environmentTeams.value.push(entry);
+        if (persistEnvironment()) {
+            presetMessage.value = `已将「${entry.name}」加入环境队伍，权重 ${entry.weight}`;
+            environmentMessage.value = presetMessage.value;
+        } else {
+            environmentTeams.value.pop();
+            presetMessage.value = environmentMessage.value;
+        }
+    } catch (error) { presetMessage.value = `加入环境队伍失败：${error.message}`; }
+};
 const scoreEnvironment = preset => {
     if (!environmentTeams.value.length) {
         presetMessage.value = '请先添加至少一支环境队伍';
@@ -736,6 +756,7 @@ const addAllPoints = type => {
                         <span>{{ preset.build.heros.map(hero => HEROS[hero.id]?.name || '未知武将').join(' · ') }}</span>
                         <button type="button" @click="loadBuild(preset)">载入{{ camp === 'blue' ? '攻方' : '守方' }}</button>
                         <button type="button" @click="updateBuild(preset)">覆盖保存</button>
+                        <button type="button" @click="copyBuildToEnvironment(preset)">加入环境构筑</button>
                         <button type="button" @click="scoreEnvironment(preset)">对抗环境评分</button>
                         <button type="button" @click="removeBuild(preset)">删除</button>
                     </div>
