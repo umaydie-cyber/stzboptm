@@ -44,6 +44,7 @@ const environmentName = ref('');
 const environmentWeight = ref(50);
 const environmentSource = ref('current');
 const environmentMessage = ref('');
+const environmentImportInput = ref(null);
 try {
     const stored = localStorage.getItem(PRESET_STORAGE_KEY);
     if (stored) presets.value = parseBuildPresets(stored).map(item => ({ ...item, id: item.id || crypto.randomUUID() }));
@@ -138,6 +139,38 @@ const persistEnvironment = () => {
         environmentMessage.value = `保存环境队伍失败：${error.message}`;
         return false;
     }
+};
+const exportEnvironmentTeams = () => {
+    try {
+        const teams = parseEnvironmentTeams(serializeEnvironmentTeams(environmentTeams.value));
+        const blob = new Blob([serializeEnvironmentTeams(teams)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '环境构筑.json';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        environmentMessage.value = `已导出 ${teams.length} 支环境队伍`;
+    } catch (error) { environmentMessage.value = `导出失败：${error.message}`; }
+};
+const importEnvironmentTeams = async event => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > 2_000_000) { environmentMessage.value = 'JSON 文件不能超过 2 MB'; return; }
+    try {
+        const imported = parseEnvironmentTeams(await file.text());
+        const known = new Set(environmentTeams.value.map(item => item.id));
+        const added = imported.map(item => {
+            const id = !item.id || known.has(item.id) ? crypto.randomUUID() : item.id;
+            known.add(id);
+            return { ...item, id };
+        });
+        const previous = environmentTeams.value;
+        environmentTeams.value = [...previous, ...added];
+        if (persistEnvironment()) environmentMessage.value = `已导入 ${added.length} 支环境队伍`;
+        else environmentTeams.value = previous;
+    } catch (error) { environmentMessage.value = `导入失败：${error.message}`; }
 };
 const addEnvironmentTeam = () => {
     const name = environmentName.value.trim();
@@ -773,6 +806,9 @@ const addAllPoints = type => {
                     </select>
                     <label>权重 <input v-model.number="environmentWeight" type="number" min="1" max="100" step="1" aria-label="新环境队伍权重"></label>
                     <button type="button" @click="addEnvironmentTeam">添加队伍</button>
+                    <button type="button" @click="environmentImportInput?.click()">导入 JSON</button>
+                    <button type="button" @click="exportEnvironmentTeams">导出 JSON</button>
+                    <input ref="environmentImportInput" class="environment-file" type="file" accept=".json,application/json" aria-label="选择环境构筑 JSON" @change="importEnvironmentTeams">
                 </div>
                 <p v-if="environmentMessage" class="environment-message" role="status">{{ environmentMessage }}</p>
                 <div v-if="environmentTeams.length" class="environment-list">
@@ -2560,6 +2596,7 @@ const addAllPoints = type => {
 .environment-teams label input { width: 60px; }
 .environment-teams button { cursor: pointer; padding: 5px 10px; color: #f6e8bd; background: #4c402e; border: 1px solid #a88956; border-radius: 3px; }
 .environment-teams button:hover { background: #6a5535; }
+.environment-teams .environment-file { display: none; }
 .environment-message { margin: 5px 0; color: #78dfa4; }
 .environment-empty { color: #bab9ae; }
 @media (max-width: 900px) {
