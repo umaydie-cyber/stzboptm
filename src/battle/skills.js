@@ -2814,13 +2814,13 @@ export const __SKILLS__ = [
     },
     {
         id: 1101, name: '疲兵沮意',
-        desc: '每回合开始时，为我军全体叠加2层避锐；受到伤害前消耗1层，使该次伤害降低10%（受谋略影响）。避锐生效后有50%几率使敌军单体燃烧1回合（伤害率150%，受谋略影响）；后续受到本战法燃烧的伤害率提高80%，可叠加至战斗结束',
-        level: 'S', type: 1, target: 3, target_type: 'friend', limit: 5, rate: 100, study: false,
+        desc: '每回合开始时，为我军随机2名武将各叠加2层避锐；受到伤害前消耗1层，使该次伤害降低10%（受谋略影响）。避锐生效后有50%几率使敌军单体燃烧1回合（伤害率150%，受谋略影响）；后续受到本战法燃烧的伤害率提高80%，可叠加至战斗结束',
+        level: 'S', type: 1, target: 2, target_type: 'friend', limit: 5, rate: 100, study: false,
         callskill: function (self) {
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
             const grant = () => {
                 const reduction = clacSkillAdditionRate(10, 0.1, self.Attrs.int);
-                for (const ally of self.getTarget(5, 3, 2)) {
+                for (const ally of self.getTarget(5, 2, 2)) {
                     (ally.Storage.xpLuxunBirui ||= []).push({ source: self, skill: this, reduction });
                     (ally.Storage.xpLuxunBirui ||= []).push({ source: self, skill: this, reduction });
                     self.Manger.Record.pushRecord(ally, `获得【疲兵沮意】2层避锐（共${ally.Storage.xpLuxunBirui.length}层）`, 1);

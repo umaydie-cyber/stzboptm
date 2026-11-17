@@ -7,17 +7,21 @@ try {
   const { BattleHero } = await vite.ssrLoadModule('/src/battle/battleHero.js');
   const skill = __SKILLS__.find(item => item.name === '疲兵沮意');
   const allies = Array.from({ length: 3 }, () => ({ Storage: {} }));
+  let selections = 0;
   const source = {
     Id: 1042, BattleCamp: 'blue', Arms: 1000, Attrs: { int: 80 },
     Manger: { Round: 1, Record: { pushRecord() {} } },
-    getTarget(_range, _count, type) { return type === 2 ? allies : []; },
+    getTarget(_range, count, type) {
+      assert.equal(count, 2);
+      return type === 2 ? (selections++ === 0 ? allies.slice(0, 2) : allies.slice(1)) : [];
+    },
     addHook(_event, _name, callback) { this.roundStart = callback; }
   };
   assert.equal(skill.callskill(source), true);
   source.roundStart();
   source.roundStart();
+  assert.deepEqual(allies.map(ally => ally.Storage.xpLuxunBirui.length), [2, 4, 2]);
   for (const ally of allies) {
-    assert.equal(ally.Storage.xpLuxunBirui.length, 4);
     assert.equal(ally.Storage.xpLuxunBirui[0].reduction, 10);
   }
 
