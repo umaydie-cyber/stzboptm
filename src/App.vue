@@ -880,12 +880,15 @@ const simulate = async () => {
 				.blue-team, .red-team {
 					width: calc(50% - 6px);
 					display: grid;
+					grid-template-columns: minmax(0, 1fr);
 					align-content: start;
 					gap: 6px;
 					.role-name, .bar-box .text { font-size: 12px; }
 					.bar-box {
 						display: grid;
+						grid-template-columns: minmax(0, 1fr);
 						grid-template-rows: auto 12px;
+						justify-content: stretch;
 						height: auto;
 						gap: 4px;
 						.text { grid-row: 1; }
