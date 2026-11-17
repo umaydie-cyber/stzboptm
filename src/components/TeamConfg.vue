@@ -2445,6 +2445,31 @@ const addAllPoints = type => {
     .heroinfo-warp > .heroinfo-box .card .hero-name, .heroinfo-warp > .heroinfo-box .card > .level { font-size: 12px; }
     .heroinfo-warp > .heroinfo-box .heroinfo { width: 100%; height: auto; }
     .heroinfo-warp > .heroinfo-box .heroinfo > div { min-height: 44px; padding: 6px 12px; margin: 3px 0; font-size: 14px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .army-type-box,
+    .heroinfo-warp > .heroinfo-box .heroinfo .bow-traits-box { flex-direction: column; align-items: stretch; gap: 8px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .infantry-choices,
+    .heroinfo-warp > .heroinfo-box .heroinfo .bow-trait-choices { width: 100%; align-items: stretch !important; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .infantry-choices > div {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 8px;
+    }
+    .heroinfo-warp > .heroinfo-box .heroinfo .infantry-option {
+        min-width: 0;
+        min-height: 52px;
+        justify-content: center;
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+    .heroinfo-warp > .heroinfo-box .heroinfo .infantry-option img { width: 110px; max-width: 100%; height: 36px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .infantry-option .infantry-icon { font-size: 22px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .infantry-choices small { font-size: 12px; }
+    .heroinfo-warp > .heroinfo-box .heroinfo .bow-traits-box > .bow-trait-choices {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 8px;
+    }
+    .heroinfo-warp > .heroinfo-box .heroinfo .bow-trait-choices button { min-height: 44px; padding: 8px 10px; font-size: 14px; }
     .heroinfo-warp > .heroinfo-box .heroinfo input { width: 52px; height: 32px; font-size: 16px; }
     .heroinfo-warp > .heroinfo-box .heroinfo .add-btn, .heroinfo-warp > .heroinfo-box .heroinfo .sub-btn { width: 30px; height: 30px; }
     .heroinfo-warp > .heroinfo-box .heroinfo .attr-icon { width: 24px; height: 24px; }
