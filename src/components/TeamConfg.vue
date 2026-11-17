@@ -30,7 +30,7 @@ __HEROS__.forEach(e => {
 });
 
 const props = defineProps(['show', 'team']);
-const emit = defineEmits(['update:show', 'update:team', 'saved']);
+const emit = defineEmits(['update:show', 'update:team', 'saved', 'score-environment']);
 
 const { show, team } = toRefs(props);
 const camp = ref('blue');
@@ -193,6 +193,20 @@ const copyEnvironmentToBuilds = entry => {
     presets.value.push({ id: crypto.randomUUID(), name: entry.name, build });
     if (persistPresets()) { presetMessage.value = `已将「${entry.name}」加入我的构筑`; environmentMessage.value = presetMessage.value; }
     else presets.value.pop();
+};
+const scoreEnvironment = preset => {
+    if (!environmentTeams.value.length) {
+        presetMessage.value = '请先添加至少一支环境队伍';
+        return;
+    }
+    try {
+        const build = validateBuild(preset.build);
+        const opponents = environmentTeams.value.map(entry => ({
+            id: entry.id, name: entry.name, weight: validateEnvironmentWeight(entry.weight), build: validateBuild(entry.build)
+        }));
+        emit('score-environment', { name: preset.name, build, opponents });
+        emit('update:show', false);
+    } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };
 const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
 const fourCampDefinitions = [
@@ -715,6 +729,7 @@ const addAllPoints = type => {
                         <span>{{ preset.build.heros.map(hero => HEROS[hero.id]?.name || '未知武将').join(' · ') }}</span>
                         <button type="button" @click="loadBuild(preset)">载入{{ camp === 'blue' ? '攻方' : '守方' }}</button>
                         <button type="button" @click="updateBuild(preset)">覆盖保存</button>
+                        <button type="button" @click="scoreEnvironment(preset)">对抗环境评分</button>
                         <button type="button" @click="removeBuild(preset)">删除</button>
                     </div>
                 </div>

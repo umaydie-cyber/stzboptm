@@ -5,6 +5,7 @@ import { __HEROS__ } from './battle/heros';
 import { ref } from 'vue'
 import TeamConfig from './components/TeamConfg.vue';
 import { summarizeBattles, ratio } from './battle/statistics';
+import { matchupScore, weightedEnvironmentScore, scoreLabel } from './battle/environmentScore';
 
 let HEROS = {};
 __HEROS__.forEach(e => {
@@ -35,6 +36,12 @@ const simulationProgress = ref(0);
 const simulationCount = 10000;
 const simulating = ref(false);
 const simulationError = ref('');
+const environmentReport = ref(null);
+const showEnvironmentReport = ref(false);
+const environmentScoring = ref(false);
+const environmentProgress = ref(0);
+const environmentTotal = ref(0);
+const environmentError = ref('');
 const configuredArms = camp => team.value[camp].heros.reduce((sum, hero) => sum + (Number(hero.arms) || 10000), 0);
 const previewScale = camp => Math.max(team.value[camp].heros.length * 10000, configuredArms(camp));
 const format = value => Number(value || 0).toFixed(1);
@@ -113,10 +120,50 @@ const simulate = async () => {
 		simulating.value = false;
 	}
 };
+
+const scoreEnvironment = async ({ name, build, opponents }) => {
+    if (environmentScoring.value) return;
+    environmentScoring.value = true;
+    environmentReport.value = null;
+    environmentError.value = '';
+    environmentProgress.value = 0;
+    environmentTotal.value = opponents.length * 500;
+    showEnvironmentReport.value = true;
+    showStatistics.value = false;
+    const originalLog = console.log;
+    try {
+        const rows = [];
+        for (const opponent of opponents) {
+            const config = { blue: build, red: opponent.build };
+            const totals = { ownWounded: 0, ownDead: 0, enemyWounded: 0, enemyDead: 0 };
+            for (let i = 0; i < 500; i += 25) {
+                console.log = () => {};
+                try {
+                    for (let j = 0; j < 25; j++) {
+                        const battle = new BattleManger(config, { records: false });
+                        totals.ownWounded += battle.BlueTeam.hurtArms;
+                        totals.ownDead += battle.BlueTeam.total - battle.BlueTeam.arms - battle.BlueTeam.hurtArms;
+                        totals.enemyWounded += battle.RedTeam.hurtArms;
+                        totals.enemyDead += battle.RedTeam.total - battle.RedTeam.arms - battle.RedTeam.hurtArms;
+                    }
+                } finally { console.log = originalLog; }
+                environmentProgress.value += 25;
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            rows.push({ id: opponent.id, name: opponent.name, weight: opponent.weight, ...matchupScore(totals, 500) });
+        }
+        environmentReport.value = { name, rows, overall: weightedEnvironmentScore(rows) };
+    } catch (error) {
+        environmentError.value = `环境评分失败：${error.message}`;
+    } finally {
+        console.log = originalLog;
+        environmentScoring.value = false;
+    }
+};
 </script>
 
 <template>
-	<TeamConfig ref="teamConfigRef" v-model:show="showTeamConfig" v-model:team="team" @saved="teamChanged" />
+	<TeamConfig ref="teamConfigRef" v-model:show="showTeamConfig" v-model:team="team" @saved="teamChanged" @score-environment="scoreEnvironment" />
 	<div class="main">
 		<div class="battle" v-if="battleinfo.BattleHeros != undefined">
 			<div class="header-area">
@@ -282,7 +329,8 @@ const simulate = async () => {
 			<!-- <div class="stbtn-1" @click="testfunc">DeBug</div> -->
 			<div class="stbtn-1" @click="battleStart">开始战斗</div>
 			<div class="stbtn-1" @click="simulate">{{ simulating ? `模拟中 ${simulationProgress}/${simulationCount}` : '战斗模拟' }}</div>
-			<div class="stbtn-1" @click="showStatistics = !showStatistics">统计</div>
+			<div class="stbtn-1" @click="showStatistics = !showStatistics; showEnvironmentReport = false">统计</div>
+			<div v-if="environmentReport || environmentScoring || environmentError" class="stbtn-1" @click="showEnvironmentReport = true; showStatistics = false">环境报告</div>
 			<div class="stbtn-1" @click="showTeamConfig = true">配置队伍</div>
 			<div class="stbtn-1" @click="showBattleRecord = !showBattleRecord">{{ showBattleRecord ? '隐藏战报' : '显示战报' }}
 			</div>
@@ -307,6 +355,21 @@ const simulate = async () => {
 					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ format(simulation[camp].wounded) }} ± {{ format(simulation[camp].woundedStd) }}；死亡 {{ format(simulation[camp].dead) }} ± {{ format(simulation[camp].deadStd) }}</h4>
 					<p>武将平均伤害 / 恢复</p><div v-for="row in heroRows({ [camp]: simulation[camp].skills }, camp)" :key="row.hero">{{ row.hero }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
 					<p>战法平均伤害 / 恢复</p><div v-for="row in simulation[camp].skills" :key="row.hero + row.skill">{{ row.hero }} · {{ row.skill }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
+				</div>
+			</template>
+		</div>
+		<div class="statistics" v-if="showEnvironmentReport" role="dialog" aria-label="环境强度报告">
+			<div class="statistics-header"><h2>环境强度报告 · {{ environmentReport?.name || '计算中' }}</h2><button type="button" @click="showEnvironmentReport = false" aria-label="关闭环境强度报告">关闭 ✕</button></div>
+			<p v-if="environmentScoring" role="status">对抗环境评分中：{{ environmentProgress }}/{{ environmentTotal }} 场</p>
+			<p v-if="environmentError" role="alert">{{ environmentError }}</p>
+			<template v-if="environmentReport">
+				<h3>总体环境武勋评分 {{ scoreLabel(environmentReport.overall.merit) }} · 总体战损评分 {{ scoreLabel(environmentReport.overall.loss) }}</h3>
+				<p>每支环境队伍模拟 500 场；构筑为攻方。逐队比值由 500 场平均伤亡计算，再按环境权重加权平均。比值越高，表现越强。</p>
+				<p>武勋比＝我方造成的伤兵＋死亡 / 我方承受的伤兵＋死亡；战损比＝敌方死亡 / 我方死亡。双方均为零时显示“—”并不计入该项加权平均；仅分母为零时显示“∞”。</p>
+				<div v-for="row in environmentReport.rows" :key="row.id" class="environment-report-row">
+					<h4>{{ row.name }} · 权重 {{ row.weight }} · 500 场</h4>
+					<div>武勋比 {{ scoreLabel(row.merit) }} · 战损比 {{ scoreLabel(row.loss) }}</div>
+					<div>我方平均伤兵 {{ format(row.ownWounded) }}，死亡 {{ format(row.ownDead) }}；敌方平均伤兵 {{ format(row.enemyWounded) }}，死亡 {{ format(row.enemyDead) }}</div>
 				</div>
 			</template>
 		</div>
@@ -819,6 +882,7 @@ const simulate = async () => {
 		}
 		h2, h3, h4 { margin: 8px 0; }
 		p { margin: 10px 0 3px; color: #d2c297; }
+		.environment-report-row { padding: 12px 0; border-top: 1px solid #554d3b; }
 	}
 	.card-area .card { cursor: pointer; }
 
