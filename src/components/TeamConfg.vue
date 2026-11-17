@@ -721,7 +721,7 @@ const addAllPoints = type => {
                 <p v-else class="my-builds-empty">暂无构筑。先配置阵容，再保存为预设。</p>
             </details>
             <details class="environment-teams">
-                <summary>环境队伍 <span>共 {{ environmentTeams.length }} 支，可设置权重 1–100</span></summary>
+                <summary class="my-builds-heading"><strong>环境队伍</strong><span>共 {{ environmentTeams.length }} 支 · 可设置权重 1–100</span></summary>
                 <div class="environment-actions">
                     <input v-model="environmentName" maxlength="60" placeholder="环境队伍名称" aria-label="新环境队伍名称" @keyup.enter="addEnvironmentTeam">
                     <select v-model="environmentSource" aria-label="环境队伍来源">
@@ -2481,20 +2481,19 @@ const addAllPoints = type => {
 .my-builds .preset-file { display: none; }
 .my-builds-message { margin: 5px 0; color: #70dda7; }
 .team-config-warp .team-settings input { width: 64px; }
-.team-config-warp .environment-teams { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 0 auto 10px; padding: 8px 12px; border: 1px solid #53665c; background: rgba(14, 22, 19, .84); color: #cce6d5; font-size: 14px; }
-.environment-teams summary { cursor: pointer; font-size: 18px; font-weight: bold; }
-.environment-teams summary span { margin-left: 10px; color: #aebfb5; font-size: 13px; font-weight: normal; }
+.team-config-warp .environment-teams { width: 90%; max-height: 190px; min-height: 0; overflow-y: auto; flex: none; box-sizing: border-box; margin: 2px auto 10px; padding: 10px 12px; border: 1px solid #66573d; background: rgba(14, 16, 17, .82); color: #ead6a0; font-size: 14px; }
+.environment-teams .my-builds-heading span { color: #bab9ae; font-weight: normal; }
 .environment-actions, .environment-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-.environment-row { padding-top: 8px; border-top: 1px solid #46574d; }
+.environment-row { padding-top: 8px; border-top: 1px solid #4b4942; }
 .environment-actions > input, .environment-row > input { width: 150px; }
-.environment-row > span { flex: 1; min-width: 165px; color: #bfc7be; }
-.environment-teams input, .environment-teams select { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #ebf5ed; background: #252e29; border: 1px solid #748d79; border-radius: 3px; }
+.environment-row > span { flex: 1; min-width: 165px; color: #bab9ae; }
+.environment-teams input, .environment-teams select { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
 .environment-teams label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .environment-teams label input { width: 60px; }
-.environment-teams button { cursor: pointer; padding: 5px 10px; color: #e7f5e9; background: #355541; border: 1px solid #78a283; border-radius: 3px; }
-.environment-teams button:hover { background: #477052; }
+.environment-teams button { cursor: pointer; padding: 5px 10px; color: #f6e8bd; background: #4c402e; border: 1px solid #a88956; border-radius: 3px; }
+.environment-teams button:hover { background: #6a5535; }
 .environment-message { margin: 5px 0; color: #78dfa4; }
-.environment-empty { color: #bfc7be; }
+.environment-empty { color: #bab9ae; }
 @media (max-width: 900px) {
     .team-config-warp .my-builds { width: calc(100% - 24px); max-height: 230px; margin-bottom: 8px; }
     .team-config-warp .my-builds-heading strong { font-size: 16px; }
