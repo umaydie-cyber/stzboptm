@@ -2753,6 +2753,83 @@ export const __SKILLS__ = [
             return true;
         }
     },
+    {
+        id: 1103, name: '同仇敌忾',
+        desc: '我军全体每次受到伤害后，其距离1以内的友军全体受到的伤害降低2%且造成所有伤害提高2%（受谋略影响），最多叠加8次，持续至战斗结束',
+        level: 'S', type: 4, target: 3, target_type: 'friend', limit: 3, rate: 100, study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const team = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            const perStack = Math.max(0, 2 + Math.floor((self.Attrs.int - 80) / 66.5));
+            for (const ally of team) {
+                ally.addHook('受伤时', '同仇敌忾受伤叠层', (_attacker, _info, _skill, damage) => {
+                    if (damage <= 0) return;
+                    for (const adjacent of team) {
+                        if (adjacent === ally || adjacent.Arms <= 0 || Math.abs(adjacent.Index - ally.Index) !== 1) continue;
+                        adjacent.Storage.rusuTongchou ||= [];
+                        let effect = adjacent.Storage.rusuTongchou.find(entry => entry.source === self);
+                        if (!effect) {
+                            effect = { source: self, stacks: 0, perStack };
+                            adjacent.Storage.rusuTongchou.push(effect);
+                        }
+                        if (effect.stacks >= 8) continue;
+                        effect.stacks++;
+                        self.Manger.Record.pushRecord(adjacent,
+                            `的【同仇敌忾】叠加至${effect.stacks}/8层：受到伤害降低、造成所有伤害提高${effect.stacks * perStack}%`, 1);
+                    }
+                }, this, self, 'buff', false);
+            }
+            return true;
+        }
+    },
+    {
+        id: 1102, name: '火烧连营',
+        desc: '准备1回合，使敌军全体围困1回合；随后对敌军单体发动3次火攻（伤害率50%，受谋略影响），每次独立选择目标，并使其受到的火攻与持续伤害提高5%，可叠加至战斗结束；最后使敌军全体燃烧1回合（伤害率120%，受谋略影响）。陆逊发动时改为恐慌',
+        level: 'S', type: 2, target: 3, target_type: 'enemy', limit: 5, rate: 35, study: true, ready: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            return self.addReadySkill(this, 1, () => {
+                const enemies = self.getTarget(this.limit, 3);
+                for (const enemy of enemies) {
+                    if (!enemy.tryQiqinDefense?.('控制', self) && applyNoRecover(enemy, self.Manger.Round + 2, self)) {
+                        self.Manger.Record.pushRecord(enemy, '受到【火烧连营】围困，持续1回合', 1);
+                    }
+                }
+                const fireRate = clacSkillAdditionRate(50, 0.5, self.Attrs.int);
+                const bonus = clacSkillAdditionRate(5, 0.05, self.Attrs.int);
+                for (let hit = 0; hit < 3; hit++) {
+                    const target = self.getTarget(this.limit, 1)[0];
+                    if (!target || self.Manger.Over) break;
+                    target.beHurt(self, { type: 2, rate: fireRate, kind: '火攻', huoshaolianying: true }, this);
+                    target.Storage.huoshaoLianyingBonus = (target.Storage.huoshaoLianyingBonus || 0) + bonus;
+                    self.Manger.Record.pushRecord(target, `受到火攻与持续伤害提高${bonus}%（累计${target.Storage.huoshaoLianyingBonus}%）`, 1);
+                }
+                const kind = [1013, 1042].includes(self.Id) ? '恐慌' : '燃烧';
+                const curseRate = clacSkillAdditionRate(120, 1.2, self.Attrs.int);
+                for (const enemy of enemies) {
+                    if (enemy.Arms > 0) enemy.applyContinuousDamage(kind, self, this, curseRate, 1);
+                }
+            });
+        }
+    },
+    {
+        id: 1101, name: '疲兵沮意',
+        desc: '每回合开始时，为我军全体叠加2层避锐；受到伤害前消耗1层，使该次伤害降低10%（受谋略影响）。避锐生效后有50%几率使敌军单体燃烧1回合（伤害率150%，受谋略影响）；后续受到本战法燃烧的伤害率提高80%，可叠加至战斗结束',
+        level: 'S', type: 1, target: 3, target_type: 'friend', limit: 5, rate: 100, study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const grant = () => {
+                const reduction = clacSkillAdditionRate(10, 0.1, self.Attrs.int);
+                for (const ally of self.getTarget(5, 3, 2)) {
+                    (ally.Storage.xpLuxunBirui ||= []).push({ source: self, skill: this, reduction });
+                    (ally.Storage.xpLuxunBirui ||= []).push({ source: self, skill: this, reduction });
+                    self.Manger.Record.pushRecord(ally, `获得【疲兵沮意】2层避锐（共${ally.Storage.xpLuxunBirui.length}层）`, 1);
+                }
+            };
+            self.addHook('回合开始时', '疲兵沮意叠加避锐', grant, this, self);
+            return true;
+        }
+    },
     ...HENEI_DERIVED.map(config => ({
         id: config.id, name: config.name,
         desc: config.desc,

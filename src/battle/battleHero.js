@@ -1339,6 +1339,19 @@ export class BattleHero {
         }
 
         if (attacker.Storage.cijianRepeat?.skill === skill || attacker.Storage.weiyuRepeat?.skill === skill) damage = Math.floor(damage * 0.5);
+        const biruiIndex = this.Storage.xpLuxunBirui?.findIndex(layer => layer.source?.BattleCamp === this.BattleCamp) ?? -1;
+        if (biruiIndex >= 0 && damage > 0) {
+            const [layer] = this.Storage.xpLuxunBirui.splice(biruiIndex, 1);
+            damage = Math.max(0, Math.round(damage * (1 - layer.reduction / 100)));
+            this.Manger.Record.pushRecord(this, `的【疲兵沮意】避锐使本次伤害降低${layer.reduction}%（剩余${this.Storage.xpLuxunBirui.length}层）`, 1);
+            if (getRandomBool(50)) {
+                const target = layer.source.getTarget(5, 1)[0];
+                if (target) {
+                    const baseRate = clacSkillAdditionRate(150, 1.5, layer.source.Attrs.int);
+                    target.applyContinuousDamage('疲兵沮意燃烧', layer.source, layer.skill, baseRate, 1);
+                }
+            }
+        }
         damage = this.absorbYuxiDamage(damage);
         // 同心分担以本次结算后的实际伤害为基数，不再经过各分担者的增减伤计算。
         const sharedAllies = this.Storage.maliangSharedRound === this.Manger.Round
@@ -1558,21 +1571,29 @@ export class BattleHero {
         return true;
     }
 
-    triggerContinuousDamage(onPursuit = false) {
+    triggerContinuousDamage(onPursuit = false, actionStart = false) {
         for (const [kind, effect] of Object.entries(this.State.continuousDamage)) {
             if (effect.expiresRound < this.Manger.Round) {
                 delete this.State.continuousDamage[kind];
                 continue;
             }
-            if (effect.onPursuit !== onPursuit || (!onPursuit && effect.appliedRound >= this.Manger.Round) || this.Arms <= 0) continue;
+            if (effect.onPursuit !== onPursuit || (kind === '疲兵沮意燃烧') !== actionStart ||
+                (!onPursuit && effect.appliedRound >= this.Manger.Round && !actionStart) || this.Arms <= 0) continue;
+            const bonus = kind === '疲兵沮意燃烧' ? (this.Storage.xpLuxunBurnBonus?.[effect.source.Id] || 0) : 0;
             this.beHurtByNum(
                 effect.source,
-                { type: 4, rate: effect.rate, kind: effect.kind, damageModifiers: effect.damageModifiers, troopBaseDamage: effect.troopBaseDamage },
+                { type: 4, rate: effect.rate + bonus, kind: effect.kind,
+                    ...(kind === '疲兵沮意燃烧' ? {} : { damageModifiers: effect.damageModifiers, troopBaseDamage: effect.troopBaseDamage }) },
                 effect.skill,
-                effect.damage,
+                kind === '疲兵沮意燃烧' ? null : effect.damage,
                 (realDamage) => this.Manger.Record.pushRecord(this,
                     `受到【${effect.skill?.name || kind}】的${kind}效果，损失 ${realDamage} 兵力(${this.Arms})`, 1)
             );
+            if (kind === '疲兵沮意燃烧') {
+                this.Storage.xpLuxunBurnBonus ||= {};
+                this.Storage.xpLuxunBurnBonus[effect.source.Id] = bonus + 80;
+                delete this.State.continuousDamage[kind];
+            }
         }
     }
 

@@ -146,7 +146,22 @@ export class BattleManger {
         });
         this.applyTroopBonus(team);
         this.applyCampBonus(team, generalPlatformLevel);
+        this.applyDongwuDaduDu(team);
         this.applyFourCampSpecials(team);
+    }
+
+    applyDongwuDaduDu(team){
+        const allowed = new Set([1009, 1013, 1014, 1042, 1043]);
+        const identities = team.hero.map(hero => hero.Id === 1042 ? 1013 : hero.Id);
+        team.dongwuDaduDu = team.hero.length === 3 &&
+            identities.every(id => allowed.has(id)) && new Set(identities).size === 3;
+        if (!team.dongwuDaduDu) return;
+        for (const hero of team.hero) {
+            hero.Attrs.int = keepTwoDecimal(hero.Attrs.int + 20);
+            hero.Attrs.spd = keepTwoDecimal(hero.Attrs.spd + 19);
+            hero.OriginAttrs.int = hero.Attrs.int;
+            hero.OriginAttrs.spd = hero.Attrs.spd;
+        }
     }
 
     normalizeFourCampLevels(levels = {}, fallback = 10){
@@ -294,6 +309,7 @@ export class BattleManger {
         })
         this.Record.pushSysRecord(this.getTroopBonusDescription(this.BlueTeam),1);
         this.Record.pushSysRecord(this.getCampBonusDescription(this.BlueTeam),1);
+        if (this.BlueTeam.dongwuDaduDu) this.Record.pushSysRecord('称号【东吴大都督】：全队谋略+20、速度+19', 1);
         this.getFourCampDescriptions(this.BlueTeam).forEach(message => this.Record.pushSysRecord(message, 1));
         this.Record.pushSysRecord('【守方阵容】');
         [...this.RedTeam.hero].forEach(e=>{
@@ -301,6 +317,7 @@ export class BattleManger {
         })
         this.Record.pushSysRecord(this.getTroopBonusDescription(this.RedTeam),1);
         this.Record.pushSysRecord(this.getCampBonusDescription(this.RedTeam),1);
+        if (this.RedTeam.dongwuDaduDu) this.Record.pushSysRecord('称号【东吴大都督】：全队谋略+20、速度+19', 1);
         this.getFourCampDescriptions(this.RedTeam).forEach(message => this.Record.pushSysRecord(message, 1));
 
         for (let index = 0; index < BattleRound.length; index++) {
@@ -389,6 +406,8 @@ export class BattleManger {
                         // 本次行动仍受暴走影响；第三次行动前才会递减至零。
                         if (e.isRage()) e.StateFlag.rage = true;
                         this.Record.pushRecord(e,"行动开始");
+                        e.triggerContinuousDamage(false, true);
+                        if (e.Arms <= 0 || this.Over) return;
                         e.callHook("行动时");
                         // 判断混乱
                         if(e.isConfusion()){

@@ -150,6 +150,15 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         special('谋议宏图', -simayan.value * (9 - target.Manger.Round) / 8, simayan.source);
     if (target.Storage.chengyuDamageTaken?.round === target.Manger.Round)
         special('审时定计', target.Storage.chengyuDamageTaken.value, target.Storage.chengyuDamageTaken.source);
+    if (target.Storage.huoshaoLianyingBonus && (type === 4 ||
+        (type === 2 && (damageInfo.kind === '火攻' || /火攻|火辎|火势风威/.test(skill?.name || '')))))
+        special('火烧连营', target.Storage.huoshaoLianyingBonus, target);
+    if ([1, 2, 3, 4].includes(type)) {
+        for (const effect of attacker.Storage.rusuTongchou || [])
+            special('同仇敌忾', effect.stacks * effect.perStack, effect.source);
+        for (const effect of target.Storage.rusuTongchou || [])
+            special('同仇敌忾', -effect.stacks * effect.perStack, effect.source);
+    }
     if (target.Storage.maliangReduction?.round === target.Manger.Round)
         special('雅虑适时', -target.Storage.maliangReduction.value, target.Storage.maliangReduction.source);
     // 基础兵种相克：骑克步、步克弓、弓克骑。被克制方造成的所有伤害降低30%。

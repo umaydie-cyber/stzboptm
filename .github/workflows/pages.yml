@@ -35,6 +35,9 @@ jobs:
       - run: node verify-sanshuqimou.mjs
       - run: node verify-simayan.mjs
       - run: node verify-shengdi-yiqiang.mjs
+      - run: node verify-xpluxun.mjs
+      - run: node verify-huoshaolianying.mjs
+      - run: node verify-lusu.mjs
       - run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:

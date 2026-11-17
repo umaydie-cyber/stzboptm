@@ -367,7 +367,7 @@ export const __HEROS__ = [
         attrs_grow: { atk: 0.55, def: 1.56, int: 2.25, spd: 1.49, des: 0.44 }
     },
     {
-        id: 1017, name: "陈宫", camp: 5, star: 5, cost: 30, army: 2, limit: 2, skill: 1036,
+        id: 1017, name: "陈宫", camp: 5, star: 5, cost: 30, army: 1, limit: 4, skill: 1036,
         attrs: { atk: 60, def: 82, int: 95, spd: 60, des: 9 },
         attrs_grow: { atk: 0.9, def: 1.8, int: 2.4, spd: 1.01, des: 0.72 }
     },
@@ -490,5 +490,15 @@ export const __HEROS__ = [
         id: 1041, name: "司马炎", camp: 6, star: 5, cost: 35, army: 2, limit: 3, skill: 1100,
         attrs: { atk: 69, def: 89, int: 88, spd: 42, des: 15 },
         attrs_grow: { atk: 1.01, def: 1.98, int: 2.12, spd: 0.86, des: 1.31 }
+    },
+    {
+        id: 1042, name: "XP陆逊", camp: 3, star: 5, cost: 30, army: 2, limit: 4, skill: 1101,
+        attrs: { atk: 85, def: 82, int: 96, spd: 55, des: 13 },
+        attrs_grow: { atk: 1.13, def: 2.24, int: 2.11, spd: 0.90, des: 1.13 }
+    },
+    {
+        id: 1043, name: "鲁肃", camp: 3, star: 5, cost: 30, army: 3, limit: 2, skill: 1103,
+        attrs: { atk: 78, def: 91, int: 90, spd: 42, des: 18 },
+        attrs_grow: { atk: 1.03, def: 1.76, int: 2.09, spd: 0.53, des: 1.70 }
     }
 ]
