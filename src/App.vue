@@ -134,9 +134,6 @@ const simulate = async () => {
 							</div>
 						</div>
 					</div>
-					<div class="team-name">
-						👻👻👻
-					</div>
 				</div>
 
 				<div class="red-team">
@@ -152,9 +149,6 @@ const simulate = async () => {
 						</div>
 						<div class="text">{{ battleinfo.RedTeam?.arms }}/<span>{{ battleinfo.RedTeam?.total }}</span>
 						</div>
-					</div>
-					<div class="team-name">
-						🤡🤡🤡
 					</div>
 				</div>
 			</div>
@@ -248,9 +242,6 @@ const simulate = async () => {
 							<div class="current" :style="`width: ${configuredArms('blue') / previewScale('blue') * 100}%`"></div>
 						</div>
 					</div>
-					<div class="team-name">
-						👻👻👻
-					</div>
 				</div>
 
 				<div class="red-team">
@@ -260,9 +251,6 @@ const simulate = async () => {
 							<div class="current" :style="`width: ${configuredArms('red') / previewScale('red') * 100}%`"></div>
 						</div>
 						<div class="text">{{ configuredArms('red') }}/<span>{{ previewScale('red') }}</span></div>
-					</div>
-					<div class="team-name">
-						🤡🤡🤡
 					</div>
 				</div>
 			</div>
@@ -433,13 +421,6 @@ const simulate = async () => {
 					font-size: 0.95vw;
 				}
 
-				.team-name {
-					color: #fff;
-					font-size: 0.95vw;
-					width: 24%;
-					text-align: center;
-					background-color: rgba(0, 0, 0, .5);
-				}
 			}
 
 			.blue-team {
@@ -894,16 +875,24 @@ const simulate = async () => {
 			margin-top: 0;
 
 			.header-area {
-				height: 82px;
+				height: auto;
 				gap: 12px;
-				.blue-team, .red-team { width: calc(50% - 6px); }
-				.blue-team .bar, .red-team .bar { width: 100%; height: 12px; }
 				.blue-team, .red-team {
-					.role-name, .bar-box .text, .team-name { font-size: 12px; }
-					.bar-box { height: auto; flex-wrap: wrap; gap: 4px; }
-					.team-name { width: auto; min-width: 50px; }
+					width: calc(50% - 6px);
+					display: grid;
+					align-content: start;
+					gap: 6px;
+					.role-name, .bar-box .text { font-size: 12px; }
+					.bar-box {
+						display: grid;
+						grid-template-rows: auto 12px;
+						height: auto;
+						gap: 4px;
+						.text { grid-row: 1; }
+						.bar { grid-row: 2; width: 100%; height: 12px; }
+					}
 				}
-				.red-team .bar-box { flex-direction: row-reverse; }
+				.red-team .bar-box .text { text-align: right; }
 			}
 
 			.card-area {
