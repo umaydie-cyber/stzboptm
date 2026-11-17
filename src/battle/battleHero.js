@@ -6,7 +6,7 @@ import { __HEROS__ } from "./heros";
 import { __ARMS__ as ARMS } from "./armys";
 import { __SKILLS__ } from "./skills"
 import { keepTwoDecimal, makeSkillTag, roundEightNine } from "../uilts"
-import { clacAttackDamage, getRandomBool, clacInteDamage, clacInte2Damage, getDamageAddition, calcRecover } from "./battleCalcFunc"
+import { clacAttackDamage, getRandomBool, clacInteDamage, clacInte2Damage, getDamageAddition, calcRecover, clacSkillAdditionRate } from "./battleCalcFunc"
 
 const LOUYING_CHUANYING = { id: 'louying-chuanying', name: '镂影·穿影', type: 4 };
 export class BattleHero {
