@@ -10,6 +10,7 @@ import { INFANTRY_TRAITS } from '../battle/infantryTraits';
 import { CAVALRY_TRAITS } from '../battle/cavalryTraits';
 import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
+import { sameRosterAndSpeed } from '../battle/environmentScore';
 
 let SKILLS = {};
 let SKILL_LIST = {1:[],2:[],3:[],4:[]};
@@ -201,10 +202,16 @@ const scoreEnvironment = preset => {
     }
     try {
         const build = validateBuild(preset.build);
-        const opponents = environmentTeams.value.map(entry => ({
+        const allOpponents = environmentTeams.value.map(entry => ({
             id: entry.id, name: entry.name, weight: validateEnvironmentWeight(entry.weight), build: validateBuild(entry.build)
         }));
-        emit('score-environment', { name: preset.name, build, opponents });
+        const opponents = allOpponents.filter(entry => !sameRosterAndSpeed(build, entry.build));
+        const excluded = allOpponents.length - opponents.length;
+        if (!opponents.length) {
+            presetMessage.value = `没有可评分的环境队伍：${excluded} 支队伍与本构筑武将及速度相同，已自动过滤`;
+            return;
+        }
+        emit('score-environment', { name: preset.name, build, opponents, excluded });
         emit('update:show', false);
     } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };

@@ -121,7 +121,7 @@ const simulate = async () => {
 	}
 };
 
-const scoreEnvironment = async ({ name, build, opponents }) => {
+const scoreEnvironment = async ({ name, build, opponents, excluded }) => {
     if (environmentScoring.value) return;
     environmentScoring.value = true;
     environmentReport.value = null;
@@ -152,7 +152,7 @@ const scoreEnvironment = async ({ name, build, opponents }) => {
             }
             rows.push({ id: opponent.id, name: opponent.name, weight: opponent.weight, ...matchupScore(totals, 500) });
         }
-        environmentReport.value = { name, rows, overall: weightedEnvironmentScore(rows) };
+        environmentReport.value = { name, rows, excluded, overall: weightedEnvironmentScore(rows) };
     } catch (error) {
         environmentError.value = `环境评分失败：${error.message}`;
     } finally {
@@ -363,6 +363,7 @@ const scoreEnvironment = async ({ name, build, opponents }) => {
 			<p v-if="environmentScoring" role="status">对抗环境评分中：{{ environmentProgress }}/{{ environmentTotal }} 场</p>
 			<p v-if="environmentError" role="alert">{{ environmentError }}</p>
 			<template v-if="environmentReport">
+				<p v-if="environmentReport.excluded">已自动过滤 {{ environmentReport.excluded }} 支武将和速度均相同的环境队伍。</p>
 				<h3>总体环境武勋评分 {{ scoreLabel(environmentReport.overall.merit) }} · 总体战损评分 {{ scoreLabel(environmentReport.overall.loss) }}</h3>
 				<p>每支环境队伍模拟 500 场；构筑为攻方。逐队比值由 500 场平均伤亡计算，再按环境权重加权平均。比值越高，表现越强。</p>
 				<p>武勋比＝我方造成的伤兵＋死亡 / 我方承受的伤兵＋死亡；战损比＝敌方死亡 / 我方死亡。双方均为零时显示“—”并不计入该项加权平均；仅分母为零时显示“∞”。</p>
