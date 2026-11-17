@@ -485,5 +485,10 @@ export const __HEROS__ = [
         id: 1040, name: "张飞", camp: 1, star: 5, cost: 30, army: 3, limit: 2, skill: 1098,
         attrs: { atk: 103, def: 87, int: 45, spd: 71, des: 10 },
         attrs_grow: { atk: 2.67, def: 1.68, int: 0.50, spd: 1.13, des: 0.96 }
+    },
+    {
+        id: 1041, name: "司马炎", camp: 6, star: 5, cost: 35, army: 2, limit: 3, skill: 1100,
+        attrs: { atk: 69, def: 89, int: 88, spd: 42, des: 15 },
+        attrs_grow: { atk: 1.01, def: 1.98, int: 2.12, spd: 0.86, des: 1.31 }
     }
 ]

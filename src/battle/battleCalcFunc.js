@@ -145,6 +145,9 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         value += amount;
         entries.push({ name, hero: hero.Name, value: amount });
     };
+    const simayan = target.Storage.simayanReduction;
+    if (simayan && target.Manger.Round >= 1 && target.Manger.Round <= 8 && [1, 2, 3, 4].includes(type))
+        special('谋议宏图', -simayan.value * (9 - target.Manger.Round) / 8, simayan.source);
     if (target.Storage.chengyuDamageTaken?.round === target.Manger.Round)
         special('审时定计', target.Storage.chengyuDamageTaken.value, target.Storage.chengyuDamageTaken.source);
     if (target.Storage.maliangReduction?.round === target.Manger.Round)

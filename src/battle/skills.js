@@ -53,6 +53,45 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1100, name: '谋议宏图',
+        desc: '战斗开始后首回合，我军全体受到伤害降低30.0%（受谋略属性影响），该效果每回合开始时减少1/8；我军全体每回合开始时士气提升8.0',
+        level: 'S', type: 1, target: 3, target_type: 'team', limit: 5, rate: '--', study: false,
+        callskill: function (self) {
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            const reduction = Math.max(0, 30 + (self.Attrs.int - 80) / 6);
+            for (const ally of allies) {
+                ally.Storage.simayanReduction = { source: self, skill: this, value: reduction };
+                ally.addHook('回合开始时', '谋议宏图士气', () => {
+                    ally.Morale = Math.min(200, ally.Morale + 8);
+                    self.Manger.Record.pushRecord(ally, `受【${this.name}】影响士气提升8（当前${ally.Morale}）`, 1);
+                }, this, self);
+            }
+        }
+    },
+    {
+        id: 1099, name: '三术奇谋', ready: true,
+        desc: '1回合准备，对敌军单体发动3次策略攻击（伤害率178.0%，受谋略属性影响），并依次使目标的攻击、防御、谋略属性下降18.0（受谋略属性影响），持续2回合，每次目标独立判定',
+        level: 'S', type: 2, target: 1, target_type: 'enemy', limit: 4, rate: 50, study: true,
+        callskill: function (self, currentRate) {
+            if (!getRandomBool(currentRate)) return false;
+            return self.addReadySkill(this, 1, () => {
+                const scale = Math.max(0, 1 + (self.Attrs.int - 80) / 96.25);
+                const damageRate = keepTwoDecimal(178 * scale);
+                const reduction = keepTwoDecimal(18 * scale);
+                for (const attribute of ['atk', 'def', 'int']) {
+                    if (self.Manger.Over || self.Arms <= 0) break;
+                    const target = self.getTarget(this.limit, 1)[0];
+                    if (!target) break;
+                    target.beHurt(self, { type: 2, rate: damageRate }, this);
+                    if (target.Arms <= 0 || self.Manger.Over) continue;
+                    reduceAttributesTemporarily(target, self, this, { [attribute]: reduction }, 2);
+                    self.Manger.Record.pushRecord(target, `的${{ atk: '攻击', def: '防御', int: '谋略' }[attribute]}属性降低${reduction}，持续2回合`, 1);
+                }
+            });
+        }
+    },
+    {
         id: 1098, name: '长坂之吼',
         ready: true,
         desc: '2回合准备，对有效距离4内的敌军群体2～3目标发动一次无视兵种相克的猛烈攻击（伤害率450.0%）',
@@ -1990,7 +2029,7 @@ export const __SKILLS__ = [
         id: 1026, //ID
         name: "一骑当千", //名称
         ready: true,
-        desc: "1回合准备，使敌军群体陷入混乱状态，持续2回合", //描述
+        desc: "1回合准备，对敌军全体发动一次猛烈攻击（伤害率280.0%）", //描述
         level: "S", //战法级别
         type: 2, //战法类型 1=指挥 2=主动 3=追击 4=被动
         target: 3, //目标数量
