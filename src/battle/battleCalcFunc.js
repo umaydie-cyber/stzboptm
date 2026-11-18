@@ -131,10 +131,19 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     const type = damageInfo.type;
     let value = 100;
     const entries = [];
+    const stateLabels = {
+        attackDamageAdd: '造成攻击伤害提高', attackDamageSub: '造成攻击伤害降低',
+        inteDamageAdd: '造成策略攻击伤害提高', inteDamageSub: '造成策略攻击伤害降低',
+        beAttackDamageAdd: '受到攻击伤害提高', beAttackDamageSub: '受到攻击伤害降低',
+        beInteDamageAdd: '受到策略攻击伤害提高', beInteDamageSub: '受到策略攻击伤害降低',
+        activeDamageAdd: '造成主动战法伤害提高', activeDamageSub: '造成主动战法伤害降低',
+        beActiveDamageAdd: '受到主动战法伤害提高', beActiveDamageSub: '受到主动战法伤害降低'
+    };
     const addStateEntries = (hero, name, sign) => {
         for (const state of Object.values(hero.State?.[name] || {})) {
             if (!state || !Number.isFinite(state.value)) continue;
-            entries.push({ name: state.from?.name || name, hero: state.hero?.Name || hero.Name, value: sign * state.value });
+            entries.push({ name: state.from?.name || stateLabels[name] || name,
+                hero: state.hero?.Name || hero.Name, value: sign * state.value });
         }
     };
     const add = (hero, name, sign) => {

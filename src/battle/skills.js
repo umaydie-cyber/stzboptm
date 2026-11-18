@@ -53,6 +53,30 @@ const HENEI_DERIVED = [
 
 export const __SKILLS__ = [
     {
+        id: 1104, name: '舍身卫主',
+        desc: '战斗开始后，受到2距离以内敌军的伤害时，有60.0%几率对伤害来源发动一次攻击（伤害率120.0%）。位于前锋或中军时，战斗开始后前3回合，敌军对友军全体造成的攻击伤害由典韦承担（概率受士气影响）',
+        level: 'S', type: 4, target: 1, target_type: 'self', limit: 2, rate: '--', study: false,
+        passiveRangeBoost: true,
+        callskill: function (self) {
+            self.Storage.dianweiGuard = self.Posname === '前锋' || self.Posname === '中军' ? this : null;
+            self.Storage.dianweiCounter = this;
+            self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
+            self.addHook('受伤时', '舍身卫主反击', (attacker, damageInfo, _skill, damage) => {
+                if (damage <= 0 || self.Arms <= 0 || !attacker || attacker.Arms <= 0 ||
+                    attacker.BattleCamp === self.BattleCamp || damageInfo.isDianweiCounter) return;
+                const line = [...self.Manger.BlueTeam.hero, ...[...self.Manger.RedTeam.hero].reverse()]
+                    .filter(hero => hero.Arms > 0);
+                const distance = Math.abs(line.indexOf(self) - line.indexOf(attacker));
+                const range = self.Skills[this.id]?.limit ?? this.limit;
+                if (distance > range) return;
+                const rate = self.getRealSkillRate(60);
+                const success = getRandomBool(rate);
+                self.Manger.Record.pushRecord(self, `的【${this.name}】反击判定（${rate}%，距离${distance}/${range}）：${success ? '成功' : '未触发'}`, 1);
+                if (success) attacker.beHurt(self, { type: 1, rate: 120, isDianweiCounter: true }, this);
+            }, this, self);
+        }
+    },
+    {
         id: 1100, name: '谋议宏图',
         desc: '战斗开始后首回合，我军全体受到伤害降低30.0%（受谋略属性影响），该效果每回合开始时减少1/8；我军全体每回合开始时士气提升8.0',
         level: 'S', type: 1, target: 3, target_type: 'team', limit: 5, rate: '--', study: false,
@@ -528,7 +552,7 @@ export const __SKILLS__ = [
                 ally.Storage.hezongLianheng = true;
                 // 战法实例按武将保存，避免影响敌方和共享配置。
                 for (const [id, equipped] of Object.entries(ally.Skills)) {
-                    if ([1, 2].includes(equipped?.type) && equipped.limit > 0) {
+                    if (([1, 2].includes(equipped?.type) || equipped?.passiveRangeBoost) && equipped.limit > 0) {
                         ally.Skills[id] = { ...equipped, limit: equipped.limit + 1 };
                     }
                 }
@@ -1238,7 +1262,9 @@ export const __SKILLS__ = [
                 // 增加攻击伤害10%
                 self.State.attackDamageAdd.passive = {
                     value: 10,
-                    rounds: -1
+                    rounds: -1,
+                    from: this,
+                    hero: self
                 }
                 self.Manger.Record.pushRecord(self, '造成的攻击伤害提高10%', 1);
                 let subskill = () => {
@@ -2108,12 +2134,13 @@ export const __SKILLS__ = [
             let enemy = self.BattleCamp == "blue" ? self.Manger.RedTeam.hero : self.Manger.BlueTeam.hero;
             let friendly = self.BattleCamp == "blue" ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
             let subrate = clacSkillAdditionRate(15, 0.045, self.Attrs.int);
+            const attrNames = { atk: '攻击', def: '防御', int: '谋略', spd: '速度' };
 
             enemy.forEach(e => {
                 for (const key of ['atk', 'def', 'int', 'spd']) {
                     let subattr = keepTwoDecimal(e.Attrs[key] * subrate / 100);
                     e.Attrs[key] = keepTwoDecimal(e.Attrs[key] - subattr);
-                    self.Manger.Record.pushRecord(e, `的${key}属性降低了${subrate}%(${subattr})(${e.Attrs[key]})`, 1);
+                    self.Manger.Record.pushRecord(e, `的${attrNames[key]}属性降低了${subrate}%(${subattr})(${e.Attrs[key]})`, 1);
                 }
             });
 

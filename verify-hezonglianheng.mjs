@@ -38,6 +38,14 @@ try {
   assert.equal(otherCampTarget.State.noRecoverUntil, 3);
   ally.hooks['普通攻击后'](sameCampTarget);
   assert.equal(sameCampTarget.State.noRecoverUntil, undefined);
+  const sameCampAllies = [makeHero('同阵营甲', 1), makeHero('同阵营乙', 1), makeHero('同阵营丙', 1)];
+  manager.BlueTeam.hero = sameCampAllies;
+  for (const hero of sameCampAllies) hero.Manger = manager;
+  skill.callskill(sameCampAllies[0]);
+  for (const hero of sameCampAllies) {
+    assert.equal(hero.Storage.hezongLianheng, true);
+    assert.equal(hero.Skills[1].limit, 4);
+  }
   console.log('Verified range, faction damage, morale roll, and one-round siege');
 } finally {
   await vite.close();

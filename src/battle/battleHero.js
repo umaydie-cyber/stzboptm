@@ -1193,6 +1193,15 @@ export class BattleHero {
     */
     beHurt(attacker, damageInfo, skill = null, num = null, record = false) {
         if(this.Manger.Over == true)return;
+        if (damageInfo.type === 1 && this.Manger.Round >= 1 && this.Manger.Round <= 3 &&
+            attacker.BattleCamp !== this.BattleCamp && !damageInfo.dianweiRedirected) {
+            const allies = this.BattleCamp === 'blue' ? this.Manger.BlueTeam.hero : this.Manger.RedTeam.hero;
+            const dianwei = allies.find(hero => hero !== this && hero.Arms > 0 && hero.Storage.dianweiGuard);
+            if (dianwei) {
+                this.Manger.Record.pushActionRecord(dianwei, this, '的【舍身卫主】替', '承担攻击伤害', 1);
+                return dianwei.beHurt(attacker, { ...damageInfo, dianweiRedirected: true }, skill, num, record);
+            }
+        }
         if (damageInfo.yuxiSettlement) return this.settleYuxiDamage(attacker, skill, num);
         if (this.Storage.ironCampFirstDamageImmunity) {
             this.Storage.ironCampFirstDamageImmunity = false;

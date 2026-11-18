@@ -38,6 +38,9 @@ jobs:
       - run: node verify-xpluxun.mjs
       - run: node verify-huoshaolianying.mjs
       - run: node verify-lusu.mjs
+      - run: node verify-hezonglianheng.mjs
+      - run: node verify-dianwei.mjs
+      - run: node verify-damage-labels.mjs
       - run: npm run build
       - uses: actions/upload-pages-artifact@v4
         with:
