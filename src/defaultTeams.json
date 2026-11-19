@@ -1,0 +1,224 @@
+{
+  "blue": {
+    "morale": 120,
+    "generalPlatformLevel": 10,
+    "fourCampLevels": {
+      "swift": 10,
+      "iron": 10,
+      "strategy": 10,
+      "martial": 10
+    },
+    "heros": [
+      {
+        "id": 1042,
+        "level": 40,
+        "up": 5,
+        "arms": 10000,
+        "animation": false,
+        "equipskill": [
+          1032,
+          1102
+        ],
+        "extraAttrsAlloc": {
+          "atk": 0,
+          "def": 0,
+          "int": 90,
+          "spd": 0
+        },
+        "infantryType": "pike",
+        "infantryTraits": [
+          "strategy",
+          "brave"
+        ],
+        "cavalryType": "basic",
+        "cavalryTraits": [],
+        "bowType": "basic",
+        "bowTraits": [],
+        "treasure": {
+          "id": "youpiao",
+          "xianzhi": 6,
+          "miaosuan": 6,
+          "forge": "quhuo",
+          "forgeValue": 30
+        }
+      },
+      {
+        "id": 1014,
+        "level": 40,
+        "up": 5,
+        "arms": 10000,
+        "animation": false,
+        "equipskill": [
+          1015,
+          1027
+        ],
+        "extraAttrsAlloc": {
+          "atk": 0,
+          "def": 0,
+          "int": 90,
+          "spd": 0
+        },
+        "infantryType": "guard",
+        "infantryTraits": [
+          "defense",
+          "brave"
+        ],
+        "cavalryType": "basic",
+        "cavalryTraits": [],
+        "bowType": "basic",
+        "bowTraits": [],
+        "treasure": {
+          "id": "xushibishou",
+          "lingdong": 11,
+          "podi": 1,
+          "forge": "tianzi",
+          "forgeValue": 15
+        }
+      },
+      {
+        "id": 1043,
+        "level": 40,
+        "up": 5,
+        "arms": 10000,
+        "animation": false,
+        "equipskill": [
+          1019,
+          1064
+        ],
+        "extraAttrsAlloc": {
+          "atk": 0,
+          "def": 0,
+          "int": 90,
+          "spd": 0
+        },
+        "infantryType": "basic",
+        "infantryTraits": [],
+        "cavalryType": "iron",
+        "cavalryTraits": [
+          "surprise",
+          "guarded"
+        ],
+        "bowType": "basic",
+        "bowTraits": [],
+        "treasure": {
+          "id": "renfeng",
+          "xianzhi": 6,
+          "lingdong": 6,
+          "forge": "genzhi",
+          "forgeValue": 30
+        }
+      }
+    ]
+  },
+  "red": {
+    "morale": 120,
+    "generalPlatformLevel": 10,
+    "fourCampLevels": {
+      "swift": 10,
+      "iron": 10,
+      "strategy": 10,
+      "martial": 10
+    },
+    "heros": [
+      {
+        "id": 1021,
+        "level": 40,
+        "up": 5,
+        "arms": 10000,
+        "animation": false,
+        "equipskill": [
+          1062,
+          1054
+        ],
+        "extraAttrsAlloc": {
+          "atk": 0,
+          "def": 0,
+          "int": 90,
+          "spd": 0
+        },
+        "treasure": {
+          "id": "youpiao",
+          "xianzhi": 6,
+          "miaosuan": 6,
+          "forge": "chousuan",
+          "forgeValue": 15
+        },
+        "infantryType": "basic",
+        "infantryTraits": [],
+        "cavalryType": "light",
+        "cavalryTraits": [
+          "rear",
+          "swift"
+        ],
+        "bowType": "basic",
+        "bowTraits": []
+      },
+      {
+        "id": 1022,
+        "level": 40,
+        "up": 5,
+        "arms": 10000,
+        "animation": false,
+        "equipskill": [
+          1020,
+          1064
+        ],
+        "extraAttrsAlloc": {
+          "atk": 0,
+          "def": 0,
+          "int": 90,
+          "spd": 0
+        },
+        "infantryType": "guard",
+        "infantryTraits": [
+          "defense",
+          "strategy"
+        ],
+        "cavalryType": "basic",
+        "cavalryTraits": [],
+        "bowType": "basic",
+        "bowTraits": [],
+        "treasure": {
+          "id": "xushibishou",
+          "lingdong": 11,
+          "podi": 1,
+          "forge": "tianzi",
+          "forgeValue": 15
+        }
+      },
+      {
+        "id": 1023,
+        "level": 40,
+        "up": 5,
+        "arms": 10000,
+        "animation": false,
+        "equipskill": [
+          1015,
+          1073
+        ],
+        "extraAttrsAlloc": {
+          "atk": 0,
+          "def": 0,
+          "int": 90,
+          "spd": 0
+        },
+        "infantryType": "basic",
+        "infantryTraits": [],
+        "cavalryType": "iron",
+        "cavalryTraits": [
+          "surprise",
+          "guarded"
+        ],
+        "bowType": "basic",
+        "bowTraits": [],
+        "treasure": {
+          "id": "xushibishou",
+          "lingdong": 11,
+          "podi": 1,
+          "forge": "tianzi",
+          "forgeValue": 15
+        }
+      }
+    ]
+  }
+}

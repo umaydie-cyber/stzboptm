@@ -6,6 +6,8 @@ import { ref } from 'vue'
 import TeamConfig from './components/TeamConfg.vue';
 import { summarizeBattles, ratio } from './battle/statistics';
 import { matchupScore, weightedEnvironmentScore, scoreLabel } from './battle/environmentScore';
+import { validateBuild } from './buildPresets';
+import defaultTeams from './defaultTeams.json';
 
 let HEROS = {};
 __HEROS__.forEach(e => {
@@ -20,6 +22,11 @@ const editTeamHero = (camp, index) => {
 	teamConfigRef.value?.editHero(camp, index);
 };
 const teamChanged = () => {
+	try {
+		localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(team.value));
+	} catch {
+		// Keep the current configuration usable when browser storage is unavailable.
+	}
 	battleinfo.value = {};
 	simulation.value = null;
 	showStatistics.value = false;
@@ -57,27 +64,19 @@ const heroRows = (stats, camp) => {
     return Object.values(rows);
 };
 
-const defaultHero = (id, equipskill, allocation = null) => ({
-	id, level: 40, up: 5, arms: 10000, animation: ![1004, 1012].includes(id), equipskill,
-	extraAttrsAlloc: {
-		atk: allocation === 'atk' ? 90 : 0,
-		def: 0,
-		int: allocation === 'int' ? 90 : 0,
-		spd: allocation === 'spd' ? 90 : 0
+const TEAM_STORAGE_KEY = 'stzboptm.currentTeams.v1';
+const loadTeams = () => {
+	try {
+		const saved = JSON.parse(localStorage.getItem(TEAM_STORAGE_KEY));
+		if (saved) {
+			return { blue: validateBuild(saved.blue), red: validateBuild(saved.red) };
+		}
+	} catch {
+		// Fall back to the built-in teams when storage is unavailable or invalid.
 	}
-});
-const team = ref({
-	blue: { morale: 120, generalPlatformLevel: 10, fourCampLevels: { swift: 10, iron: 10, strategy: 10, martial: 10 }, heros: [
-		defaultHero(1002, [1039, 1043], 'atk'), // 马超：大营
-		defaultHero(1004, [1044, 1014], 'spd'), // 张辽：中军
-		defaultHero(1012, [1023, 1041], 'int')  // 曹操：前锋
-	] },
-	red: { morale: 120, generalPlatformLevel: 10, fourCampLevels: { swift: 10, iron: 10, strategy: 10, martial: 10 }, heros: [
-		defaultHero(1021, [1062, 1054], 'int'), // 刘秀：大营
-		defaultHero(1022, [1020, 1019]),        // 司马懿：中军
-		defaultHero(1023, [1015, 1014], 'int')  // 冯嫽：前锋（垒实迎击）
-	] }
-});
+	return structuredClone(defaultTeams);
+};
+const team = ref(loadTeams());
 
 const battleStart = () => {
 	const bm = new BattleManger(team.value);
