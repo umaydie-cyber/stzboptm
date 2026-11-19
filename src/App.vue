@@ -165,7 +165,7 @@ const simulate = async () => {
 	}
 };
 
-const scoreEnvironment = async ({ name, build, opponents, excluded, deep }) => {
+const scoreEnvironment = async ({ name, build, opponents, excluded, deep, battlesPerOpponent }) => {
     if (environmentScoring.value) return;
     environmentScoring.value = true;
     environmentReport.value = null;
@@ -177,7 +177,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, deep }) => {
     showEnvironmentReport.value = true;
     showStatistics.value = false;
     if (deep) {
-        runSkillEvaluation({ name, build, opponents, excluded });
+        runSkillEvaluation({ name, build, opponents, excluded, battlesPerOpponent });
         return;
     }
     try {

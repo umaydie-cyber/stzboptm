@@ -2,11 +2,13 @@ import { __HEROS__ } from './heros';
 import { __SKILLS__ } from './skills';
 import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore } from './environmentScore';
 
-const battlesPerOpponent = 100;
 const innateSkills = new Map(__HEROS__.map(hero => [hero.id, hero.skill]));
 
-self.onmessage = ({ data: { name, build, opponents, excluded } }) => {
+self.onmessage = ({ data: { name, build, opponents, excluded, battlesPerOpponent } }) => {
     try {
+        if (!Number.isSafeInteger(battlesPerOpponent) || battlesPerOpponent < 1) {
+            throw new Error('战法评测场数必须是正整数');
+        }
         const used = new Set(build.heros.flatMap(hero => [
             innateSkills.get(Number(hero.id)), ...hero.equipskill.map(Number)
         ]));
@@ -17,6 +19,7 @@ self.onmessage = ({ data: { name, build, opponents, excluded } }) => {
         if (!slots.length) throw new Error('请先为构筑配置至少一个可更换战法');
 
         const total = (1 + slots.length * candidates.length) * opponents.length * battlesPerOpponent;
+        if (!Number.isSafeInteger(total)) throw new Error('模拟总场数过大，请调低评测场数');
         let completed = 0;
         let lastUpdate = performance.now();
         self.postMessage({ completed, total });

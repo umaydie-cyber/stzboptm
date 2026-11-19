@@ -35,6 +35,7 @@ const emit = defineEmits(['update:show', 'update:team', 'saved', 'score-environm
 
 const { show, team } = toRefs(props);
 const camp = ref('blue');
+const evaluationBattleCount = ref(100);
 const presetName = ref('');
 const presetMessage = ref('');
 const importInput = ref(null);
@@ -249,6 +250,11 @@ const copyBuildToEnvironment = preset => {
     } catch (error) { presetMessage.value = `加入环境队伍失败：${error.message}`; }
 };
 const scoreEnvironment = (preset, deep = false) => {
+    const battlesPerOpponent = evaluationBattleCount.value;
+    if (deep && (!Number.isSafeInteger(battlesPerOpponent) || battlesPerOpponent < 1)) {
+        presetMessage.value = '战法评测场数必须是正整数';
+        return;
+    }
     if (!environmentTeams.value.length) {
         presetMessage.value = '请先添加至少一支环境队伍';
         return;
@@ -264,7 +270,7 @@ const scoreEnvironment = (preset, deep = false) => {
             presetMessage.value = `没有可评分的环境队伍：${excluded} 支队伍与本构筑武将及速度相同，已自动过滤`;
             return;
         }
-        emit('score-environment', { name: preset.name, build, opponents, excluded, deep });
+        emit('score-environment', { name: preset.name, build, opponents, excluded, deep, battlesPerOpponent });
         emit('update:show', false);
     } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };
@@ -781,6 +787,14 @@ const addAllPoints = type => {
                     <button type="button" @click="importInput?.click()">导入 JSON</button>
                     <button type="button" @click="exportBuilds">导出 JSON</button>
                     <input ref="importInput" class="preset-file" type="file" accept=".json,application/json" aria-label="选择构筑 JSON" @change="importBuilds">
+                </div>
+                <div class="my-builds-actions">
+                    <label class="evaluation-count">
+                        战法评测场数
+                        <input v-model.number="evaluationBattleCount" type="number" min="1" step="1"
+                            aria-describedby="evaluation-count-hint">
+                    </label>
+                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
                 </div>
                 <p v-if="presetMessage" class="my-builds-message" role="status">{{ presetMessage }}</p>
                 <div v-if="presets.length" class="my-builds-list">
@@ -2578,6 +2592,7 @@ const addAllPoints = type => {
 .my-builds-actions, .my-build-row { flex-wrap: wrap; margin: 6px 0; }
 .my-builds-actions input:not(.preset-file), .my-build-row input, .team-config-warp .team-settings input { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
 .my-builds-actions input:not(.preset-file) { width: 180px; }
+.my-builds-actions .evaluation-count input { width: 6em; margin-inline-start: 4px; }
 .my-build-row { border-top: 1px solid #4b4942; padding-top: 6px; }
 .my-build-row input { width: 150px; }
 .my-build-row span { flex: 1; min-width: 175px; }
