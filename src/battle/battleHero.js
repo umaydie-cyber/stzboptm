@@ -1282,9 +1282,12 @@ export class BattleHero {
         const panzhenReduction = panzhen?.round === this.Manger.Round && panzhenKind && !panzhen[panzhenKind] ? 90 : 0;
         const jixianFront = this.Storage.jixianFront;
         const jixianReduction = jixianFront?.round === this.Manger.Round && !jixianFront.used && [1, 2].includes(damageInfo.type) ? 50 : 0;
+        const shengbingBonus = skill?.type === 2 && skill.id === attacker.Skill
+            ? (attacker.Storage.shengbingStacks || 0) * 15 : 0;
         const resolvedInfo = { ...damageInfo, ...(reduceThisHit ? { jianzuReduction: true } : {}),
             treasureJishiReductions: jishiReductions, xinghanBuquReduction: buquReduction,
-            xinghanWeishiReduction: weishiReduction, taieFirstReduction, panzhenReduction, jixianReduction };
+            xinghanWeishiReduction: weishiReduction, taieFirstReduction, panzhenReduction, jixianReduction,
+            shengbingBonus: num == null ? shengbingBonus : 0 };
         const qiqinActive = attacker.Storage.qiqinAllDamageSub?.round === this.Manger.Round;
         const qiqinInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '七擒七纵');
         const applyQiqinToSnapshot = num != null && qiqinActive && !qiqinInSnapshot;
@@ -1325,7 +1328,7 @@ export class BattleHero {
                     : attacker.Arms * 178 / (6459 + attacker.Arms) / 3);
                 const before = 100 + damageInfo.damageModifiers.total;
                 const after = Math.max(10, before - 20);
-                damage = Math.round(base + Math.max(0, damage - base) * after / before);
+                damage += Math.round(Math.max(0, damage - base) * (after / before - 1));
                 resolvedInfo.damageModifiers = {
                     ...damageInfo.damageModifiers,
                     total: damageInfo.damageModifiers.total - 20,
@@ -1345,6 +1348,23 @@ export class BattleHero {
                 //燃烧/恐慌/妖术伤害
                 damage = clacInte2Damage(attacker, this, resolvedInfo, skill);
             }
+        }
+
+        // 持续伤害先保存快照，胜兵只在实际命中时加成一次。
+        if (num != null && shengbingBonus && [1, 2, 4].includes(damageInfo.type)) {
+            const modifiers = resolvedInfo.damageModifiers;
+            const floor = modifiers.entries.find(entry => entry.name === '增减伤下限')?.value || 0;
+            const before = 100 + modifiers.total;
+            const after = Math.max(10, before - floor + shengbingBonus);
+            const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
+                ? attacker.Arms * 373 / (7700 + attacker.Arms)
+                : attacker.Arms * 178 / (6459 + attacker.Arms) / (damageInfo.type === 4 ? 3 : 1));
+            damage += Math.round(Math.max(0, damage - base) * (after / before - 1));
+            const entries = modifiers.entries.filter(entry => entry.name !== '增减伤下限');
+            entries.push({ name: '胜兵求战', hero: attacker.Name, value: shengbingBonus });
+            const newFloor = after - (before - floor + shengbingBonus);
+            if (newFloor) entries.push({ name: '增减伤下限', hero: '', value: newFloor });
+            resolvedInfo.damageModifiers = { total: after - 100, entries };
         }
 
         if (attacker.Storage.cijianRepeat?.skill === skill || attacker.Storage.weiyuRepeat?.skill === skill) damage = Math.floor(damage * 0.5);
@@ -1396,6 +1416,10 @@ export class BattleHero {
             attacker.Storage.wentaoUsedRound !== attacker.Manger.Round) {
             attacker.Storage.wentaoUsedRound = attacker.Manger.Round;
             attacker.Manger.Record.pushRecord(attacker, '的【步兵·文韬】本回合首次策略伤害已触发', 1);
+        }
+        if (realDamage > 0 && shengbingBonus && [1, 2, 4].includes(damageInfo.type)) {
+            attacker.Storage.shengbingStacks = 0;
+            attacker.Manger.Record.pushRecord(attacker, '的【胜兵求战】下次主动主战法伤害加成已消耗', 1);
         }
         if (realDamage > 0 && [1, 2].includes(damageInfo.type) && skill?.type === 2 && attacker.Storage.lingwukongxuanStacks) {
             attacker.Storage.lingwukongxuanStacks = 0;
@@ -2232,13 +2256,13 @@ export class BattleHero {
     //     this
     // }
     //准备技能需被 混乱 犹豫所打断
-    //TODO 需要考虑 法正 和 胜兵的准备回合跳过如何处理
     //添加准备技能
     addReadySkill(from, round, func) {
         if (this.canAddReadySkill(from)) {
             this.callHook('开始准备战法时',from);
-            if(this.READY_VAL[from.id]){
+            if (this.READY_VAL[from.id]) {
                 round += this.READY_VAL[from.id].skip;
+                delete this.READY_VAL[from.id];
             }
             if (this.Treasure?.id === 'yanri' && from.id === this.Skill && from.type === 2 && from.ready) {
                 this.Storage.yanriMainReadyCount = (this.Storage.yanriMainReadyCount || 0) + 1;

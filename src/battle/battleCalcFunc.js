@@ -263,6 +263,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
     }
 
     if (skill && skill.type == 2){
+        if (damageInfo.shengbingBonus && [1, 2, 4].includes(type)) special('胜兵求战', damageInfo.shengbingBonus);
         if ([1, 2].includes(type) && attacker.Storage.lingwukongxuanStacks) special('令无空悬', attacker.Storage.lingwukongxuanStacks * 30, attacker);
         add(attacker, "activeDamageAdd", 1);
         add(attacker, "activeDamageSub", -1);

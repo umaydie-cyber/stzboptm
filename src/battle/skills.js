@@ -2267,30 +2267,36 @@ export const __SKILLS__ = [
     {
         id: 1031, //ID
         name: "胜兵求战", //名称
-        desc: "战斗中，每当自身发动需要准备的主战法时，有80.0%的几率跳过1回合的准备时间。同时，任意友军发动主动战法后，自身下一次主动战法造成的伤害提高15.0%，此效果最多叠加3次", //描述
-        level: "B", //战法级别
-        type: 1, //战法类型 1=指挥 2=主动 3=追击 4=被动
-        target: 1, //目标数量
-        target_type: "self", //作用目标
-        limit: 2, //战法距离
-        rate: "--", //战法发动率
-        study: true, //战法是否可学习
+        desc: "战斗中，每当自身发动需要准备的主战法时，有80.0%的几率跳过1回合的准备时间。同时，任意友军发动主动战法后，自身下一次主动主战法造成的伤害提高15.0%，此效果最多叠加3次",
+        level: "B",
+        type: 1,
+        target: 1,
+        target_type: "self",
+        limit: 2,
+        rate: "--",
+        study: true,
         callskill: function (self) {
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
-            self.addHook("开始准备战法时","跳过准备回合",(skill) => {
-                let realrate = self.getRealSkillRate(80);
-                self.Manger.Record.pushActionRecord(self,self,`来自`,`的【${this.name}】当前生效几率为${realrate}%`);
-                let skip = getRandomBool(realrate);
-                if(skip){
-                    self.READY_VAL[skill.id] = {
-                        skip: -1,
-                        from: this
-                    };
-                    self.Manger.Record.pushActionRecord(self,self,`【${this.name}】使`,"主战法减少准备1回合");
-                }else{
-                    self.Manger.Record.pushActionRecord(self,self,`来自`,`的【${this.name}】没有生效`);
-                }
-            },this,self);
+            self.addHook('开始准备战法时', '胜兵求战跳过准备', skill => {
+                if (skill.id !== self.Skill || skill.type !== 2) return;
+                const rate = self.getRealSkillRate(80);
+                const skip = getRandomBool(rate);
+                self.Manger.Record.pushRecord(self,
+                    `的【胜兵求战】判定（${rate}%）：${skip ? '主战法减少1回合准备' : '未生效'}`, 1);
+                if (skip) self.READY_VAL[skill.id] = { skip: -1, from: this };
+            }, this, self);
+
+            if (self.Skills[self.Skill]?.type !== 2) return;
+            const allies = self.BattleCamp === 'blue' ? self.Manger.BlueTeam.hero : self.Manger.RedTeam.hero;
+            for (const ally of allies) {
+                if (ally === self) continue;
+                ally.addHook('战法成功发动后', '胜兵求战增伤叠层', skill => {
+                    if (skill?.type !== 2 || self.Arms <= 0) return;
+                    const stacks = Math.min(3, (self.Storage.shengbingStacks || 0) + 1);
+                    self.Storage.shengbingStacks = stacks;
+                    self.Manger.Record.pushRecord(self, `的【胜兵求战】下次主动主战法伤害提高${stacks * 15}%`, 1);
+                }, this, self);
+            }
         }
     },
 
@@ -2735,7 +2741,7 @@ export const __SKILLS__ = [
                     target.Limit = Math.max(0, originalLimit - 2);
                     const skills = [];
                     for (const [id, skill] of Object.entries(target.Skills)) {
-                        if (skill.type !== 2) continue;
+                        if (skill?.type !== 2) continue;
                         const reduced = { ...skill, limit: Math.max(0, skill.limit - 2) };
                         target.Skills[id] = reduced;
                         skills.push([id, skill, reduced]);
