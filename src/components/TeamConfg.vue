@@ -248,7 +248,7 @@ const copyBuildToEnvironment = preset => {
         }
     } catch (error) { presetMessage.value = `加入环境队伍失败：${error.message}`; }
 };
-const scoreEnvironment = preset => {
+const scoreEnvironment = (preset, deep = false) => {
     if (!environmentTeams.value.length) {
         presetMessage.value = '请先添加至少一支环境队伍';
         return;
@@ -264,7 +264,7 @@ const scoreEnvironment = preset => {
             presetMessage.value = `没有可评分的环境队伍：${excluded} 支队伍与本构筑武将及速度相同，已自动过滤`;
             return;
         }
-        emit('score-environment', { name: preset.name, build, opponents, excluded });
+        emit('score-environment', { name: preset.name, build, opponents, excluded, deep });
         emit('update:show', false);
     } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };
@@ -791,6 +791,7 @@ const addAllPoints = type => {
                         <button type="button" @click="updateBuild(preset)">覆盖保存</button>
                         <button type="button" @click="copyBuildToEnvironment(preset)">加入环境构筑</button>
                         <button type="button" @click="scoreEnvironment(preset)">对抗环境评分</button>
+                        <button type="button" @click="scoreEnvironment(preset, true)">战法深度评测</button>
                         <button type="button" @click="removeBuild(preset)">删除</button>
                     </div>
                 </div>

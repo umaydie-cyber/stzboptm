@@ -61,3 +61,19 @@ export function weightedEnvironmentScore(rows) {
 export function scoreLabel(value) {
     return value === null ? '—' : value === Infinity ? '∞' : value.toFixed(2);
 }
+
+export function simulateMatchupBatch(config, totals, count) {
+    const originalLog = console.log;
+    console.log = () => {};
+    try {
+        for (let i = 0; i < count; i++) {
+            const battle = new BattleManger(config, { records: false });
+            totals.ownWounded += battle.BlueTeam.hurtArms;
+            totals.ownDead += battle.BlueTeam.total - battle.BlueTeam.arms - battle.BlueTeam.hurtArms;
+            totals.enemyWounded += battle.RedTeam.hurtArms;
+            totals.enemyDead += battle.RedTeam.total - battle.RedTeam.arms - battle.RedTeam.hurtArms;
+        }
+    } finally {
+        console.log = originalLog;
+    }
+}

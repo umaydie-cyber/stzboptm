@@ -2,10 +2,11 @@
 import { BattleManger } from './battle/battleManger'
 import { __SKILLS__ as SKILLS } from './battle/skills';
 import { __HEROS__ } from './battle/heros';
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
+import SkillEvaluationReport from './components/SkillEvaluationReport.vue';
 import TeamConfig from './components/TeamConfg.vue';
 import { summarizeBattles, ratio } from './battle/statistics';
-import { matchupScore, weightedEnvironmentScore, scoreLabel } from './battle/environmentScore';
+import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore, scoreLabel } from './battle/environmentScore';
 import { validateBuild } from './buildPresets';
 import defaultTeams from './defaultTeams.json';
 
@@ -49,6 +50,50 @@ const environmentScoring = ref(false);
 const environmentProgress = ref(0);
 const environmentTotal = ref(0);
 const environmentError = ref('');
+const deepEvaluation = ref(false);
+const environmentName = ref('');
+let evaluationWorker;
+
+const stopEvaluation = () => {
+    evaluationWorker?.terminate();
+    evaluationWorker = undefined;
+};
+onUnmounted(stopEvaluation);
+
+const closeEnvironmentReport = () => {
+    showEnvironmentReport.value = false;
+    if (deepEvaluation.value) {
+        stopEvaluation();
+        environmentScoring.value = false;
+    }
+};
+
+const runSkillEvaluation = payload => {
+    const finish = error => {
+        if (error) environmentError.value = `评测失败：${error}`;
+        stopEvaluation();
+        environmentScoring.value = false;
+    };
+    try {
+        evaluationWorker = new Worker(new URL('./battle/skillEvaluation.worker.js', import.meta.url), { type: 'module' });
+        evaluationWorker.onmessage = ({ data }) => {
+            if (data.error) {
+                finish(data.error);
+                return;
+            }
+            environmentProgress.value = data.completed;
+            environmentTotal.value = data.total;
+            if (data.report) {
+                environmentReport.value = data.report;
+                finish();
+            }
+        };
+        evaluationWorker.onerror = event => finish(event.message || '无法运行评测线程');
+        evaluationWorker.postMessage(payload);
+    } catch (error) {
+        finish(error.message);
+    }
+};
 const configuredArms = camp => team.value[camp].heros.reduce((sum, hero) => sum + (Number(hero.arms) || 10000), 0);
 const previewScale = camp => Math.max(team.value[camp].heros.length * 10000, configuredArms(camp));
 const format = value => Number(value || 0).toFixed(1);
@@ -120,32 +165,28 @@ const simulate = async () => {
 	}
 };
 
-const scoreEnvironment = async ({ name, build, opponents, excluded }) => {
+const scoreEnvironment = async ({ name, build, opponents, excluded, deep }) => {
     if (environmentScoring.value) return;
     environmentScoring.value = true;
     environmentReport.value = null;
     environmentError.value = '';
     environmentProgress.value = 0;
-    environmentTotal.value = opponents.length * 500;
+    environmentTotal.value = deep ? 0 : opponents.length * 500;
+    deepEvaluation.value = deep;
+    environmentName.value = name;
     showEnvironmentReport.value = true;
     showStatistics.value = false;
-    const originalLog = console.log;
+    if (deep) {
+        runSkillEvaluation({ name, build, opponents, excluded });
+        return;
+    }
     try {
         const rows = [];
         for (const opponent of opponents) {
             const config = { blue: build, red: opponent.build };
             const totals = { ownWounded: 0, ownDead: 0, enemyWounded: 0, enemyDead: 0 };
             for (let i = 0; i < 500; i += 25) {
-                console.log = () => {};
-                try {
-                    for (let j = 0; j < 25; j++) {
-                        const battle = new BattleManger(config, { records: false });
-                        totals.ownWounded += battle.BlueTeam.hurtArms;
-                        totals.ownDead += battle.BlueTeam.total - battle.BlueTeam.arms - battle.BlueTeam.hurtArms;
-                        totals.enemyWounded += battle.RedTeam.hurtArms;
-                        totals.enemyDead += battle.RedTeam.total - battle.RedTeam.arms - battle.RedTeam.hurtArms;
-                    }
-                } finally { console.log = originalLog; }
+                simulateMatchupBatch(config, totals, 25);
                 environmentProgress.value += 25;
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
@@ -155,7 +196,6 @@ const scoreEnvironment = async ({ name, build, opponents, excluded }) => {
     } catch (error) {
         environmentError.value = `环境评分失败：${error.message}`;
     } finally {
-        console.log = originalLog;
         environmentScoring.value = false;
     }
 };
@@ -357,12 +397,18 @@ const scoreEnvironment = async ({ name, build, opponents, excluded }) => {
 				</div>
 			</template>
 		</div>
-		<div class="statistics" v-if="showEnvironmentReport" role="dialog" aria-label="环境强度报告">
-			<div class="statistics-header"><h2>环境强度报告 · {{ environmentReport?.name || '计算中' }}</h2><button type="button" @click="showEnvironmentReport = false" aria-label="关闭环境强度报告">关闭 ✕</button></div>
-			<p v-if="environmentScoring" role="status">对抗环境评分中：{{ environmentProgress }}/{{ environmentTotal }} 场</p>
+		<div class="statistics" v-if="showEnvironmentReport" role="dialog" :aria-label="deepEvaluation ? '战法深度评测' : '环境强度报告'">
+			<div class="statistics-header">
+				<h2>{{ deepEvaluation ? '战法深度评测' : '环境强度报告' }} · {{ environmentName }}</h2>
+				<button type="button" @click="closeEnvironmentReport">{{ deepEvaluation && environmentScoring ? '取消评测' : '关闭 ✕' }}</button>
+			</div>
+			<p v-if="environmentScoring" role="status">
+				{{ deepEvaluation ? '战法评测中' : '对抗环境评分中' }}：{{ environmentTotal ? `${environmentProgress}/${environmentTotal} 场` : '准备中' }}
+			</p>
 			<p v-if="environmentError" role="alert">{{ environmentError }}</p>
-			<template v-if="environmentReport">
-				<p v-if="environmentReport.excluded">已自动过滤 {{ environmentReport.excluded }} 支武将和速度均相同的环境队伍。</p>
+			<p v-if="environmentReport?.excluded">已自动过滤 {{ environmentReport.excluded }} 支武将和速度均相同的环境队伍。</p>
+			<SkillEvaluationReport v-if="environmentReport && deepEvaluation" :report="environmentReport" />
+			<template v-else-if="environmentReport">
 				<h3>总体环境武勋评分 {{ scoreLabel(environmentReport.overall.merit) }} · 总体战损评分 {{ scoreLabel(environmentReport.overall.loss) }}</h3>
 				<p>每支环境队伍模拟 500 场；构筑为攻方。逐队比值由 500 场平均伤亡计算，再按环境权重加权平均。比值越高，表现越强。</p>
 				<p>武勋比＝我方造成的伤兵＋死亡 / 我方承受的伤兵＋死亡；战损比＝敌方死亡 / 我方死亡。双方均为零时显示“—”并不计入该项加权平均；仅分母为零时显示“∞”。</p>
