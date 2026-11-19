@@ -2,7 +2,7 @@ import { __HEROS__ } from './heros';
 import { __SKILLS__ } from './skills';
 import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore } from './environmentScore';
 
-const battlesPerOpponent = 20;
+const battlesPerOpponent = 100;
 const innateSkills = new Map(__HEROS__.map(hero => [hero.id, hero.skill]));
 
 self.onmessage = ({ data: { name, build, opponents, excluded } }) => {
