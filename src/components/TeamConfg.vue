@@ -249,10 +249,10 @@ const copyBuildToEnvironment = preset => {
         }
     } catch (error) { presetMessage.value = `加入环境队伍失败：${error.message}`; }
 };
-const scoreEnvironment = (preset, deep = false) => {
+const scoreEnvironment = (preset, evaluation = null) => {
     const battlesPerOpponent = evaluationBattleCount.value;
-    if (deep && (!Number.isSafeInteger(battlesPerOpponent) || battlesPerOpponent < 1)) {
-        presetMessage.value = '战法评测场数必须是正整数';
+    if (evaluation && (!Number.isSafeInteger(battlesPerOpponent) || battlesPerOpponent < 1)) {
+        presetMessage.value = '测评场数必须是正整数';
         return;
     }
     if (!environmentTeams.value.length) {
@@ -270,7 +270,7 @@ const scoreEnvironment = (preset, deep = false) => {
             presetMessage.value = `没有可评分的环境队伍：${excluded} 支队伍与本构筑武将及速度相同，已自动过滤`;
             return;
         }
-        emit('score-environment', { name: preset.name, build, opponents, excluded, deep, battlesPerOpponent });
+        emit('score-environment', { name: preset.name, build, opponents, excluded, evaluation, battlesPerOpponent });
         emit('update:show', false);
     } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };
@@ -790,11 +790,11 @@ const addAllPoints = type => {
                 </div>
                 <div class="my-builds-actions">
                     <label class="evaluation-count">
-                        战法评测场数
+                        测评场数
                         <input v-model.number="evaluationBattleCount" type="number" min="1" step="1"
                             aria-describedby="evaluation-count-hint">
                     </label>
-                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
+                    <small id="evaluation-count-hint">战法和武将测评共用。每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
                 </div>
                 <p v-if="presetMessage" class="my-builds-message" role="status">{{ presetMessage }}</p>
                 <div v-if="presets.length" class="my-builds-list">
@@ -805,7 +805,8 @@ const addAllPoints = type => {
                         <button type="button" @click="updateBuild(preset)">覆盖保存</button>
                         <button type="button" @click="copyBuildToEnvironment(preset)">加入环境构筑</button>
                         <button type="button" @click="scoreEnvironment(preset)">对抗环境评分</button>
-                        <button type="button" @click="scoreEnvironment(preset, true)">战法深度评测</button>
+                        <button type="button" @click="scoreEnvironment(preset, 'skill')">战法测评</button>
+                        <button type="button" @click="scoreEnvironment(preset, 'hero')">武将测评</button>
                         <button type="button" @click="removeBuild(preset)">删除</button>
                     </div>
                 </div>
