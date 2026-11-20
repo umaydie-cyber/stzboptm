@@ -66,8 +66,8 @@ self.onmessage = ({ data: {
         const hasSlotSpecificCandidates = isTreasureEvaluation || isArmyEvaluation;
         if (!slots.length) {
             const message = {
-                treasure: '请先为当前阵容装备至少一件宝物',
-                army: '当前阵容没有可测评兵种的武将',
+                treasure: '这套构筑没有装备宝物',
+                army: '这套构筑没有可测评兵种的武将',
                 skill: '请先为构筑配置至少一个可更换战法'
             };
             throw new Error(message[evaluation] || '当前阵容没有可测评的位置');

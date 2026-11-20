@@ -273,7 +273,7 @@ const scoreEnvironment = (preset, evaluation = null) => {
     try {
         const build = validateBuild(preset.build);
         if (evaluation === 'treasure' && !build.heros.some(hero => Object.hasOwn(treasureSpecs, hero.treasure?.id))) {
-            presetMessage.value = '请先为当前阵容装备至少一件宝物';
+            presetMessage.value = '这套构筑没有装备宝物，请装备后保存构筑';
             return;
         }
         const allOpponents = environmentTeams.value.map(entry => ({
@@ -296,11 +296,6 @@ const scoreEnvironment = (preset, evaluation = null) => {
         emit('update:show', false);
     } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };
-const evaluateCurrentBuild = evaluation => scoreEnvironment({
-    name: camp.value === 'blue' ? '当前攻方阵容' : '当前守方阵容',
-    build: team.value[camp.value]
-}, evaluation);
-
 const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
 const fourCampDefinitions = [
     { key: 'swift', name: '疾风营', attr: '速度', special: '10级：首回合全体速度额外+10' },
@@ -631,9 +626,7 @@ const addAllPoints = type => {
                             <option v-for="(label, key) in BATTLE_METRICS" :key="key" :value="key">{{ label }}</option>
                         </select>
                     </label>
-                    <button type="button" @click="evaluateCurrentBuild('treasure')">宝物测评</button>
-                    <button type="button" @click="evaluateCurrentBuild('army')">兵种测评</button>
-                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。宝物和兵种测评使用当前阵容。</small>
+                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
                 </div>
                 <p v-if="presetMessage" class="my-builds-message" role="status">{{ presetMessage }}</p>
                 <div v-if="presets.length" class="my-builds-list">
@@ -646,6 +639,8 @@ const addAllPoints = type => {
                         <button type="button" @click="scoreEnvironment(preset)">对抗环境评分</button>
                         <button type="button" @click="scoreEnvironment(preset, 'skill')">战法测评</button>
                         <button type="button" @click="scoreEnvironment(preset, 'hero')">武将测评</button>
+                        <button type="button" @click="scoreEnvironment(preset, 'treasure')">宝物测评</button>
+                        <button type="button" @click="scoreEnvironment(preset, 'army')">兵种测评</button>
                         <button type="button" @click="removeBuild(preset)">删除</button>
                     </div>
                 </div>
