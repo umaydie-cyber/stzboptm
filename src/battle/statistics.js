@@ -1,3 +1,25 @@
+export const BATTLE_METRICS = {
+    efficiency: '武勋效率',
+    loss: '战损比',
+    merit: '武勋比'
+};
+
+export const DEFAULT_EVALUATION_METRIC = 'efficiency';
+
+export function battleMetrics({ ownWounded, ownDead, enemyWounded, enemyDead }) {
+    const ratio = (caused, suffered) => suffered === 0 ? (caused === 0 ? null : Infinity) : caused / suffered;
+    const enemyCasualties = enemyWounded + enemyDead;
+    return {
+        efficiency: ratio(enemyCasualties, ownDead),
+        loss: ratio(enemyDead, ownDead),
+        merit: ratio(enemyCasualties, ownWounded + ownDead)
+    };
+}
+
+export function scoreLabel(value) {
+    return value === null ? '—' : value === Infinity ? '∞' : value.toFixed(2);
+}
+
 export function summarizeBattles(battles) {
     const result = {
         count: battles.length,
@@ -27,10 +49,11 @@ export function summarizeBattles(battles) {
             skills: Object.values(skills).map(item => ({ ...item, damage: item.damage / battles.length, recovery: item.recovery / battles.length }))
         };
     }
+    result.metrics = battleMetrics({
+        ownWounded: result.blue.wounded,
+        ownDead: result.blue.dead,
+        enemyWounded: result.red.wounded,
+        enemyDead: result.red.dead
+    });
     return result;
-}
-
-export function ratio(value, other) {
-    if (!other) return value ? '∞' : '—';
-    return (value / other).toFixed(2);
 }

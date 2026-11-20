@@ -11,6 +11,9 @@ import { CAVALRY_TRAITS } from '../battle/cavalryTraits';
 import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 import { sameRosterAndSpeed } from '../battle/environmentScore';
+import { createHeroConfig, HERO_POOL_STORAGE_KEY } from '../heroPool';
+import { BATTLE_METRICS, DEFAULT_EVALUATION_METRIC } from '../battle/statistics';
+import { treasureSpecs, treasureImageUrl, TREASURE_BASE_POINTS, TREASURE_MAX_POINTS, TREASURE_UPGRADE_POINTS } from '../battle/treasures';
 
 let SKILLS = {};
 let SKILL_LIST = {1:[],2:[],3:[],4:[]};
@@ -36,6 +39,7 @@ const emit = defineEmits(['update:show', 'update:team', 'saved', 'score-environm
 const { show, team } = toRefs(props);
 const camp = ref('blue');
 const evaluationBattleCount = ref(100);
+const evaluationMetric = ref(DEFAULT_EVALUATION_METRIC);
 const presetName = ref('');
 const presetMessage = ref('');
 const importInput = ref(null);
@@ -46,6 +50,13 @@ const environmentWeight = ref(50);
 const environmentSource = ref('current');
 const environmentMessage = ref('');
 const environmentImportInput = ref(null);
+const heroPool = ref({});
+try {
+    const stored = localStorage.getItem(HERO_POOL_STORAGE_KEY);
+    if (stored) heroPool.value = JSON.parse(stored) || {};
+} catch {
+    // Use the default pool when browser storage is unavailable.
+}
 try {
     const stored = localStorage.getItem(PRESET_STORAGE_KEY);
     if (stored) presets.value = parseBuildPresets(stored).map(item => ({ ...item, id: item.id || crypto.randomUUID() }));
@@ -261,19 +272,35 @@ const scoreEnvironment = (preset, evaluation = null) => {
     }
     try {
         const build = validateBuild(preset.build);
+        if (evaluation === 'treasure' && !build.heros.some(hero => Object.hasOwn(treasureSpecs, hero.treasure?.id))) {
+            presetMessage.value = '请先为当前阵容装备至少一件宝物';
+            return;
+        }
         const allOpponents = environmentTeams.value.map(entry => ({
             id: entry.id, name: entry.name, weight: validateEnvironmentWeight(entry.weight), build: validateBuild(entry.build)
         }));
-        const opponents = allOpponents.filter(entry => !sameRosterAndSpeed(build, entry.build));
+        const opponents = evaluation === 'treasure' || evaluation === 'army'
+            ? allOpponents
+            : allOpponents.filter(entry => !sameRosterAndSpeed(build, entry.build));
         const excluded = allOpponents.length - opponents.length;
         if (!opponents.length) {
             presetMessage.value = `没有可评分的环境队伍：${excluded} 支队伍与本构筑武将及速度相同，已自动过滤`;
             return;
         }
-        emit('score-environment', { name: preset.name, build, opponents, excluded, evaluation, battlesPerOpponent });
+        emit('score-environment', {
+            name: preset.name, build, opponents, excluded, evaluation, battlesPerOpponent,
+            ...(evaluation && { metric: evaluationMetric.value }),
+            ...(evaluation === 'army' && { ownCamp: camp.value }),
+            ...(evaluation === 'hero' && { heroPool: JSON.parse(JSON.stringify(heroPool.value)) })
+        });
         emit('update:show', false);
     } catch (error) { presetMessage.value = `评分失败：${error.message}`; }
 };
+const evaluateCurrentBuild = evaluation => scoreEnvironment({
+    name: camp.value === 'blue' ? '当前攻方阵容' : '当前守方阵容',
+    build: team.value[camp.value]
+}, evaluation);
+
 const generalPlatformLevels = Array.from({ length: 11 }, (_, level) => level);
 const fourCampDefinitions = [
     { key: 'swift', name: '疾风营', attr: '速度', special: '10级：首回合全体速度额外+10' },
@@ -308,6 +335,8 @@ const testt = ref({
     },
 })
 const showHeroList = ref(false);
+const editingHeroPool = ref(false);
+const poolEvaluationEnabled = ref(true);
 const heroSearch = ref('');
 const heroSort = ref('default');
 const heroSortDescending = ref(false);
@@ -346,196 +375,12 @@ const showHeroInfo = ref(false);
 const showTreasure = ref(false);
 const treasureHero = ref(0);
 const treasureDraft = ref(null);
-const tongsuForgeOptions = [
-    { id: 'xiaorui', name: '骁锐', min: 5, max: 15, desc: '基础攻击属性提高' },
-    { id: 'zhice', name: '至策', min: 10, max: 20, desc: '主动战法伤害提高' },
-    { id: 'podi', name: '破敌', min: 10, max: 20, desc: '攻击伤害无视目标防御' },
-    { id: 'yingyong', name: '英勇', min: 5, max: 15, desc: '攻击型主战法发动率提高' },
-    { id: 'shanmou', name: '善谋', min: 10, max: 30, desc: '第4、6回合攻击型主战法发动率提高' },
-    { id: 'jianren', name: '坚忍', min: 10, max: 20, desc: '受到的主动战法伤害降低' }
-];
-const yuanrongForgeOptions = [
-    tongsuForgeOptions[0],
-    { id: 'tianzi', name: '天资', min: 5, max: 15, desc: '基础谋略属性提高' },
-    { id: 'benxi', name: '奔袭', min: 3, max: 9, desc: '所有追击战法发动率提高' },
-    { id: 'jianyi', name: '坚毅', min: 2, max: 6, unit: '回合', desc: '前几回合免疫暴走和混乱' },
-    { id: 'xuanfeng', name: '选锋', min: 10, max: 30, desc: '普通攻击后下一次策略伤害提高' },
-    { id: 'xurui', name: '蓄锐', min: 5, max: 15, desc: '每两次普攻，追击伤害叠加提高' }
-];
-const fenranForgeOptions = [
-    tongsuForgeOptions[0], tongsuForgeOptions[2],
-    { id: 'xianzhen', name: '陷阵', min: 10, max: 30, desc: '普通攻击伤害提高' },
-    { id: 'qiangji', name: '强击', min: 1, max: 5, unit: '回合', desc: '前几回合普通攻击不受反击' },
-    { id: 'qingyi', name: '清毅', min: 5, max: 8, unit: '回合', desc: '第5回合至所选回合获得洞察' },
-    { id: 'cangfeng', name: '藏锋', min: 10, max: 30, desc: '本回合未普攻时，下回合首次普攻无视防御' }
-];
-const youpiaoForgeOptions = [
-    { id: 'lingdong', name: '灵动', min: 10, max: 30, unit: '速度', desc: '速度属性提高' },
-    yuanrongForgeOptions[1],
-    { id: 'yingwu', name: '颖悟', min: 10, max: 20, desc: '策略伤害额外无视目标谋略' },
-    { id: 'quhuo', name: '驱火', min: 10, max: 30, desc: '燃烧及火攻伤害提高' },
-    { id: 'xuanhuo', name: '炫惑', min: 10, max: 30, desc: '恐慌及妖术伤害提高' },
-    { id: 'chousuan', name: '筹算', min: 5, max: 15, desc: '策略伤害主战法发动率提高' }
-];
-const wuhaoForgeOptions = [
-    { id: 'shulv', name: '熟虑', min: 6, max: 20, desc: '需准备的武将主战法发动率提高' },
-    yuanrongForgeOptions[1],
-    { id: 'kangli', name: '亢厉', min: 10, max: 30, desc: '主动及追击主战法伤害提高' },
-    tongsuForgeOptions[1], tongsuForgeOptions[0],
-    { id: 'jixu', name: '击虚', min: 3, max: 9, desc: '每种持续伤害或控制效果使目标受到的伤害提高' }
-];
-const xushibishouForgeOptions = [
-    yuanrongForgeOptions[1], tongsuForgeOptions[0], youpiaoForgeOptions[5],
-    { id: 'shipo', name: '识破', min: 1, max: 4, unit: '回合', desc: '前几回合主战法伤害无视规避' },
-    wuhaoForgeOptions[2], tongsuForgeOptions[3]
-];
-const louyingForgeOptions = [
-    tongsuForgeOptions[0], tongsuForgeOptions[5], yuanrongForgeOptions[1],
-    { id: 'buxie', name: '不懈', min: 3, max: 9, desc: '每损失15%初始兵力，受到的恢复效果提高' },
-    fenranForgeOptions[4],
-    { id: 'shanzhan', name: '善战', min: 3, max: 7, unit: '层', desc: '每次造成攻击或策略伤害增伤2%，最多叠加' }
-];
-const tianwenForgeOptions = [
-    yuanrongForgeOptions[1],
-    { id: 'jiebei', name: '戒备', min: 10, max: 30, desc: '前2回合受到的所有伤害降低' },
-    { id: 'jimin', name: '机敏', min: 3, max: 9, desc: '武将主战法发动率提高' },
-    wuhaoForgeOptions[0], tongsuForgeOptions[5],
-    { id: 'renxin', name: '仁心', min: 5, max: 15, desc: '造成的恢复效果提高' }
-];
-const shanjunForgeOptions = [
-    tongsuForgeOptions[0], yuanrongForgeOptions[2], yuanrongForgeOptions[5], tongsuForgeOptions[2],
-    { id: 'wuwei', name: '无畏', min: 10, max: 30, desc: '追击战法伤害提高' },
-    yuanrongForgeOptions[3]
-];
-const jinjiuForgeOptions = [
-    wuhaoForgeOptions[0], yuanrongForgeOptions[1], wuhaoForgeOptions[2],
-    tongsuForgeOptions[1], tongsuForgeOptions[0], wuhaoForgeOptions[5]
-];
-const weizhisan_gongForgeOptions = [
-    wuhaoForgeOptions[0], yuanrongForgeOptions[1], wuhaoForgeOptions[2],
-    tongsuForgeOptions[1], tongsuForgeOptions[0], wuhaoForgeOptions[5]
-];
-const xinghanForgeOptions = [
-    { id: 'jishi', name: '济世', min: 5, max: 15, desc: '主战法每次造成恢复后，目标下一次受到的伤害降低（可叠加）' },
-    tongsuForgeOptions[5],
-    { id: 'buqu', name: '不屈', min: 3, max: 9, desc: '每次受到伤害后，本回合后续受到的所有伤害降低（可叠加）' },
-    louyingForgeOptions[3],
-    { id: 'weishi', name: '威势', min: 10, max: 20, desc: '受到统帅值低于自身的武将造成的所有伤害降低' },
-    tianwenForgeOptions[1]
-];
-const shenfengForgeOptions = [
-    tongsuForgeOptions[0], yuanrongForgeOptions[1], yuanrongForgeOptions[2],
-    yuanrongForgeOptions[3], yuanrongForgeOptions[4], yuanrongForgeOptions[5]
-];
-const qianjunForgeOptions = [
-    { id: 'wengu', name: '稳固', min: 10, max: 20, desc: '防御属性提高' },
-    tianwenForgeOptions[2], xinghanForgeOptions[2], xinghanForgeOptions[0],
-    xinghanForgeOptions[4], youpiaoForgeOptions[0],
-    { id: 'huoyan', name: '惑言', min: 1, max: 4, unit: '个', desc: '正式回合起主战法成功施加的前几个控制效果额外持续1回合' }
-];
-const daluForgeOptions = [
-    ...qianjunForgeOptions.slice(0, 5),
-    { id: 'genzhi', name: '艮止', min: 10, max: 30, unit: '谋略', desc: '无法普通攻击（不可消除），谋略属性提高' },
-    qianjunForgeOptions[6]
-];
-const taieForgeOptions = [
-    tianwenForgeOptions[2], youpiaoForgeOptions[0], tongsuForgeOptions[5],
-    { id: 'chenwen', name: '沉稳', min: 10, max: 20, desc: '受到指挥战法伤害降低' },
-    qianjunForgeOptions[0],
-    { id: 'qiangren', name: '强韧', min: 10, max: 20, desc: '受到普通攻击伤害降低' },
-    fenranForgeOptions[4]
-];
-const shaofuForgeOptions = [
-    tongsuForgeOptions[0], fenranForgeOptions[2], fenranForgeOptions[3],
-    yuanrongForgeOptions[2], yuanrongForgeOptions[3], shanjunForgeOptions[4]
-];
-const renfengForgeOptions = [
-    youpiaoForgeOptions[0], tianwenForgeOptions[2], fenranForgeOptions[4],
-    tianwenForgeOptions[5], tongsuForgeOptions[5], daluForgeOptions[5], qianjunForgeOptions[6]
-];
-const treasureSpecs = {
-    tongsu: { name: '彤素', first: 'xiaorui', second: 'kangli', firstName: '骁锐', secondName: '亢厉', fixedName: '奇袭',
-        fixedDesc: '造成攻击伤害时，与目标距离每提高 1，伤害提高 3%', forgeOptions: tongsuForgeOptions },
-    yuanrong: { name: '元戎', first: 'xianzhen', second: 'wuwei', firstName: '陷阵', secondName: '无畏', fixedName: '迸发',
-        fixedDesc: '首次发动追击类主战法时，攻击距离内额外选取 1 个目标', forgeOptions: yuanrongForgeOptions },
-    fenran: { name: '奋髯', first: 'xiaorui', second: 'buyi', firstName: '骁锐', secondName: '不移', fixedName: '奋武',
-        fixedDesc: '普通攻击增伤累计超过 250% 时，该次攻击无视规避', forgeOptions: fenranForgeOptions },
-    youpiao: { name: '游飘', first: 'xianzhi', second: 'miaosuan', firstName: '先知', secondName: '妙算', fixedName: '颖悟',
-        fixedDesc: '造成的策略伤害无视目标 10% 谋略属性', forgeOptions: youpiaoForgeOptions },
-    wuhao: { name: '乌号', first: 'lingdong', second: 'kangli', firstName: '灵动', secondName: '亢厉', fixedName: '逐胜',
-        fixedDesc: '对敌方当前兵力最低的武将造成伤害提高 15%；兵力相同者均生效', forgeOptions: wuhaoForgeOptions },
-    xushibishou: { name: '徐氏匕首', first: 'lingdong', second: 'podi', firstName: '灵动', secondName: '破敌', fixedName: '英才',
-        fixedDesc: '攻击与谋略属性提高 5%', forgeOptions: xushibishouForgeOptions },
-    louying: { name: '镂影', first: 'jianren', second: 'yingcai', firstName: '坚忍', secondName: '英才', fixedName: '穿影',
-        fixedDesc: '每对敌军造成 4 次攻击伤害，下次行动前对 3 距离内敌军单体发动 1 次攻击（伤害率 20%）', forgeOptions: louyingForgeOptions },
-    tianwen: { name: '天问', first: 'buyi', second: 'tianzi', firstName: '不移', secondName: '天资', fixedName: '观星',
-        fixedDesc: '首次发动主战法施加犹豫时，有 40% 概率额外持续 1 回合', forgeOptions: tianwenForgeOptions },
-    shanjun: { name: '山君', first: 'podi', second: 'xiaorui', firstName: '破敌', secondName: '骁锐', fixedName: '虎啸',
-        fixedDesc: '行动时自身主战法每提供 30% 攻击增伤，本回合追击战法发动率提高 1%（受士气影响）', forgeOptions: shanjunForgeOptions },
-    jinjiu: { name: '金鸠', first: 'podi', second: 'kangli', firstName: '破敌', secondName: '亢厉', fixedName: '鸠佑',
-        fixedDesc: '自身主动类武将主战法每发动一次，之后造成的攻击伤害提高 6%，可叠加', forgeOptions: jinjiuForgeOptions },
-    weizhisan_gong: { name: '位至三公', first: 'wengu', second: 'yanshi', firstName: '稳固', secondName: '炎势', fixedName: '燮理',
-        fixedDesc: '正式回合后，自身施加的燃烧效果每回合首次造成伤害后，自身恢复一次兵力（恢复率 120%）', forgeOptions: weizhisan_gongForgeOptions },
-    xinghan: { name: '星汉', first: 'wengu', second: 'buyi', firstName: '稳固', secondName: '不移', fixedName: '归心',
-        fixedDesc: '我军全体每发动 2 次主动战法，自身恢复一次兵力（恢复率 150%）', forgeOptions: xinghanForgeOptions },
-    canghai: { name: '沧海', first: 'wengu', second: 'jianren', firstName: '稳固', secondName: '坚忍', fixedName: '破浪',
-        fixedDesc: '每受到 1 次伤害，本回合造成的所有伤害提高 10%，最多叠加 10 次', forgeOptions: xinghanForgeOptions },
-    shenfeng: { name: '神锋', first: 'wuwei', second: 'yingcai', firstName: '无畏', secondName: '英才', fixedName: '劲弩',
-        fixedDesc: '首回合无法普通攻击；第 2 回合起首次普通攻击时，对攻击距离内敌军全体各发动 1 次普通攻击', forgeOptions: shenfengForgeOptions },
-    xiuni: { name: '貅猊', first: 'jianren', second: 'xiaorui', firstName: '坚忍', secondName: '骁锐', fixedName: '迅猛',
-        fixedDesc: '处于连击状态时，普通攻击伤害提高 20%', forgeOptions: shenfengForgeOptions },
-    longlin: { name: '龙鳞', first: 'lingdong', second: 'kangli', firstName: '灵动', secondName: '亢厉', fixedName: '慎心',
-        fixedDesc: '自身追击类武将主战法施加的控制效果额外持续 1 回合', forgeOptions: shenfengForgeOptions },
-    tengshe: { name: '螣蛇', first: 'lingdong', second: 'xiaorui', firstName: '灵动', secondName: '骁锐', fixedName: '豪纵',
-        fixedDesc: '自身主动类武将主战法的战法距离 +1', forgeOptions: jinjiuForgeOptions },
-    jushu: { name: '钜黍', first: 'wuwei', second: 'lingdong', firstName: '无畏', secondName: '灵动', fixedName: '穿杨',
-        fixedDesc: '自身攻击距离 +1', forgeOptions: jinjiuForgeOptions },
-    qianjun: { name: '千钧', first: 'wengu', second: 'anzhen', firstName: '稳固', secondName: '安贞', fixedName: '破障',
-        fixedDesc: '普通攻击后，移除攻击目标由主动或追击战法带来的1种增益效果', forgeOptions: qianjunForgeOptions },
-    dalu: { name: '大橹', first: 'qiangren', second: 'jianren', firstName: '强韧', secondName: '坚忍', fixedName: '避险',
-        fixedDesc: '战斗中首次实际受到伤害后，获得1次规避，免疫下一次受到的伤害', forgeOptions: daluForgeOptions },
-    taie: { name: '泰阿', first: 'xiaorui', second: 'mingjing', firstName: '骁锐', secondName: '明镜', fixedName: '强固',
-        fixedDesc: '正式回合开始后，每回合首次受到的伤害降低20%', forgeOptions: taieForgeOptions },
-    dajiang: { name: '大将', first: 'wengu', second: 'qiangren', firstName: '稳固', secondName: '强韧', fixedName: '护主',
-        fixedDesc: '战斗开始后的前2回合，援护我军大营，替其承受普通攻击', forgeOptions: taieForgeOptions },
-    yanri: { name: '掩日', first: 'wengu', second: 'kangli', firstName: '稳固', secondName: '亢厉', fixedName: '谋断',
-        fixedDesc: '第2次发动需要准备的主动类武将主战法时，跳过1个准备回合', forgeOptions: jinjiuForgeOptions },
-    shaofu: { name: '少府', first: 'xiaorui', second: 'xianzhen', firstName: '骁锐', secondName: '陷阵', fixedName: '再战',
-        fixedDesc: '第5回合有50%几率获得连击效果', forgeOptions: shaofuForgeOptions },
-    renfeng: { name: '仁风', first: 'xianzhi', second: 'lingdong', firstName: '先知', secondName: '灵动', fixedName: '天资',
-        fixedDesc: '谋略属性提高8%', forgeOptions: renfengForgeOptions },
-    bolang: { name: '博浪', first: 'anzhen', second: 'jianren', firstName: '安贞', secondName: '坚忍', fixedName: '抖擞',
-        fixedDesc: '自身受到的恢复效果提高25%', forgeOptions: renfengForgeOptions },
-    chengying: { name: '承影', first: 'xiaorui', second: 'tianzi', firstName: '骁锐', secondName: '天资', fixedName: '机先',
-        fixedDesc: '正式回合开始后，前2次造成的策略伤害提高20%', forgeOptions: youpiaoForgeOptions },
-    jingyangwanren: { name: '旌阳万仞', first: 'wengu', second: 'kangli', firstName: '稳固', secondName: '亢厉', fixedName: '睥睨',
-        fixedDesc: '恐慌、妖术、燃烧、火攻伤害提高10%', forgeOptions: youpiaoForgeOptions },
-    xuanyi: { name: '悬翳', first: 'wengu', second: 'xiaorui', firstName: '稳固', secondName: '骁锐', fixedName: '亢厉',
-        fixedDesc: '主动战法造成的攻击伤害提高10%', forgeOptions: xushibishouForgeOptions },
-    kunwu: { name: '锟铻', first: 'wengu', second: 'kangli', firstName: '稳固', secondName: '亢厉', fixedName: '英才',
-        fixedDesc: '攻击、谋略、速度属性提高8', forgeOptions: xushibishouForgeOptions },
-    minghong: { name: '铭鸿', first: 'wengu', second: 'yingcai', firstName: '稳固', secondName: '英才', fixedName: '亢厉',
-        fixedDesc: '自身主动及追击类武将主战法伤害提高10%', forgeOptions: xushibishouForgeOptions },
-    bieming: { name: '别鸣', first: 'wengu', second: 'buyi', firstName: '稳固', secondName: '不移', fixedName: '英才',
-        fixedDesc: '谋略、速度属性提高5%', forgeOptions: renfengForgeOptions },
-    qi: { name: '戚', first: 'xiaorui', second: 'wengu', firstName: '骁锐', secondName: '稳固', fixedName: '勇猛',
-        fixedDesc: '造成的攻击伤害提高8%', forgeOptions: shaofuForgeOptions },
-    zhengang: { name: '真刚', first: 'podi', second: 'xiaorui', firstName: '破敌', secondName: '骁锐', fixedName: '盛气',
-        fixedDesc: '正式回合开始后，前2回合造成的攻击伤害提高20%', forgeOptions: tongsuForgeOptions },
-    jingni: { name: '惊鲵', first: 'buyi', second: 'podi', firstName: '不移', secondName: '破敌', fixedName: '英才',
-        fixedDesc: '攻击和防御属性提高6%', forgeOptions: tongsuForgeOptions },
-    mingshangouyue: { name: '冥山勾月', first: 'wengu', second: 'kangli', firstName: '稳固', secondName: '亢厉', fixedName: '骁锐',
-        fixedDesc: '攻击属性提高8%', forgeOptions: tongsuForgeOptions },
-    qulu: { name: '屈卢', first: 'xiaorui', second: 'wuwei', firstName: '骁锐', secondName: '无畏', fixedName: '破敌',
-        fixedDesc: '造成的攻击伤害无视目标10%防御', forgeOptions: shaofuForgeOptions },
-    zhengjiaoqiang: { name: '狰角枪', first: 'wuwei', second: 'xiaorui', firstName: '无畏', secondName: '骁锐', fixedName: '陷阵',
-        fixedDesc: '普通攻击伤害提高12%', forgeOptions: shaofuForgeOptions }
-};
 const treasureSpec = computed(() => treasureDraft.value ? treasureSpecs[treasureDraft.value.id] : null);
-const treasureImageUrl = id => `/stzboptm/assets/treasure/${id}.png${id === 'fenran' ? '?v=2' : ''}`;
 const forgeOptions = computed(() => treasureSpec.value?.forgeOptions || []);
 const remainingTreasurePoints = computed(() => treasureDraft.value
-    ? 12 - Number(treasureDraft.value[treasureSpec.value.first]) - Number(treasureDraft.value[treasureSpec.value.second]) : 10);
+    ? TREASURE_BASE_POINTS * 2 + TREASURE_UPGRADE_POINTS -
+        Number(treasureDraft.value[treasureSpec.value.first]) - Number(treasureDraft.value[treasureSpec.value.second])
+    : TREASURE_UPGRADE_POINTS);
 const openTreasure = index => {
     treasureHero.value = index;
     treasureDraft.value = team.value[camp.value].heros[index].treasure
@@ -544,16 +389,16 @@ const openTreasure = index => {
 };
 const chooseTreasure = id => {
     const spec = treasureSpecs[id];
-    treasureDraft.value = { id, [spec.first]: 1, [spec.second]: 1, forge: '', forgeValue: 0 };
+    treasureDraft.value = { id, [spec.first]: TREASURE_BASE_POINTS, [spec.second]: TREASURE_BASE_POINTS, forge: '', forgeValue: 0 };
 };
 const changeTreasurePoint = (key, delta) => {
     const draft = treasureDraft.value;
     if (delta > 0 && remainingTreasurePoints.value <= 0) return;
-    draft[key] = Math.max(1, Math.min(11, Number(draft[key]) + delta));
+    draft[key] = Math.max(TREASURE_BASE_POINTS, Math.min(TREASURE_MAX_POINTS, Number(draft[key]) + delta));
 };
 const maxTreasurePoint = key => {
     const draft = treasureDraft.value;
-    draft[key] = Math.min(11, Number(draft[key]) + remainingTreasurePoints.value);
+    draft[key] = Math.min(TREASURE_MAX_POINTS, Number(draft[key]) + remainingTreasurePoints.value);
 };
 const selectForge = option => {
     treasureDraft.value.forge = option.id;
@@ -601,12 +446,19 @@ const saveSkill = (id) => {
 }
 
 const selectHero = (camp, hindex) => {
-    showHeroList.value = !showHeroList.value
+    editingHeroPool.value = false;
+    showHeroList.value = true;
     c_camp = camp;
     c_hindex = hindex;
 }
 
+const openHeroPool = () => {
+    editingHeroPool.value = true;
+    showHeroList.value = true;
+};
+
 const editHero = (selectedCamp, index) => {
+    editingHeroPool.value = false;
     c_camp = selectedCamp;
     c_hindex = index;
     const current = team.value[selectedCamp].heros[index];
@@ -623,9 +475,8 @@ const editHero = (selectedCamp, index) => {
     };
     showHeroInfo.value = true;
 };
-defineExpose({ editHero });
+defineExpose({ editHero, openHeroPool });
 
-const ConfigHeroId = ref(0);
 const HeroConfig = ref({})
 const selectBowType = id => {
     HeroConfig.value.bowType = id;
@@ -657,29 +508,12 @@ const toggleBowTrait = id => {
 var c_camp;
 var c_hindex;
 
-const ConfigHeroInfo = (id) => {
-    console.log(id,HEROS[id]);
-    // ConfigHeroId.value = id;
+const ConfigHeroInfo = id => {
+    const entry = editingHeroPool.value ? heroPool.value[id] : undefined;
+    HeroConfig.value = entry?.config ? JSON.parse(JSON.stringify(entry.config)) : createHeroConfig(id);
+    poolEvaluationEnabled.value = entry?.enabled !== false;
     showHeroInfo.value = true;
-    HeroConfig.value = {
-        id: id,//武将Id
-        level: 40,//武将等级
-        extraAttrsAlloc: {//属性分配
-            atk: 0,
-            def: 0,
-            int: 0,
-            spd: 0
-        },
-        up: 5,
-        infantryType: 'basic',
-        infantryTraits: [],
-        cavalryType: 'basic',
-        cavalryTraits: [],
-        bowType: 'basic',
-        bowTraits: [],
-        arms: 10000
-    }
-}
+};
 
 const saveConfig = () =>{
     if (HEROS[HeroConfig.value.id].army === 2 && HeroConfig.value.infantryType !== 'basic' &&
@@ -697,29 +531,26 @@ const saveConfig = () =>{
         window.alert('请选择2个骑兵特性');
         return;
     }
-    console.log(team.value[c_camp].heros[c_hindex]);
-    team.value[c_camp].heros[c_hindex].id = HeroConfig.value.id;
-    team.value[c_camp].heros[c_hindex].level = HeroConfig.value.level;
-    team.value[c_camp].heros[c_hindex].extraAttrsAlloc.atk = HeroConfig.value.extraAttrsAlloc.atk;
-    team.value[c_camp].heros[c_hindex].extraAttrsAlloc.def = HeroConfig.value.extraAttrsAlloc.def;
-    team.value[c_camp].heros[c_hindex].extraAttrsAlloc.int = HeroConfig.value.extraAttrsAlloc.int;
-    team.value[c_camp].heros[c_hindex].extraAttrsAlloc.spd = HeroConfig.value.extraAttrsAlloc.spd;
-    team.value[c_camp].heros[c_hindex].up = HeroConfig.value.up;
-    team.value[c_camp].heros[c_hindex].infantryType = HEROS[HeroConfig.value.id].army === 2 ? HeroConfig.value.infantryType : 'basic';
-    team.value[c_camp].heros[c_hindex].infantryTraits = HEROS[HeroConfig.value.id].army === 2 && HeroConfig.value.infantryType !== 'basic'
-        ? [...HeroConfig.value.infantryTraits] : [];
-    team.value[c_camp].heros[c_hindex].cavalryType = HEROS[HeroConfig.value.id].army === 3 ? HeroConfig.value.cavalryType : 'basic';
-    team.value[c_camp].heros[c_hindex].cavalryTraits = HEROS[HeroConfig.value.id].army === 3 && HeroConfig.value.cavalryType !== 'basic'
-        ? [...HeroConfig.value.cavalryTraits] : [];
-    team.value[c_camp].heros[c_hindex].bowType = HEROS[HeroConfig.value.id].army === 1 ? HeroConfig.value.bowType : 'basic';
-    team.value[c_camp].heros[c_hindex].bowTraits = HEROS[HeroConfig.value.id].army === 1 && HeroConfig.value.bowType !== 'basic'
-        ? [...HeroConfig.value.bowTraits] : [];
-    const arms = Number(HeroConfig.value.arms);
-    team.value[c_camp].heros[c_hindex].arms = Number.isFinite(arms) ? Math.max(1, Math.floor(arms)) : 10000;
-    team.value[c_camp].heros[c_hindex].animation = false;
-    console.log(team.value[c_camp].heros[c_hindex],"save");
-    console.log('team save',team.value);
-    // alert("保存成功");
+    const config = { ...HeroConfig.value };
+    const arms = Number(config.arms);
+    config.arms = Number.isFinite(arms) ? Math.max(1, Math.floor(arms)) : 10000;
+
+    if (editingHeroPool.value) {
+        const pool = {
+            ...heroPool.value,
+            [config.id]: { config, enabled: poolEvaluationEnabled.value }
+        };
+        try {
+            localStorage.setItem(HERO_POOL_STORAGE_KEY, JSON.stringify(pool));
+            heroPool.value = pool;
+            showHeroInfo.value = false;
+        } catch (error) {
+            window.alert(`保存武将池失败：${error.message}`);
+        }
+        return;
+    }
+
+    Object.assign(team.value[c_camp].heros[c_hindex], config, { animation: false });
     showHeroInfo.value = false;
     showHeroList.value = false;
     emit('saved');
@@ -794,7 +625,15 @@ const addAllPoints = type => {
                         <input v-model.number="evaluationBattleCount" type="number" min="1" step="1"
                             aria-describedby="evaluation-count-hint">
                     </label>
-                    <small id="evaluation-count-hint">战法和武将测评共用。每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
+                    <label class="evaluation-metric">
+                        测评指标
+                        <select v-model="evaluationMetric">
+                            <option v-for="(label, key) in BATTLE_METRICS" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                    </label>
+                    <button type="button" @click="evaluateCurrentBuild('treasure')">宝物测评</button>
+                    <button type="button" @click="evaluateCurrentBuild('army')">兵种测评</button>
+                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。宝物和兵种测评使用当前阵容。</small>
                 </div>
                 <p v-if="presetMessage" class="my-builds-message" role="status">{{ presetMessage }}</p>
                 <div v-if="presets.length" class="my-builds-list">
@@ -915,7 +754,7 @@ const addAllPoints = type => {
                 <div class="treasure-card"><img :src="treasureImageUrl(treasureDraft.id)" :alt="`${treasureSpec.name}宝物卡`"><span v-if="treasureDraft.id === 'xushibishou'" class="treasure-art-label">徐氏匕首</span></div>
                 <div class="treasure-settings">
                     <h3>宝物效果</h3>
-                    <p>前两条共可加点 10 次，剩余 {{ remainingTreasurePoints }} 点</p>
+                    <p>前两条共可加点 {{ TREASURE_UPGRADE_POINTS }} 次，剩余 {{ remainingTreasurePoints }} 点</p>
                     <div class="treasure-point"><strong>{{ treasureSpec.firstName }}</strong><span>{{ treasureDraft.id === 'zhengang' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'jingni' ? `受到攻击伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'mingshangouyue' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'qulu' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'zhengjiaoqiang' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'kunwu' ? `防御 +${treasureDraft.wengu * 2}` : treasureDraft.id === 'minghong' || treasureDraft.id === 'bieming' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'qi' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'bolang' ? `控制状态下受到伤害 -${treasureDraft.anzhen}%` : treasureDraft.id === 'jingyangwanren' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'xuanyi' ? `防御属性 +${(treasureDraft.wengu * 1.5).toFixed(1)}%` : treasureDraft.id === 'renfeng' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : treasureDraft.id === 'shaofu' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'yanri' ? `防御 +${(treasureDraft.wengu * 1.5).toFixed(1)}` : treasureDraft.id === 'dajiang' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'taie' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'dalu' ? `受到普通攻击伤害 -${treasureDraft.qiangren}%` : treasureDraft.id === 'qianjun' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jushu' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'tengshe' ? `速度 +${treasureDraft.lingdong}` : treasureDraft.id === 'xiuni' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'shenfeng' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'canghai' ? `防御 +${(treasureDraft.wengu * 2.5).toFixed(1)}` : treasureDraft.id === 'xinghan' ? `防御属性 +${treasureDraft.wengu}%` : treasureDraft.id === 'weizhisan_gong' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'jinjiu' ? `攻击伤害无视目标防御 ${treasureDraft.podi}%` : treasureDraft.id === 'shanjun' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'yuanrong' ? `普通攻击伤害 +${treasureDraft.xianzhen}%` : treasureDraft.id === 'youpiao' ? `受到策略伤害 -${treasureDraft.xianzhi}%` : ['wuhao', 'xushibishou', 'longlin'].includes(treasureDraft.id) ? `速度 +${(treasureDraft.lingdong * 1.5).toFixed(1)}` : treasureDraft.id === 'louying' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'tianwen' ? `受到攻击伤害 -${treasureDraft.buyi}%` : `攻击 +${(treasureDraft.xiaorui * 2.5).toFixed(1)}` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, -1)">−</button><span>{{ treasureDraft[treasureSpec.first] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.first, 1)">+</button><button class="treasure-max-button" type="button" :disabled="remainingTreasurePoints <= 0 || treasureDraft[treasureSpec.first] >= 11" @click="maxTreasurePoint(treasureSpec.first)">点满</button></div>
                     <div class="treasure-point"><strong>{{ treasureSpec.secondName }}</strong><span>{{ treasureDraft.id === 'zhengang' ? `攻击 +${treasureDraft.xiaorui * 3}` : treasureDraft.id === 'jingni' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'mingshangouyue' ? `主动、追击主战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'qulu' ? `追击战法伤害 +${treasureDraft.wuwei}%` : treasureDraft.id === 'zhengjiaoqiang' ? `攻击 +${treasureDraft.xiaorui * 3}` : treasureDraft.id === 'kunwu' ? `主动主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'minghong' ? `攻击、谋略 +${(treasureDraft.yingcai * 1.5).toFixed(1)}` : treasureDraft.id === 'bieming' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'qi' ? `防御 +${treasureDraft.wengu * 3}` : treasureDraft.id === 'bolang' ? `受到主动战法伤害 -${treasureDraft.jianren * 2}%` : treasureDraft.id === 'chengying' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : treasureDraft.id === 'jingyangwanren' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'xuanyi' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'renfeng' ? `速度 +${treasureDraft.lingdong * 2}` : treasureDraft.id === 'shaofu' ? `前4回合普攻伤害 +${treasureDraft.xianzhen * 2}%` : treasureDraft.id === 'yanri' ? `主动主战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'dajiang' ? `受到普通攻击伤害 -${treasureDraft.qiangren * 2}%` : treasureDraft.id === 'taie' ? `谋略 +${treasureDraft.mingjing * 2}；初始统率 <3 时防御 +${(treasureDraft.mingjing * 1.5).toFixed(1)}` : treasureDraft.id === 'dalu' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'qianjun' ? `控制状态下受到伤害 -${treasureDraft.anzhen}%` : treasureDraft.id === 'jushu' ? `速度 +${treasureDraft.lingdong}` : treasureDraft.id === 'tengshe' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'xiuni' ? `攻击 +${treasureDraft.xiaorui * 2}` : treasureDraft.id === 'shenfeng' ? `攻击、谋略 +${(treasureDraft.yingcai * 1.5).toFixed(1)}` : treasureDraft.id === 'canghai' ? `受到主动战法伤害 -${treasureDraft.jianren}%` : treasureDraft.id === 'xinghan' ? `受到所有伤害 -${treasureDraft.buyi}%` : treasureDraft.id === 'weizhisan_gong' ? `火攻、燃烧伤害 +${treasureDraft.yanshi}%` : treasureDraft.id === 'jinjiu' ? `主动战法伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'shanjun' ? `攻击属性 +${treasureDraft.xiaorui}%` : treasureDraft.id === 'tongsu' ? `主动、追击伤害 +${treasureDraft.kangli}%` : treasureDraft.id === 'yuanrong' ? `追击伤害 +${treasureDraft.wuwei * 2}%` : treasureDraft.id === 'youpiao' ? `主动策略伤害 +${treasureDraft.miaosuan}%` : treasureDraft.id === 'wuhao' ? `主动、追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'longlin' ? `追击主战法伤害 +${treasureDraft.kangli * 2}%` : treasureDraft.id === 'xushibishou' ? `攻击伤害无视目标防御 ${(treasureDraft.podi * 1.5).toFixed(1)}%` : treasureDraft.id === 'louying' ? `攻击、谋略 +${treasureDraft.yingcai}` : treasureDraft.id === 'tianwen' ? `谋略 +${(treasureDraft.tianzi * 2.5).toFixed(1)}` : `受到所有伤害 -${treasureDraft.buyi}%` }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, -1)">−</button><span>{{ treasureDraft[treasureSpec.second] }}</span><button type="button" @click="changeTreasurePoint(treasureSpec.second, 1)">+</button><button class="treasure-max-button" type="button" :disabled="remainingTreasurePoints <= 0 || treasureDraft[treasureSpec.second] >= 11" @click="maxTreasurePoint(treasureSpec.second)">点满</button></div>
                     <div class="treasure-fixed"><strong>{{ treasureSpec.fixedName }}</strong><span>{{ treasureSpec.fixedDesc }}</span></div>
@@ -936,7 +775,7 @@ const addAllPoints = type => {
     </div>
     <div class="herolist-warp" v-show="showHeroList">
         <div class="herolist-header">
-            <div class="title">武将卡</div>
+            <div class="title">{{ editingHeroPool ? '武将池' : '武将卡' }}</div>
             <div class="close" @click="showHeroList = false"></div>
         </div>
         <div class="hero-list-controls">
@@ -975,8 +814,9 @@ const addAllPoints = type => {
                     {{ hero.name }}
                 </div>
                 <div class="level">
-                    Lv<span>.{{40}}</span>
+                    Lv<span>.{{ (editingHeroPool && heroPool[hero.id]?.config?.level) || 40 }}</span>
                 </div>
+                <div v-if="editingHeroPool && heroPool[hero.id]?.enabled === false" class="pool-disabled">测评禁用</div>
                 <div class="juexing"></div>
                 <div class="stars">
                     <div class="star up" v-for="s in hero.star"></div>
@@ -1140,10 +980,14 @@ const addAllPoints = type => {
                         <!-- <div class="stbtn" style="margin-left: .2vw;">MAX</div> -->
                     </div>
                 </div>
+                <label v-if="editingHeroPool" class="pool-evaluation">
+                    <input v-model="poolEvaluationEnabled" type="checkbox">
+                    {{ poolEvaluationEnabled ? '测评启用' : '测评禁用' }}（仅武将测评）
+                </label>
                 <div class="num-box">
                     <div class="left">剩余点数: {{ attrnum }}</div>
                     <div class="right">
-                        <div class="stbtn" @click="saveConfig">保存上阵</div>
+                        <div class="stbtn" @click="saveConfig">{{ editingHeroPool ? '保存配置' : '保存上阵' }}</div>
                     </div>
                 </div>
             </div>
@@ -1174,6 +1018,25 @@ const addAllPoints = type => {
 </template>
 
 <style lang="scss" scoped>
+.pool-disabled {
+    position: absolute;
+    z-index: 1;
+    top: 5%;
+    right: 5%;
+    padding: 2px 5px;
+    background: #3b2422;
+    color: #ffe4d5;
+    font-size: clamp(11px, 1vw, 16px);
+}
+.pool-evaluation {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0;
+    color: #ead49b;
+    font-size: clamp(14px, 1vw, 18px);
+}
+
 .team-config-warp {
     display: flex;
     align-items: center;
@@ -2591,7 +2454,7 @@ const addAllPoints = type => {
 .my-builds-heading strong { font-size: 18px; }
 .my-builds-heading span, .my-build-row span, .my-builds-empty { color: #bab9ae; }
 .my-builds-actions, .my-build-row { flex-wrap: wrap; margin: 6px 0; }
-.my-builds-actions input:not(.preset-file), .my-build-row input, .team-config-warp .team-settings input { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
+.my-builds-actions input:not(.preset-file), .my-builds-actions .evaluation-metric select, .my-build-row input, .team-config-warp .team-settings input { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
 .my-builds-actions input:not(.preset-file) { width: 180px; }
 .my-builds-actions .evaluation-count input { width: 6em; margin-inline-start: 4px; }
 .my-build-row { border-top: 1px solid #4b4942; padding-top: 6px; }

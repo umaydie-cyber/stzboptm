@@ -5,8 +5,8 @@ import { __HEROS__ } from './battle/heros';
 import { computed, onUnmounted, ref } from 'vue'
 import BuildEvaluationReport from './components/BuildEvaluationReport.vue';
 import TeamConfig from './components/TeamConfg.vue';
-import { summarizeBattles, ratio } from './battle/statistics';
-import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore, scoreLabel } from './battle/environmentScore';
+import { summarizeBattles, BATTLE_METRICS, scoreLabel } from './battle/statistics';
+import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore } from './battle/environmentScore';
 import { validateBuild } from './buildPresets';
 import defaultTeams from './defaultTeams.json';
 
@@ -51,8 +51,10 @@ const environmentProgress = ref(0);
 const environmentTotal = ref(0);
 const environmentError = ref('');
 const evaluationType = ref(null);
-const evaluationTitle = computed(() => ({ skill: '战法测评', hero: '武将测评' })[evaluationType.value] || '环境强度报告');
+const evaluationTitle = computed(() => ({ skill: '战法测评', hero: '武将测评', treasure: '宝物测评', army: '兵种测评' })[evaluationType.value] || '环境强度报告');
 const environmentName = ref('');
+const formatBattleMetrics = metrics => Object.entries(BATTLE_METRICS)
+    .map(([key, label]) => `${label} ${scoreLabel(metrics[key])}`).join(' · ');
 let evaluationWorker;
 
 const stopEvaluation = () => {
@@ -166,7 +168,7 @@ const simulate = async () => {
 	}
 };
 
-const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, battlesPerOpponent }) => {
+const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp }) => {
     if (environmentScoring.value) return;
     environmentScoring.value = true;
     environmentReport.value = null;
@@ -178,7 +180,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
     showEnvironmentReport.value = true;
     showStatistics.value = false;
     if (evaluation) {
-        runBuildEvaluation({ name, build, opponents, excluded, evaluation, battlesPerOpponent });
+        runBuildEvaluation({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp });
         return;
     }
     try {
@@ -372,6 +374,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 			<div class="stbtn-1" @click="showStatistics = !showStatistics; showEnvironmentReport = false">统计</div>
 			<div v-if="environmentReport || environmentScoring || environmentError" class="stbtn-1" @click="showEnvironmentReport = true; showStatistics = false">环境报告</div>
 			<div class="stbtn-1" @click="showTeamConfig = true">配置队伍</div>
+			<button type="button" class="stbtn-1 hero-pool-button" @click="teamConfigRef?.openHeroPool()">武将池</button>
 			<div class="stbtn-1" @click="showBattleRecord = !showBattleRecord">{{ showBattleRecord ? '隐藏战报' : '显示战报' }}
 			</div>
 		</div>
@@ -390,7 +393,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 			<template v-if="simulation">
 				<h3>{{ simulationCount }} 局模拟（每局平均）</h3>
 				<p>平均回合数：{{ format(simulation.averageRounds) }}</p>
-				<p>武勋比（攻方造成伤兵＋死亡 / 守方造成伤兵＋死亡）：{{ ratio(simulation.red.wounded + simulation.red.dead, simulation.blue.wounded + simulation.blue.dead) }}；战损比（攻方造成死亡 / 守方造成死亡）：{{ ratio(simulation.red.dead, simulation.blue.dead) }}</p>
+				<p>攻方 · {{ formatBattleMetrics(simulation.metrics) }}</p>
 				<div v-for="camp in ['blue', 'red']" :key="camp">
 					<h4>{{ camp === 'blue' ? '攻方' : '守方' }}：伤兵 {{ format(simulation[camp].wounded) }} ± {{ format(simulation[camp].woundedStd) }}；死亡 {{ format(simulation[camp].dead) }} ± {{ format(simulation[camp].deadStd) }}</h4>
 					<p>武将平均伤害 / 恢复</p><div v-for="row in heroRows({ [camp]: simulation[camp].skills }, camp)" :key="row.hero">{{ row.hero }}：{{ format(row.damage) }} / {{ format(row.recovery) }}</div>
@@ -410,12 +413,12 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 			<p v-if="environmentReport?.excluded">已自动过滤 {{ environmentReport.excluded }} 支武将和速度均相同的环境队伍。</p>
 			<BuildEvaluationReport v-if="environmentReport && evaluationType" :report="environmentReport" />
 			<template v-else-if="environmentReport">
-				<h3>总体环境武勋评分 {{ scoreLabel(environmentReport.overall.merit) }} · 总体战损评分 {{ scoreLabel(environmentReport.overall.loss) }}</h3>
+				<h3>总体环境评分 · {{ formatBattleMetrics(environmentReport.overall) }}</h3>
 				<p>每支环境队伍模拟 500 场；构筑为攻方。逐队比值由 500 场平均伤亡计算，再按环境权重加权平均。比值越高，表现越强。</p>
-				<p>武勋比＝我方造成的伤兵＋死亡 / 我方承受的伤兵＋死亡；战损比＝敌方死亡 / 我方死亡。双方均为零时显示“—”并不计入该项加权平均；仅分母为零时显示“∞”。</p>
+				<p>武勋效率＝（敌方伤兵＋死亡）÷ 我方死亡。战损比＝敌方死亡 ÷ 我方死亡。武勋比＝（敌方伤兵＋死亡）÷（我方伤兵＋死亡）。分子和分母均为零时显示“—”并跳过该项加权，仅分母为零时显示“∞”。</p>
 				<div v-for="row in environmentReport.rows" :key="row.id" class="environment-report-row">
 					<h4>{{ row.name }} · 权重 {{ row.weight }} · 500 场</h4>
-					<div>武勋比 {{ scoreLabel(row.merit) }} · 战损比 {{ scoreLabel(row.loss) }}</div>
+					<div>{{ formatBattleMetrics(row) }}</div>
 					<div>我方平均伤兵 {{ format(row.ownWounded) }}，死亡 {{ format(row.ownDead) }}；敌方平均伤兵 {{ format(row.enemyWounded) }}，死亡 {{ format(row.enemyDead) }}</div>
 				</div>
 			</template>
@@ -945,6 +948,12 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 
 		&>* {
 			position: relative;
+		}
+
+		&>.hero-pool-button {
+			background-color: transparent;
+			border: 0;
+			color: inherit;
 		}
 
 		&>.stbtn-1 {
