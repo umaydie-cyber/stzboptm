@@ -187,15 +187,17 @@ export const treasureSpecs = {
 export const TREASURE_BASE_POINTS = 1;
 export const TREASURE_UPGRADE_POINTS = 10;
 export const TREASURE_MAX_POINTS = TREASURE_BASE_POINTS + TREASURE_UPGRADE_POINTS;
+export const TREASURE_SECOND_UNLOCK_POINTS = 6;
 
 export const treasureImageUrl = id =>
     `${import.meta.env.BASE_URL}assets/treasure/${id}.png${id === 'fenran' ? '?v=2' : ''}`;
 
 export function treasureEvaluationVariants() {
+    const secondMax = TREASURE_BASE_POINTS + TREASURE_MAX_POINTS - TREASURE_SECOND_UNLOCK_POINTS;
     return Object.entries(treasureSpecs).flatMap(([id, spec]) =>
         spec.forgeOptions.flatMap(forge => [
             { id, [spec.first]: TREASURE_MAX_POINTS, [spec.second]: TREASURE_BASE_POINTS, forge: forge.id, forgeValue: forge.max },
-            { id, [spec.first]: TREASURE_BASE_POINTS, [spec.second]: TREASURE_MAX_POINTS, forge: forge.id, forgeValue: forge.max }
+            { id, [spec.first]: TREASURE_SECOND_UNLOCK_POINTS, [spec.second]: secondMax, forge: forge.id, forgeValue: forge.max }
         ])
     );
 }
