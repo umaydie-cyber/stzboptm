@@ -11,11 +11,14 @@ export const ARMY_OPTIONS = {
     3: { typeKey: 'cavalryType', traitsKey: 'cavalryTraits', types: CAVALRY_TYPES, traits: CAVALRY_TRAITS }
 };
 
-export function armyEvaluationVariants(army, currentType) {
+export function armyEvaluationVariants(army, current) {
     const { types, traits } = ARMY_OPTIONS[army];
     const pairs = traits.flatMap(({ id: first }, index) =>
         traits.slice(index + 1).map(({ id: second }) => [first, second])
     );
-    return types.filter(({ id }) => id !== 'basic' && id !== currentType)
-        .flatMap(({ id }) => pairs.map(traits => ({ id, traits })));
+    return types.filter(({ id }) => id !== 'basic')
+        .flatMap(({ id }) => pairs.map(traits => ({ id, traits })))
+        .filter(({ id, traits }) => id !== current.id ||
+            current.traits.length !== traits.length ||
+            !traits.every(trait => current.traits.includes(trait)));
 }

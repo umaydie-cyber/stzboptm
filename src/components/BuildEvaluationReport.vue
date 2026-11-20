@@ -53,8 +53,8 @@ const improvement = (value, baseline) => {
 
 <template>
     <h3>原构筑环境{{ metricLabel }} {{ scoreLabel(report.baseline) }}</h3>
-    <p v-if="isTreasureEvaluation">共测评 {{ report.candidateCount }} 个替换方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。每次只替换一件宝物，测试第一条 6 点、第二条 6 点，以及第一条 11 点、第二条 1 点。两种加点均搭配每条满值锻造词条。</p>
-    <p v-else-if="isArmyEvaluation">共测评 {{ report.candidateCount }} 个替换方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。每次只更换一名武将的进阶兵种和两条特性。</p>
+    <p v-if="isTreasureEvaluation">共测评 {{ report.candidateCount }} 个方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。每个位置也测当前宝物的其他搭配，按第一条和第二条 6/6 或 11/1 加点，分别搭配每条满值锻造词条。</p>
+    <p v-else-if="isArmyEvaluation">共测评 {{ report.candidateCount }} 个方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。每次只调整一名武将，测试各进阶兵种的双特性组合，也包含当前进阶兵种的其他特性组合。</p>
     <p v-else>每个位置测评 {{ report.candidateCount }} 个{{ isHeroEvaluation ? '候选武将' : '可学习战法' }}，逐一对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。</p>
     <p v-if="isHeroEvaluation">候选武将使用武将池中的等级、进阶、兵力、加点、兵种和特性，沿用原位置的宝物及可兼容的携带战法。</p>
     <p v-if="isHeroEvaluation && !report.candidateCount">没有可替换的候选武将，可在武将池中启用未上阵的武将。</p>

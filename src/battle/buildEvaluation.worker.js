@@ -17,11 +17,16 @@ function replaceHero(current, hero, config) {
 function evaluationSlots(build, evaluation, heroPool) {
     if (evaluation === 'treasure') {
         const variants = treasureEvaluationVariants();
-        return build.heros.flatMap(({ id: heroId, treasure }, heroIndex) =>
-            Object.hasOwn(treasureSpecs, treasure?.id)
-                ? [{ heroId, heroIndex, treasure, candidates: variants.filter(candidate => candidate.id !== treasure.id) }]
-                : []
-        );
+        return build.heros.flatMap(({ id: heroId, treasure }, heroIndex) => {
+            if (!Object.hasOwn(treasureSpecs, treasure?.id)) return [];
+            const { first, second } = treasureSpecs[treasure.id];
+            const candidates = variants.filter(candidate => candidate.id !== treasure.id ||
+                candidate[first] !== Number(treasure[first]) ||
+                candidate[second] !== Number(treasure[second]) ||
+                candidate.forge !== treasure.forge ||
+                candidate.forgeValue !== Number(treasure.forgeValue));
+            return [{ heroId, heroIndex, treasure, candidates }];
+        });
     }
     if (evaluation === 'army') {
         return build.heros.flatMap((hero, heroIndex) => {
@@ -31,7 +36,8 @@ function evaluationSlots(build, evaluation, heroPool) {
             if (!options) return [];
             const id = hero[options.typeKey] || 'basic';
             const traits = id === 'basic' ? [] : hero[options.traitsKey] || [];
-            return [{ heroId, heroIndex, army, troops: { id, traits }, candidates: armyEvaluationVariants(army, id) }];
+            const troops = { id, traits };
+            return [{ heroId, heroIndex, army, troops, candidates: armyEvaluationVariants(army, troops) }];
         });
     }
 
