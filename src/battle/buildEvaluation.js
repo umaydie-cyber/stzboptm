@@ -1,17 +1,28 @@
 import { __HEROS__ } from './heros';
 import { __SKILLS__ } from './skills';
 import { weightedEnvironmentScore } from './environmentScore';
-import { createHeroConfig } from '../heroPool';
+import { createHeroConfig, HERO_ATTRIBUTES, heroAttributePoints } from '../heroPool';
 import { BATTLE_METRICS, DEFAULT_EVALUATION_METRIC } from './statistics';
 import { treasureSpecs, treasureEvaluationVariants } from './treasures';
 import { ARMY_OPTIONS, armyEvaluationVariants } from './armyEvaluation';
 
-function replaceHero(current, hero, config) {
+function replaceHero(current, { skill, config, extraAttrsAlloc }) {
     return {
         ...current,
         ...config,
-        equipskill: current.equipskill.map(id => Number(id) === hero.skill ? 0 : id)
+        extraAttrsAlloc,
+        equipskill: current.equipskill.map(id => Number(id) === skill ? 0 : id)
     };
+}
+
+const attributeKeys = Object.keys(HERO_ATTRIBUTES);
+
+function heroAllocationVariants(config) {
+    const points = heroAttributePoints(config.level);
+    return attributeKeys.map(attribute => ({
+        allocation: { attribute, points },
+        extraAttrsAlloc: Object.fromEntries(attributeKeys.map(key => [key, key === attribute ? points : 0]))
+    }));
 }
 
 function evaluationSlots(build, evaluation, heroPool) {
@@ -43,8 +54,19 @@ function evaluationSlots(build, evaluation, heroPool) {
 
     const roster = new Set(build.heros.map(hero => Number(hero.id)));
     if (evaluation === 'hero') {
-        const candidates = __HEROS__.filter(hero => !roster.has(hero.id) && heroPool[hero.id]?.enabled !== false);
-        return build.heros.map((hero, heroIndex) => ({ heroId: hero.id, heroIndex, candidates }));
+        const replacements = __HEROS__.filter(hero => !roster.has(hero.id) && heroPool[hero.id]?.enabled !== false)
+            .flatMap(({ id, skill }) => {
+                const config = heroPool[id]?.config ?? createHeroConfig(id);
+                return heroAllocationVariants(config).map(variant => ({ id, skill, config, ...variant }));
+            });
+        return build.heros.map((hero, heroIndex) => {
+            const heroId = Number(hero.id);
+            const currentAllocation = hero.extraAttrsAlloc;
+            const ownVariants = heroAllocationVariants(hero)
+                .filter(({ extraAttrsAlloc }) => attributeKeys.some(key => extraAttrsAlloc[key] !== Number(currentAllocation[key])))
+                .map(variant => ({ id: heroId, ...variant }));
+            return { heroId, heroIndex, currentAllocation, candidates: [...replacements, ...ownVariants] };
+        });
     }
 
     const usedSkills = new Set([
@@ -70,9 +92,10 @@ export function prepareBuildEvaluation({
     if (!opponents.length) throw new Error('请先添加至少一支环境队伍');
 
     const slots = evaluationSlots(build, evaluation, heroPool);
+    const isHeroEvaluation = evaluation === 'hero';
     const isTreasureEvaluation = evaluation === 'treasure';
     const isArmyEvaluation = evaluation === 'army';
-    const hasSlotSpecificCandidates = isTreasureEvaluation || isArmyEvaluation;
+    const hasSlotSpecificCandidates = isHeroEvaluation || isTreasureEvaluation || isArmyEvaluation;
     if (!slots.length) {
         const message = {
             treasure: '这套构筑没有装备宝物',
@@ -100,9 +123,10 @@ export function prepareBuildEvaluation({
             } else if (isArmyEvaluation) {
                 const { typeKey, traitsKey } = ARMY_OPTIONS[slot.army];
                 heros[heroIndex] = { ...current, [typeKey]: id, [traitsKey]: candidate.traits };
-            } else if (evaluation === 'hero') {
-                const config = heroPool[id]?.config ?? createHeroConfig(id);
-                heros[heroIndex] = replaceHero(current, candidate, config);
+            } else if (isHeroEvaluation) {
+                heros[heroIndex] = id === slot.heroId
+                    ? { ...current, extraAttrsAlloc: candidate.extraAttrsAlloc }
+                    : replaceHero(current, candidate);
             } else {
                 const equipskill = [...current.equipskill];
                 equipskill[slotIndex] = id;
@@ -113,6 +137,7 @@ export function prepareBuildEvaluation({
             return {
                 buildIndex,
                 id,
+                ...(isHeroEvaluation && { allocation: candidate.allocation }),
                 ...(isTreasureEvaluation && { treasure: candidate }),
                 ...(isArmyEvaluation && { troops: candidate })
             };
@@ -151,7 +176,9 @@ export function prepareBuildEvaluation({
                     replacements.push({ ...candidate, score });
                 }
             }
-            replacements.sort((a, b) => a.score === b.score ? (hasSlotSpecificCandidates ? 0 : a.id - b.id) : b.score - a.score);
+            replacements.sort((a, b) => a.score === b.score
+                ? (isTreasureEvaluation || isArmyEvaluation ? 0 : a.id - b.id)
+                : b.score - a.score);
             return { ...slot, replacements };
         });
         return {

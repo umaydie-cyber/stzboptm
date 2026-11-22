@@ -12,7 +12,7 @@ import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 import { sameRosterAndSpeed } from '../battle/environmentScore';
 import { MAX_EVALUATION_WORKERS } from '../battle/buildEvaluation';
-import { createHeroConfig, HERO_POOL_STORAGE_KEY } from '../heroPool';
+import { createHeroConfig, heroAttributePoints, HERO_POOL_STORAGE_KEY } from '../heroPool';
 import { BATTLE_METRICS, DEFAULT_EVALUATION_METRIC } from '../battle/statistics';
 import { treasureSpecs, treasureImageUrl, TREASURE_BASE_POINTS, TREASURE_MAX_POINTS, TREASURE_UPGRADE_POINTS, TREASURE_SECOND_UNLOCK_POINTS } from '../battle/treasures';
 
@@ -599,7 +599,7 @@ const addAttrChange = (type,act) => {
 }
 
 const attrnum = computed(() => {
-    return Math.floor(HeroConfig.value.level / 10) * 10 + 50 - (HeroConfig.value.extraAttrsAlloc.atk + HeroConfig.value.extraAttrsAlloc.def + HeroConfig.value.extraAttrsAlloc.int + HeroConfig.value.extraAttrsAlloc.spd);
+    return heroAttributePoints(HeroConfig.value.level) - (HeroConfig.value.extraAttrsAlloc.atk + HeroConfig.value.extraAttrsAlloc.def + HeroConfig.value.extraAttrsAlloc.int + HeroConfig.value.extraAttrsAlloc.spd);
 })
 
 const clearAttrChange = (type) => {

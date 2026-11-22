@@ -6,13 +6,14 @@ import { __SKILLS__ } from '../battle/skills';
 import { BATTLE_METRICS, scoreLabel } from '../battle/statistics';
 import { treasureImageUrl, treasureSpecs } from '../battle/treasures';
 import { ARMY_OPTIONS } from '../battle/armyEvaluation';
+import { HERO_ATTRIBUTES } from '../heroPool';
 
 const props = defineProps({ report: { type: Object, required: true } });
 const isHeroEvaluation = computed(() => props.report.evaluation === 'hero');
 const isTreasureEvaluation = computed(() => props.report.evaluation === 'treasure');
 const isArmyEvaluation = computed(() => props.report.evaluation === 'army');
-const hasSlotSpecificCandidates = computed(() => isTreasureEvaluation.value || isArmyEvaluation.value);
-const replacementLabel = computed(() => ({ treasure: '替换宝物', hero: '替换武将', army: '兵种组合', skill: '替换战法' })[props.report.evaluation]);
+const hasSlotSpecificCandidates = computed(() => isHeroEvaluation.value || isTreasureEvaluation.value || isArmyEvaluation.value);
+const replacementLabel = computed(() => ({ treasure: '替换宝物', hero: '武将或加点方案', army: '兵种组合', skill: '替换战法' })[props.report.evaluation]);
 const metricLabel = computed(() => BATTLE_METRICS[props.report.metric]);
 
 const heroes = new Map(__HEROS__.map(hero => [hero.id, hero]));
@@ -21,6 +22,9 @@ const positions = ['大营', '中军', '前锋'];
 const types = ['zh', 'zd', 'zj', 'bd'];
 const armies = new Map(__ARMS__.map(army => [army.id, army.name]));
 const candidateName = id => (isHeroEvaluation.value ? heroes : skills).get(Number(id)).name;
+const currentHeroPoints = allocation => Object.entries(HERO_ATTRIBUTES)
+    .filter(([key]) => Number(allocation[key]) > 0)
+    .map(([key, label]) => `${label} ${allocation[key]}`).join(' · ') || '未加点';
 const treasurePoints = treasure => {
     const spec = treasureSpecs[treasure.id];
     return `${spec.firstName} ${treasure[spec.first]} · ${spec.secondName} ${treasure[spec.second]}`;
@@ -30,6 +34,7 @@ const treasureForge = treasure => {
     return option ? `锻造 ${option.name} ${treasure.forgeValue}${option.unit || '%'}` : '未锻造';
 };
 const replacementKey = option => {
+    if (option.allocation) return `${option.id}-${option.allocation.attribute}`;
     if (option.treasure) return `${option.id}-${option.treasure.forge}-${option.treasure[treasureSpecs[option.id].first]}`;
     if (option.troops) return `${option.id}-${option.troops.traits.join('-')}`;
     return option.id;
@@ -55,9 +60,9 @@ const improvement = (value, baseline) => {
     <h3>原构筑环境{{ metricLabel }} {{ scoreLabel(report.baseline) }}</h3>
     <p v-if="isTreasureEvaluation">共测评 {{ report.candidateCount }} 个方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。每个位置也测当前宝物的其他搭配，按第一条和第二条 6/6 或 11/1 加点，分别搭配每条满值锻造词条。</p>
     <p v-else-if="isArmyEvaluation">共测评 {{ report.candidateCount }} 个方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。每次只调整一名武将，测试各进阶兵种的双特性组合，也包含当前进阶兵种的其他特性组合。</p>
-    <p v-else>每个位置测评 {{ report.candidateCount }} 个{{ isHeroEvaluation ? '候选武将' : '可学习战法' }}，逐一对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。</p>
-    <p v-if="isHeroEvaluation">候选武将使用武将池中的等级、进阶、兵力、加点、兵种和特性，沿用原位置的宝物及可兼容的携带战法。</p>
-    <p v-if="isHeroEvaluation && !report.candidateCount">没有可替换的候选武将，可在武将池中启用未上阵的武将。</p>
+    <p v-else-if="isHeroEvaluation">共测评 {{ report.candidateCount }} 个方案，每个方案对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。未上阵且未禁用的武将分别测全攻、全防、全谋、全速。当前武将也会测与原配置不同的加点。</p>
+    <p v-else>每个位置测评 {{ report.candidateCount }} 个可学习战法，逐一对 {{ report.opponentCount }} 支环境队伍各模拟 {{ report.battlesPerOpponent }} 场。</p>
+    <p v-if="isHeroEvaluation">替换武将使用武将池中的等级、进阶、兵力、兵种和特性，沿用原位置的宝物及可兼容的携带战法。</p>
     <p>按环境加权{{ metricLabel }}的相对提升排序。模拟有随机波动，接近的结果可能互换。</p>
     <p v-if="report.baseline === null">原构筑{{ metricLabel }}无法计算，本次没有可比较的结果。</p>
     <section v-for="slot in report.candidateCount ? report.results : []" :key="`${slot.heroIndex}-${slot.slotIndex ?? ''}`" class="evaluation-slot">
@@ -72,6 +77,7 @@ const improvement = (value, baseline) => {
                     <img class="evaluation-camp" :src="campIcon(slot.heroId)" alt="">
                     <span>{{ candidateName(slot.heroId) }}</span>
                     <small>{{ armyName(slot.heroId) }} · 当前武将</small>
+                    <small>{{ currentHeroPoints(slot.currentAllocation) }}</small>
                 </template>
                 <template v-else-if="isTreasureEvaluation">
                     <img class="evaluation-treasure" :src="treasureImageUrl(slot.treasure.id)" alt="">
@@ -107,7 +113,10 @@ const improvement = (value, baseline) => {
                     </span>
                     <span v-if="isArmyEvaluation">{{ troopType(slot.army, option.id).name }}</span>
                     <span v-else>{{ isTreasureEvaluation ? treasureSpecs[option.id].name : candidateName(option.id) }}</span>
-                    <small v-if="isHeroEvaluation">{{ armyName(option.id) }}</small>
+                    <template v-if="isHeroEvaluation">
+                        <small>{{ option.id === slot.heroId ? '当前武将换加点' : armyName(option.id) }}</small>
+                        <small>全加{{ HERO_ATTRIBUTES[option.allocation.attribute] }} · {{ option.allocation.points }} 点</small>
+                    </template>
                     <template v-if="isTreasureEvaluation">
                         <small>{{ treasurePoints(option.treasure) }}</small>
                         <small>{{ treasureForge(option.treasure) }}</small>
