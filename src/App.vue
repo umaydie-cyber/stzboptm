@@ -7,6 +7,7 @@ import BuildEvaluationReport from './components/BuildEvaluationReport.vue';
 import TeamConfig from './components/TeamConfg.vue';
 import { summarizeBattles, BATTLE_METRICS, scoreLabel } from './battle/statistics';
 import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore } from './battle/environmentScore';
+import { prepareBuildEvaluation, MAX_EVALUATION_WORKERS } from './battle/buildEvaluation';
 import { validateBuild } from './buildPresets';
 import defaultTeams from './defaultTeams.json';
 
@@ -49,17 +50,18 @@ const showEnvironmentReport = ref(false);
 const environmentScoring = ref(false);
 const environmentProgress = ref(0);
 const environmentTotal = ref(0);
+const activeEvaluationWorkerCount = ref(0);
 const environmentError = ref('');
 const evaluationType = ref(null);
 const evaluationTitle = computed(() => ({ skill: '战法测评', hero: '武将测评', treasure: '宝物测评', army: '兵种测评' })[evaluationType.value] || '环境强度报告');
 const environmentName = ref('');
 const formatBattleMetrics = metrics => Object.entries(BATTLE_METRICS)
     .map(([key, label]) => `${label} ${scoreLabel(metrics[key])}`).join(' · ');
-let evaluationWorker;
+let evaluationWorkers;
 
 const stopEvaluation = () => {
-    evaluationWorker?.terminate();
-    evaluationWorker = undefined;
+    evaluationWorkers?.forEach(worker => worker.terminate());
+    evaluationWorkers = undefined;
 };
 onUnmounted(stopEvaluation);
 
@@ -71,28 +73,52 @@ const closeEnvironmentReport = () => {
     }
 };
 
-const runBuildEvaluation = payload => {
+const runBuildEvaluation = (payload, workerCount) => {
+    const workers = [];
+    evaluationWorkers = workers;
     const finish = error => {
+        if (workers !== evaluationWorkers) return;
         if (error) environmentError.value = `评测失败：${error}`;
         stopEvaluation();
         environmentScoring.value = false;
     };
     try {
-        evaluationWorker = new Worker(new URL('./battle/buildEvaluation.worker.js', import.meta.url), { type: 'module' });
-        evaluationWorker.onmessage = ({ data }) => {
-            if (data.error) {
-                finish(data.error);
-                return;
-            }
-            environmentProgress.value = data.completed;
-            environmentTotal.value = data.total;
-            if (data.report) {
-                environmentReport.value = data.report;
-                finish();
-            }
+        if (!Number.isInteger(workerCount) || workerCount < 1 || workerCount > MAX_EVALUATION_WORKERS) {
+            throw new Error(`Worker 数量须为 1 至 ${MAX_EVALUATION_WORKERS}`);
+        }
+        const plan = prepareBuildEvaluation(payload);
+        environmentTotal.value = plan.total;
+        activeEvaluationWorkerCount.value = Math.min(workerCount, plan.jobCount);
+        let nextJob = 0;
+        let completedJobs = 0;
+        const dispatch = worker => {
+            if (nextJob < plan.jobCount) worker.postMessage(plan.job(nextJob++));
         };
-        evaluationWorker.onerror = event => finish(event.message || '无法运行评测线程');
-        evaluationWorker.postMessage(payload);
+        for (let i = 0; i < activeEvaluationWorkerCount.value; i++) {
+            const worker = new Worker(new URL('./battle/buildEvaluation.worker.js', import.meta.url), { type: 'module' });
+            workers.push(worker);
+            worker.onmessage = ({ data }) => {
+                if (workers !== evaluationWorkers) return;
+                try {
+                    if (data.error) throw new Error(data.error);
+                    environmentProgress.value += data.advanced;
+                    if (!data.row) return;
+                    plan.record(data.index, data.row);
+                    completedJobs++;
+                    if (completedJobs === plan.jobCount) {
+                        environmentReport.value = plan.report();
+                        finish();
+                    } else {
+                        dispatch(worker);
+                    }
+                } catch (error) {
+                    finish(error.message);
+                }
+            };
+            worker.onerror = event => finish(event.message || '无法运行评测线程');
+            worker.onmessageerror = () => finish('无法读取评测线程的结果');
+            dispatch(worker);
+        }
     } catch (error) {
         finish(error.message);
     }
@@ -168,7 +194,7 @@ const simulate = async () => {
 	}
 };
 
-const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp }) => {
+const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp, workerCount }) => {
     if (environmentScoring.value) return;
     environmentScoring.value = true;
     environmentReport.value = null;
@@ -180,7 +206,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
     showEnvironmentReport.value = true;
     showStatistics.value = false;
     if (evaluation) {
-        runBuildEvaluation({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp });
+        runBuildEvaluation({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp }, workerCount);
         return;
     }
     try {
@@ -408,6 +434,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 			</div>
 			<p v-if="environmentScoring" role="status">
 				{{ evaluationType ? `${evaluationTitle}中` : '对抗环境评分中' }}：{{ environmentTotal ? `${environmentProgress}/${environmentTotal} 场` : '准备中' }}
+				<span v-if="evaluationType && activeEvaluationWorkerCount"> · {{ activeEvaluationWorkerCount }} 个 Worker</span>
 			</p>
 			<p v-if="environmentError" role="alert">{{ environmentError }}</p>
 			<p v-if="environmentReport?.excluded">已自动过滤 {{ environmentReport.excluded }} 支武将和速度均相同的环境队伍。</p>

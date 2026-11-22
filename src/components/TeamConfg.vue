@@ -1,5 +1,5 @@
 <script setup>
-import { ref, toRefs, computed } from 'vue'
+import { ref, toRefs, computed, watch } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
 import { INFANTRY_TYPES } from '../battle/infantryTypes';
@@ -11,6 +11,7 @@ import { CAVALRY_TRAITS } from '../battle/cavalryTraits';
 import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 import { sameRosterAndSpeed } from '../battle/environmentScore';
+import { MAX_EVALUATION_WORKERS } from '../battle/buildEvaluation';
 import { createHeroConfig, HERO_POOL_STORAGE_KEY } from '../heroPool';
 import { BATTLE_METRICS, DEFAULT_EVALUATION_METRIC } from '../battle/statistics';
 import { treasureSpecs, treasureImageUrl, TREASURE_BASE_POINTS, TREASURE_MAX_POINTS, TREASURE_UPGRADE_POINTS, TREASURE_SECOND_UNLOCK_POINTS } from '../battle/treasures';
@@ -39,6 +40,23 @@ const emit = defineEmits(['update:show', 'update:team', 'saved', 'score-environm
 const { show, team } = toRefs(props);
 const camp = ref('blue');
 const evaluationBattleCount = ref(100);
+const EVALUATION_WORKERS_STORAGE_KEY = 'stzboptm.evaluationWorkers.v1';
+const evaluationWorkerCount = ref(Math.min(4, navigator.hardwareConcurrency || 2));
+try {
+    const saved = Number(localStorage.getItem(EVALUATION_WORKERS_STORAGE_KEY));
+    if (Number.isInteger(saved) && saved >= 1 && saved <= MAX_EVALUATION_WORKERS) {
+        evaluationWorkerCount.value = saved;
+    }
+} catch {
+    // Use the default when browser storage is unavailable.
+}
+watch(evaluationWorkerCount, count => {
+    try {
+        localStorage.setItem(EVALUATION_WORKERS_STORAGE_KEY, String(count));
+    } catch {
+        // The current selection still applies to this session.
+    }
+});
 const evaluationMetric = ref(DEFAULT_EVALUATION_METRIC);
 const presetName = ref('');
 const presetMessage = ref('');
@@ -289,7 +307,7 @@ const scoreEnvironment = (preset, evaluation = null) => {
         }
         emit('score-environment', {
             name: preset.name, build, opponents, excluded, evaluation, battlesPerOpponent,
-            ...(evaluation && { metric: evaluationMetric.value }),
+            ...(evaluation && { metric: evaluationMetric.value, workerCount: evaluationWorkerCount.value }),
             ...(evaluation === 'army' && { ownCamp: camp.value }),
             ...(evaluation === 'hero' && { heroPool: JSON.parse(JSON.stringify(heroPool.value)) })
         });
@@ -645,6 +663,12 @@ const addAllPoints = type => {
                         测评指标
                         <select v-model="evaluationMetric">
                             <option v-for="(label, key) in BATTLE_METRICS" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                    </label>
+                    <label class="evaluation-worker-count">
+                        Worker 数量
+                        <select v-model="evaluationWorkerCount">
+                            <option v-for="count in MAX_EVALUATION_WORKERS" :key="count" :value="count">{{ count }}</option>
                         </select>
                     </label>
                     <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
@@ -2470,7 +2494,7 @@ const addAllPoints = type => {
 .my-builds-heading strong { font-size: 18px; }
 .my-builds-heading span, .my-build-row span, .my-builds-empty { color: #bab9ae; }
 .my-builds-actions, .my-build-row { flex-wrap: wrap; margin: 6px 0; }
-.my-builds-actions input:not(.preset-file), .my-builds-actions .evaluation-metric select, .my-build-row input, .team-config-warp .team-settings input { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
+.my-builds-actions input:not(.preset-file), .my-builds-actions select, .my-build-row input, .team-config-warp .team-settings input { box-sizing: border-box; min-width: 0; padding: 5px 8px; color: #f5ebd5; background: #282929; border: 1px solid #827454; border-radius: 3px; }
 .my-builds-actions input:not(.preset-file) { width: 180px; }
 .my-builds-actions .evaluation-count input { width: 6em; margin-inline-start: 4px; }
 .my-build-row { border-top: 1px solid #4b4942; padding-top: 6px; }
