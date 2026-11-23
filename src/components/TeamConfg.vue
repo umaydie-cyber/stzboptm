@@ -1,5 +1,5 @@
 <script setup>
-import { ref, toRefs, computed, shallowRef, watch } from 'vue'
+import { ref, toRefs, computed, shallowRef } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
 import { INFANTRY_TYPES } from '../battle/infantryTypes';
@@ -35,28 +35,15 @@ __HEROS__.forEach(e => {
     HEROS[e.id] = e;
 });
 
-const props = defineProps(['show', 'team']);
-const emit = defineEmits(['update:show', 'update:team', 'saved', 'score-environment']);
+const props = defineProps(['show', 'team', 'workerCount']);
+const emit = defineEmits(['update:show', 'update:team', 'update:workerCount', 'saved', 'score-environment']);
 
 const { show, team } = toRefs(props);
 const camp = ref('blue');
 const evaluationBattleCount = ref(100);
-const EVALUATION_WORKERS_STORAGE_KEY = 'stzboptm.evaluationWorkers.v1';
-const evaluationWorkerCount = ref(Math.min(4, navigator.hardwareConcurrency || 2));
-try {
-    const saved = Number(localStorage.getItem(EVALUATION_WORKERS_STORAGE_KEY));
-    if (Number.isInteger(saved) && saved >= 1 && saved <= MAX_EVALUATION_WORKERS) {
-        evaluationWorkerCount.value = saved;
-    }
-} catch {
-    // Use the default when browser storage is unavailable.
-}
-watch(evaluationWorkerCount, count => {
-    try {
-        localStorage.setItem(EVALUATION_WORKERS_STORAGE_KEY, String(count));
-    } catch {
-        // The current selection still applies to this session.
-    }
+const evaluationWorkerCount = computed({
+    get: () => props.workerCount,
+    set: count => emit('update:workerCount', count)
 });
 const evaluationMetric = ref(DEFAULT_EVALUATION_METRIC);
 const presetName = ref('');
@@ -709,7 +696,7 @@ const addAllPoints = type => {
                             <option v-for="count in MAX_EVALUATION_WORKERS" :key="count" :value="count">{{ count }}</option>
                         </select>
                     </label>
-                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数，建议至少 10 场。</small>
+                    <small id="evaluation-count-hint">每个方案对每支环境队伍的模拟场数建议至少 10 场。Worker 数量也用于战斗模拟。</small>
                 </div>
                 <p v-if="presetMessage" class="my-builds-message" role="status">{{ presetMessage }}</p>
                 <div v-if="presets.length" class="my-builds-list">

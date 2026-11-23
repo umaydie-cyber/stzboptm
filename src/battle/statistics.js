@@ -39,7 +39,7 @@ export function summarizeBattles(battles) {
         const skills = {};
         for (const battle of battles) {
             for (const [key, item] of Object.entries(battle.Stats[camp])) {
-                const row = skills[key] ||= { ...item, damage: 0, recovery: 0 };
+                const row = skills[key] ||= { ...item, key, damage: 0, recovery: 0 };
                 row.damage += item.damage;
                 row.recovery += item.recovery;
             }
@@ -49,6 +49,10 @@ export function summarizeBattles(battles) {
             skills: Object.values(skills).map(item => ({ ...item, damage: item.damage / battles.length, recovery: item.recovery / battles.length }))
         };
     }
+    return withMetrics(result);
+}
+
+function withMetrics(result) {
     result.metrics = battleMetrics({
         ownWounded: result.blue.wounded,
         ownDead: result.blue.dead,
@@ -56,4 +60,31 @@ export function summarizeBattles(battles) {
         enemyDead: result.red.dead
     });
     return result;
+}
+
+export function combineBattleSummaries(summaries) {
+    const count = summaries.reduce((sum, item) => sum + item.count, 0);
+    const weighted = select => summaries.reduce((sum, item) => sum + item.count * select(item), 0) / count;
+    const result = { count, averageRounds: weighted(item => item.averageRounds) };
+    for (const camp of ['blue', 'red']) {
+        const wounded = weighted(item => item[camp].wounded);
+        const dead = weighted(item => item[camp].dead);
+        const deviation = (key, mean) => Math.sqrt(weighted(item =>
+            item[camp][`${key}Std`] ** 2 + (item[camp][key] - mean) ** 2));
+        const skills = new Map();
+        for (const item of summaries) {
+            for (const skill of item[camp].skills) {
+                const key = skill.key;
+                if (!skills.has(key)) skills.set(key, { ...skill, damage: 0, recovery: 0 });
+                const row = skills.get(key);
+                row.damage += skill.damage * item.count / count;
+                row.recovery += skill.recovery * item.count / count;
+            }
+        }
+        result[camp] = {
+            wounded, dead, woundedStd: deviation('wounded', wounded), deadStd: deviation('dead', dead),
+            skills: [...skills.values()]
+        };
+    }
+    return withMetrics(result);
 }

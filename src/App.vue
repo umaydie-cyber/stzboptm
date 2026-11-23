@@ -2,12 +2,12 @@
 import { BattleManger } from './battle/battleManger'
 import { __SKILLS__ as SKILLS } from './battle/skills';
 import { __HEROS__ } from './battle/heros';
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import BuildEvaluationReport from './components/BuildEvaluationReport.vue';
 import TeamConfig from './components/TeamConfg.vue';
-import { summarizeBattles, BATTLE_METRICS, scoreLabel } from './battle/statistics';
+import { combineBattleSummaries, BATTLE_METRICS, scoreLabel } from './battle/statistics';
 import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore } from './battle/environmentScore';
-import { prepareBuildEvaluation, EVALUATION_LABELS, ENVIRONMENT_BATTLES } from './battle/buildEvaluation';
+import { prepareBuildEvaluation, EVALUATION_LABELS, ENVIRONMENT_BATTLES, MAX_EVALUATION_WORKERS } from './battle/buildEvaluation';
 import { runEvaluation } from './battle/runEvaluation';
 import { validateBuild } from './buildPresets';
 import defaultTeams from './defaultTeams.json';
@@ -25,6 +25,7 @@ const editTeamHero = (camp, index) => {
 	teamConfigRef.value?.editHero(camp, index);
 };
 const teamChanged = () => {
+	simulationController?.abort();
 	try {
 		localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(team.value));
 	} catch {
@@ -34,6 +35,23 @@ const teamChanged = () => {
 	simulation.value = null;
 	showStatistics.value = false;
 };
+const EVALUATION_WORKERS_STORAGE_KEY = 'stzboptm.evaluationWorkers.v1';
+const evaluationWorkerCount = ref(Math.min(4, navigator.hardwareConcurrency || 2));
+try {
+    const saved = Number(localStorage.getItem(EVALUATION_WORKERS_STORAGE_KEY));
+    if (Number.isInteger(saved) && saved >= 1 && saved <= MAX_EVALUATION_WORKERS) {
+        evaluationWorkerCount.value = saved;
+    }
+} catch {
+    // Use the default when browser storage is unavailable.
+}
+watch(evaluationWorkerCount, count => {
+    try {
+        localStorage.setItem(EVALUATION_WORKERS_STORAGE_KEY, String(count));
+    } catch {
+        // The current selection still applies to this session.
+    }
+});
 const showBattleRecord = ref(false);
 const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1042, 1043]);
 const isPortraitCard = id => portraitCardIds.has(Number(id));
@@ -44,6 +62,9 @@ const showStatistics = ref(false);
 const simulation = ref(null);
 const simulationProgress = ref(0);
 const simulationCount = 10000;
+const simulationWorkers = ref(0);
+let simulationController;
+onUnmounted(() => simulationController?.abort());
 const simulating = ref(false);
 const simulationError = ref('');
 const environmentReport = ref(null);
@@ -124,38 +145,48 @@ const battleStart = () => {
 }
 
 const simulate = async () => {
-	if (simulating.value) return;
-	simulating.value = true;
-	simulationProgress.value = 0;
-	simulation.value = null;
-	simulationError.value = '';
-	const battles = [];
-	const originalLog = console.log;
-	try {
-		const config = JSON.parse(JSON.stringify(team.value));
-		// Existing battle calculations log every hit; silence those logs during bulk runs.
-		for (let i = 0; i < simulationCount; i += 25) {
-			console.log = () => {};
-			try {
-				for (let j = 0; j < Math.min(25, simulationCount - i); j++) {
-					const battle = new BattleManger(config, { records: false });
-					battles.push({ Round: battle.Round, BlueTeam: { arms: battle.BlueTeam.arms, hurtArms: battle.BlueTeam.hurtArms, total: battle.BlueTeam.total }, RedTeam: { arms: battle.RedTeam.arms, hurtArms: battle.RedTeam.hurtArms, total: battle.RedTeam.total }, Stats: battle.Stats });
-				}
-			} finally {
-				console.log = originalLog;
-			}
-			simulationProgress.value = Math.min(i + 25, simulationCount);
-			await new Promise(resolve => setTimeout(resolve, 0));
-		}
-		simulation.value = summarizeBattles(battles);
-		showStatistics.value = true;
-	} catch (error) {
-		simulationError.value = `模拟失败：${error.message}`;
-		showStatistics.value = true;
-	} finally {
-		console.log = originalLog;
-		simulating.value = false;
-	}
+    if (simulating.value) return;
+    const controller = new AbortController();
+    simulationController = controller;
+    simulating.value = true;
+    simulationProgress.value = 0;
+    simulation.value = null;
+    simulationError.value = '';
+    try {
+        const config = JSON.parse(JSON.stringify(team.value));
+        const batchSize = 50;
+        const summaries = new Array(Math.ceil(simulationCount / batchSize));
+        const plan = {
+            total: simulationCount,
+            jobCount: summaries.length,
+            job: index => ({
+                index, config, collectStatistics: true,
+                battlesPerOpponent: Math.min(batchSize, simulationCount - index * batchSize)
+            }),
+            record(index, row) { summaries[index] = row; },
+            report: () => combineBattleSummaries(summaries)
+        };
+        const result = await runEvaluation(plan, {
+            workerCount: evaluationWorkerCount.value,
+            signal: controller.signal,
+            onProgress(completed, _total, workers) {
+                simulationProgress.value = completed;
+                simulationWorkers.value = workers;
+            }
+        });
+        if (!controller.signal.aborted) {
+            simulation.value = result;
+            showStatistics.value = true;
+        }
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            simulationError.value = `模拟失败：${error.message}`;
+            showStatistics.value = true;
+        }
+    } finally {
+        simulationController = undefined;
+        simulating.value = false;
+    }
 };
 
 const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, battlesPerOpponent, heroPool, metric, ownCamp, workerCount }) => {
@@ -195,7 +226,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 </script>
 
 <template>
-	<TeamConfig ref="teamConfigRef" v-model:show="showTeamConfig" v-model:team="team" @saved="teamChanged" @score-environment="scoreEnvironment" />
+	<TeamConfig ref="teamConfigRef" v-model:show="showTeamConfig" v-model:team="team" v-model:worker-count="evaluationWorkerCount" @saved="teamChanged" @score-environment="scoreEnvironment" />
 	<div class="main">
 		<div class="battle" v-if="battleinfo.BattleHeros != undefined">
 			<div class="header-area">
@@ -381,7 +412,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 				</div>
 			</template>
 			<template v-if="simulation">
-				<h3>{{ simulationCount }} 局模拟（每局平均）</h3>
+				<h3>{{ simulationCount }} 局模拟（每局平均） · {{ simulationWorkers }} 个 Worker</h3>
 				<p>平均回合数：{{ format(simulation.averageRounds) }}</p>
 				<p>攻方 · {{ formatBattleMetrics(simulation.metrics) }}</p>
 				<div v-for="camp in ['blue', 'red']" :key="camp">
