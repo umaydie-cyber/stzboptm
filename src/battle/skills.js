@@ -16,6 +16,17 @@ import { clacAttackDamage, getRandomBool, calcRecover, calcDefenseRecover, getRa
 import { keepTwoDecimal, makeSkillTag } from "../uilts";
 import { BattleHero } from "./battleHero";
 
+function applyDoubleAttackPreparation(target, skill) {
+    const current = target.Storage.doubleAttackPreparation;
+    if (current) {
+        target.Manger.Record.pushRecord(target, `已有【${current}】的连击预备，【${skill.name}】的连击预备冲突`, 1);
+        return false;
+    }
+    target.Storage.doubleAttackPreparation = skill.name;
+    target.Manger.Record.pushRecord(target, `的【${skill.name}】连击(预备)效果已施加`, 1);
+    return true;
+}
+
 function applyNoRecover(target, until, source) {
     if (typeof target.applyNoRecoverUntil === 'function') return target.applyNoRecoverUntil(until, source);
     target.State.noRecoverUntil = Math.max(target.State.noRecoverUntil || 0, until);
@@ -1015,6 +1026,7 @@ export const __SKILLS__ = [
                     e.clearHook("速度排序前", expireTag);
                 }, this, self);
 
+                if (!applyDoubleAttackPreparation(e, this)) return;
                 e.addHook("普攻前", "连击效果", () => {
                     if (self.Manger.Round >= 1 && self.Manger.Round <= 3) {
                         if (getRandomBool(self.getRealSkillRate(70))) {
@@ -1032,8 +1044,6 @@ export const __SKILLS__ = [
                         }
                     }
                 }, this, self);
-
-                self.Manger.Record.pushRecord(e, '的连击(预备)效果已施加', 1)
             });
         },
     },
@@ -1717,6 +1727,7 @@ export const __SKILLS__ = [
             self.Manger.Record.pushRecord(self, `发动【${this.name}】`);
             for (const ally of allies) {
                 ally.Storage.chuewujin = true;
+                if (!applyDoubleAttackPreparation(ally, this)) continue;
                 ally.addHook('行动前', '除恶务尽连击判定', () => {
                     if (self.Manger.Round < 4) return;
                     const rate = self.getRealSkillRate(70);
