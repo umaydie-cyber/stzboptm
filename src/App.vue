@@ -7,7 +7,8 @@ import BuildEvaluationReport from './components/BuildEvaluationReport.vue';
 import TeamConfig from './components/TeamConfg.vue';
 import { summarizeBattles, BATTLE_METRICS, scoreLabel } from './battle/statistics';
 import { matchupScore, simulateMatchupBatch, weightedEnvironmentScore } from './battle/environmentScore';
-import { prepareBuildEvaluation, MAX_EVALUATION_WORKERS } from './battle/buildEvaluation';
+import { prepareBuildEvaluation, EVALUATION_LABELS, ENVIRONMENT_BATTLES } from './battle/buildEvaluation';
+import { runEvaluation } from './battle/runEvaluation';
 import { validateBuild } from './buildPresets';
 import defaultTeams from './defaultTeams.json';
 
@@ -53,74 +54,37 @@ const environmentTotal = ref(0);
 const activeEvaluationWorkerCount = ref(0);
 const environmentError = ref('');
 const evaluationType = ref(null);
-const evaluationTitle = computed(() => ({ skill: '战法测评', hero: '武将测评', treasure: '宝物测评', army: '兵种测评' })[evaluationType.value] || '环境强度报告');
+const evaluationTitle = computed(() => EVALUATION_LABELS[evaluationType.value] || '环境强度报告');
 const environmentName = ref('');
 const formatBattleMetrics = metrics => Object.entries(BATTLE_METRICS)
     .map(([key, label]) => `${label} ${scoreLabel(metrics[key])}`).join(' · ');
-let evaluationWorkers;
-
-const stopEvaluation = () => {
-    evaluationWorkers?.forEach(worker => worker.terminate());
-    evaluationWorkers = undefined;
-};
-onUnmounted(stopEvaluation);
+let evaluationController;
+onUnmounted(() => evaluationController?.abort());
 
 const closeEnvironmentReport = () => {
     showEnvironmentReport.value = false;
-    if (evaluationType.value) {
-        stopEvaluation();
-        environmentScoring.value = false;
-    }
+    evaluationController?.abort();
 };
 
-const runBuildEvaluation = (payload, workerCount) => {
-    const workers = [];
-    evaluationWorkers = workers;
-    const finish = error => {
-        if (workers !== evaluationWorkers) return;
-        if (error) environmentError.value = `评测失败：${error}`;
-        stopEvaluation();
-        environmentScoring.value = false;
-    };
+const runBuildEvaluation = async (payload, workerCount) => {
+    const controller = new AbortController();
+    evaluationController = controller;
     try {
-        if (!Number.isInteger(workerCount) || workerCount < 1 || workerCount > MAX_EVALUATION_WORKERS) {
-            throw new Error(`Worker 数量须为 1 至 ${MAX_EVALUATION_WORKERS}`);
-        }
         const plan = prepareBuildEvaluation(payload);
-        environmentTotal.value = plan.total;
-        activeEvaluationWorkerCount.value = Math.min(workerCount, plan.jobCount);
-        let nextJob = 0;
-        let completedJobs = 0;
-        const dispatch = worker => {
-            if (nextJob < plan.jobCount) worker.postMessage(plan.job(nextJob++));
-        };
-        for (let i = 0; i < activeEvaluationWorkerCount.value; i++) {
-            const worker = new Worker(new URL('./battle/buildEvaluation.worker.js', import.meta.url), { type: 'module' });
-            workers.push(worker);
-            worker.onmessage = ({ data }) => {
-                if (workers !== evaluationWorkers) return;
-                try {
-                    if (data.error) throw new Error(data.error);
-                    environmentProgress.value += data.advanced;
-                    if (!data.row) return;
-                    plan.record(data.index, data.row);
-                    completedJobs++;
-                    if (completedJobs === plan.jobCount) {
-                        environmentReport.value = plan.report();
-                        finish();
-                    } else {
-                        dispatch(worker);
-                    }
-                } catch (error) {
-                    finish(error.message);
-                }
-            };
-            worker.onerror = event => finish(event.message || '无法运行评测线程');
-            worker.onmessageerror = () => finish('无法读取评测线程的结果');
-            dispatch(worker);
-        }
+        environmentReport.value = await runEvaluation(plan, {
+            workerCount,
+            signal: controller.signal,
+            onProgress(completed, total, workers) {
+                environmentProgress.value = completed;
+                environmentTotal.value = total;
+                activeEvaluationWorkerCount.value = workers;
+            }
+        });
     } catch (error) {
-        finish(error.message);
+        if (error.name !== 'AbortError') environmentError.value = `评测失败：${error.message}`;
+    } finally {
+        evaluationController = undefined;
+        environmentScoring.value = false;
     }
 };
 const configuredArms = camp => team.value[camp].heros.reduce((sum, hero) => sum + (Number(hero.arms) || 10000), 0);
@@ -200,7 +164,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
     environmentReport.value = null;
     environmentError.value = '';
     environmentProgress.value = 0;
-    environmentTotal.value = evaluation ? 0 : opponents.length * 500;
+    environmentTotal.value = evaluation ? 0 : opponents.length * ENVIRONMENT_BATTLES;
     evaluationType.value = evaluation;
     environmentName.value = name;
     showEnvironmentReport.value = true;
@@ -214,12 +178,12 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
         for (const opponent of opponents) {
             const config = { blue: build, red: opponent.build };
             const totals = { ownWounded: 0, ownDead: 0, enemyWounded: 0, enemyDead: 0 };
-            for (let i = 0; i < 500; i += 25) {
+            for (let i = 0; i < ENVIRONMENT_BATTLES; i += 25) {
                 simulateMatchupBatch(config, totals, 25);
                 environmentProgress.value += 25;
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
-            rows.push({ id: opponent.id, name: opponent.name, weight: opponent.weight, ...matchupScore(totals, 500) });
+            rows.push({ id: opponent.id, name: opponent.name, weight: opponent.weight, ...matchupScore(totals, ENVIRONMENT_BATTLES) });
         }
         environmentReport.value = { name, rows, excluded, overall: weightedEnvironmentScore(rows) };
     } catch (error) {

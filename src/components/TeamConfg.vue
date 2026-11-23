@@ -1,5 +1,5 @@
 <script setup>
-import { ref, toRefs, computed, watch } from 'vue'
+import { ref, toRefs, computed, shallowRef, watch } from 'vue'
 import { __HEROS__ } from '../battle/heros';
 import { __SKILLS__ } from '../battle/skills';
 import { INFANTRY_TYPES } from '../battle/infantryTypes';
@@ -12,6 +12,7 @@ import { keepTwoDecimal } from "../uilts"
 import { PRESET_STORAGE_KEY, ENVIRONMENT_STORAGE_KEY, validateBuild, parseBuildPresets, serializeBuildPresets, validateEnvironmentWeight, parseEnvironmentTeams, serializeEnvironmentTeams } from '../buildPresets';
 import { sameRosterAndSpeed } from '../battle/environmentScore';
 import { MAX_EVALUATION_WORKERS } from '../battle/buildEvaluation';
+import BuildOptimization from './BuildOptimization.vue';
 import { createHeroConfig, heroAttributePoints, HERO_POOL_STORAGE_KEY } from '../heroPool';
 import { BATTLE_METRICS, DEFAULT_EVALUATION_METRIC } from '../battle/statistics';
 import { treasureSpecs, treasureImageUrl, TREASURE_BASE_POINTS, TREASURE_MAX_POINTS, TREASURE_UPGRADE_POINTS, TREASURE_SECOND_UNLOCK_POINTS } from '../battle/treasures';
@@ -68,6 +69,7 @@ const environmentWeight = ref(50);
 const environmentSource = ref('current');
 const environmentMessage = ref('');
 const environmentImportInput = ref(null);
+const optimization = shallowRef(null);
 const heroPool = ref({});
 try {
     const stored = localStorage.getItem(HERO_POOL_STORAGE_KEY);
@@ -278,6 +280,43 @@ const copyBuildToEnvironment = preset => {
         }
     } catch (error) { presetMessage.value = `加入环境队伍失败：${error.message}`; }
 };
+const environmentSnapshot = () => environmentTeams.value.map(entry => ({
+    id: entry.id, name: entry.name, weight: validateEnvironmentWeight(entry.weight), build: validateBuild(entry.build)
+}));
+
+const startOptimization = preset => {
+    try {
+        if (!environmentTeams.value.length) throw new Error('请先添加至少一支环境队伍');
+        if (!Number.isSafeInteger(evaluationBattleCount.value) || evaluationBattleCount.value < 1) {
+            throw new Error('测评场数必须是正整数');
+        }
+        presetMessage.value = '';
+        optimization.value = {
+            name: preset.name,
+            build: validateBuild(preset.build),
+            opponents: environmentSnapshot(),
+            battlesPerOpponent: evaluationBattleCount.value,
+            workerCount: evaluationWorkerCount.value,
+            metric: evaluationMetric.value,
+            ownCamp: camp.value,
+            heroPool: JSON.parse(JSON.stringify(heroPool.value))
+        };
+    } catch (error) {
+        presetMessage.value = error.message;
+    }
+};
+
+const saveOptimizedBuild = (name, build) => {
+    name = name.trim();
+    if (!name || name.length > 60) throw new Error('请输入 1 至 60 字的构筑名称');
+    presets.value.push({ id: crypto.randomUUID(), name, build: validateBuild(build) });
+    if (!persistPresets()) {
+        presets.value.pop();
+        throw new Error(presetMessage.value);
+    }
+    presetMessage.value = `已另存优化构筑「${name}」`;
+};
+
 const scoreEnvironment = (preset, evaluation = null) => {
     const battlesPerOpponent = evaluationBattleCount.value;
     if (evaluation && (!Number.isSafeInteger(battlesPerOpponent) || battlesPerOpponent < 1)) {
@@ -294,9 +333,7 @@ const scoreEnvironment = (preset, evaluation = null) => {
             presetMessage.value = '这套构筑没有装备宝物，请装备后保存构筑';
             return;
         }
-        const allOpponents = environmentTeams.value.map(entry => ({
-            id: entry.id, name: entry.name, weight: validateEnvironmentWeight(entry.weight), build: validateBuild(entry.build)
-        }));
+        const allOpponents = environmentSnapshot();
         const opponents = evaluation === 'treasure' || evaluation === 'army'
             ? allOpponents
             : allOpponents.filter(entry => !sameRosterAndSpeed(build, entry.build));
@@ -633,6 +670,7 @@ const addAllPoints = type => {
 </script>
 
 <template>
+    <BuildOptimization v-if="optimization" :context="optimization" :save-build="saveOptimizedBuild" @close="optimization = null" />
     <div class="team-config-warp" v-show="props.show">
         <div class="box">
             <div class="header">
@@ -686,6 +724,7 @@ const addAllPoints = type => {
                         <button type="button" @click="scoreEnvironment(preset, 'hero')">武将测评</button>
                         <button type="button" @click="scoreEnvironment(preset, 'treasure')">宝物测评</button>
                         <button type="button" @click="scoreEnvironment(preset, 'army')">兵种测评</button>
+                        <button type="button" @click="startOptimization(preset)">辅助优化</button>
                         <button type="button" @click="removeBuild(preset)">删除</button>
                     </div>
                 </div>

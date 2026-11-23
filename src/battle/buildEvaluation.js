@@ -80,6 +80,47 @@ function evaluationSlots(build, evaluation, heroPool) {
 }
 
 export const MAX_EVALUATION_WORKERS = 16;
+export const ENVIRONMENT_BATTLES = 500;
+export const EVALUATION_LABELS = { skill: '战法测评', hero: '武将测评', treasure: '宝物测评', army: '兵种测评' };
+
+function prepareMatchups(builds, opponents, battlesPerOpponent, ownCamp, completeBuild) {
+    const opponentCount = opponents.length;
+    const jobCount = builds.length * opponentCount;
+    const total = jobCount * battlesPerOpponent;
+    if (!opponentCount) throw new Error('请先添加至少一支环境队伍');
+    if (!Number.isSafeInteger(total)) throw new Error('模拟总场数过大，请调低评测场数');
+
+    const rowsByBuild = builds.map(() => []);
+    return {
+        jobCount,
+        total,
+        job(index) {
+            const candidate = builds[Math.floor(index / opponentCount)];
+            const opponent = opponents[index % opponentCount].build;
+            const config = ownCamp === 'red' ? { blue: opponent, red: candidate } : { blue: candidate, red: opponent };
+            return { index, config, battlesPerOpponent, ownCamp };
+        },
+        record(index, row) {
+            const buildIndex = Math.floor(index / opponentCount);
+            const opponentIndex = index % opponentCount;
+            const rows = rowsByBuild[buildIndex];
+            rows.push({ opponentIndex, weight: opponents[opponentIndex].weight, ...row });
+            if (rows.length === opponentCount) {
+                rows.sort((a, b) => a.opponentIndex - b.opponentIndex);
+                completeBuild(buildIndex, rows);
+                rowsByBuild[buildIndex] = null;
+            }
+        }
+    };
+}
+
+export function prepareEnvironmentComparison(builds, opponents, ownCamp) {
+    const scores = new Array(builds.length);
+    const plan = prepareMatchups(builds, opponents, ENVIRONMENT_BATTLES, ownCamp, (index, rows) => {
+        scores[index] = weightedEnvironmentScore(rows);
+    });
+    return { ...plan, report: () => scores };
+}
 
 export function prepareBuildEvaluation({
     name, build, opponents, excluded, evaluation, battlesPerOpponent,
@@ -145,33 +186,17 @@ export function prepareBuildEvaluation({
         return { ...slot, candidateCount: candidates.length, variants };
     });
 
-    const rowsByBuild = builds.map(() => []);
     const scores = new Array(builds.length);
-    function job(index) {
-        const candidate = builds[Math.floor(index / opponentCount)];
-        const opponent = opponents[index % opponentCount].build;
-        const config = ownCamp === 'red' ? { blue: opponent, red: candidate } : { blue: candidate, red: opponent };
-        return { index, config, battlesPerOpponent, ownCamp };
-    }
-
-    function record(index, row) {
-        const buildIndex = Math.floor(index / opponentCount);
-        const opponentIndex = index % opponentCount;
-        const rows = rowsByBuild[buildIndex];
-        rows.push({ opponentIndex, weight: opponents[opponentIndex].weight, ...row });
-        if (rows.length === opponentCount) {
-            rows.sort((a, b) => a.opponentIndex - b.opponentIndex);
-            scores[buildIndex] = weightedEnvironmentScore(rows)[metric];
-            rowsByBuild[buildIndex] = null;
-        }
-    }
+    const plan = prepareMatchups(builds, opponents, battlesPerOpponent, ownCamp, (index, rows) => {
+        scores[index] = weightedEnvironmentScore(rows)[metric];
+    });
 
     function report() {
         const baseline = scores[0];
         const results = reportSlots.map(({ variants, ...slot }) => {
             const replacements = [];
-            for (const { buildIndex, ...candidate } of variants) {
-                const score = scores[buildIndex];
+            for (const candidate of variants) {
+                const score = scores[candidate.buildIndex];
                 if (baseline !== null && score !== null && score > baseline) {
                     replacements.push({ ...candidate, score });
                 }
@@ -187,5 +212,5 @@ export function prepareBuildEvaluation({
         };
     }
 
-    return { jobCount, total, job, record, report };
+    return { ...plan, report, getBuild: index => builds[index] };
 }
