@@ -241,6 +241,7 @@ export const getDamageAddition = (attacker, target, damageInfo, skill) => {
         add(target, "beInteDamageSub", -1);
         if (type == 2) {
             if (target.State.nextInteDamageSub?.value) special(target.State.nextInteDamageSub.from?.name || '下一次策略减伤', -target.State.nextInteDamageSub.value, target);
+            if (damageInfo.wenfaSource) special('文伐', 20, damageInfo.wenfaSource);
             const taoyuan = target.Storage.taoyuanStrategyReduction;
             if (!damageInfo.ignoreTaoyuan && taoyuan && target.Manger.Round >= 1 && target.Manger.Round <= 3 && taoyuan.remaining > 0) special('桃源问津', -9999, target);
         }

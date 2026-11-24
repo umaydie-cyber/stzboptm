@@ -1284,10 +1284,12 @@ export class BattleHero {
         const jixianReduction = jixianFront?.round === this.Manger.Round && !jixianFront.used && [1, 2].includes(damageInfo.type) ? 50 : 0;
         const shengbingBonus = skill?.type === 2 && skill.id === attacker.Skill
             ? (attacker.Storage.shengbingStacks || 0) * 15 : 0;
+        const wenfaSource = damageInfo.type === 2 ? this.State.wenfaSource : null;
         const resolvedInfo = { ...damageInfo, ...(reduceThisHit ? { jianzuReduction: true } : {}),
             treasureJishiReductions: jishiReductions, xinghanBuquReduction: buquReduction,
             xinghanWeishiReduction: weishiReduction, taieFirstReduction, panzhenReduction, jixianReduction,
-            shengbingBonus: num == null ? shengbingBonus : 0 };
+            shengbingBonus: num == null ? shengbingBonus : 0,
+            wenfaSource: num == null ? wenfaSource : null };
         const qiqinActive = attacker.Storage.qiqinAllDamageSub?.round === this.Manger.Round;
         const qiqinInSnapshot = damageInfo.damageModifiers?.entries?.some(entry => entry.name === '七擒七纵');
         const applyQiqinToSnapshot = num != null && qiqinActive && !qiqinInSnapshot;
@@ -1306,6 +1308,7 @@ export class BattleHero {
         if (num != null && !resolvedInfo.damageModifiers) getDamageAddition(attacker, this, resolvedInfo, skill);
         let realDamage = 0;
         let damage;
+        let wenfaAppliedToSnapshot = false;
         if (num != null) {
             damage = num;
             if ((reduceThisHit || applyQiqinToSnapshot || applyTaoyuanToSnapshot || xinghanDynamicReduction || taieFirstReduction || panzhenReduction || jixianReduction) && [1, 2, 4].includes(damageInfo.type)) {
@@ -1316,8 +1319,13 @@ export class BattleHero {
                 const beforeInfo = { ...damageInfo, ignoreQiqin: applyQiqinToSnapshot,
                     ignoreTaoyuan: applyTaoyuanToSnapshot, jianzuReduction: false };
                 const before = getDamageAddition(attacker, this, beforeInfo, skill);
+                if (wenfaSource) {
+                    resolvedInfo.wenfaSource = wenfaSource;
+                    wenfaAppliedToSnapshot = true;
+                }
                 const after = getDamageAddition(attacker, this, resolvedInfo, skill);
-                damage = Math.min(num, Math.round(base + Math.max(0, num - base) * after / before));
+                const adjusted = Math.round(base + Math.max(0, num - base) * after / before);
+                damage = wenfaAppliedToSnapshot ? adjusted : Math.min(num, adjusted);
             }
             // 指挥战法可能在战前缓存伤害；第三次策略命中不能继续沿用机先的快照增伤。
             if (attacker.Treasure?.id === 'chengying' && [2, 4].includes(damageInfo.type) &&
@@ -1350,19 +1358,22 @@ export class BattleHero {
             }
         }
 
-        // 持续伤害先保存快照，胜兵只在实际命中时加成一次。
-        if (num != null && shengbingBonus && [1, 2, 4].includes(damageInfo.type)) {
+        // 一次性增伤在命中时加入预先计算的伤害快照。
+        const snapshotWenfa = num != null && !wenfaAppliedToSnapshot ? wenfaSource : null;
+        if (num != null && (shengbingBonus || snapshotWenfa) && [1, 2, 4].includes(damageInfo.type)) {
             const modifiers = resolvedInfo.damageModifiers;
             const floor = modifiers.entries.find(entry => entry.name === '增减伤下限')?.value || 0;
             const before = 100 + modifiers.total;
-            const after = Math.max(10, before - floor + shengbingBonus);
+            const added = shengbingBonus + (snapshotWenfa ? 20 : 0);
+            const after = Math.max(10, before - floor + added);
             const base = damageInfo.troopBaseDamage ?? (damageInfo.type === 1
                 ? attacker.Arms * 373 / (7700 + attacker.Arms)
                 : attacker.Arms * 178 / (6459 + attacker.Arms) / (damageInfo.type === 4 ? 3 : 1));
             damage += Math.round(Math.max(0, damage - base) * (after / before - 1));
             const entries = modifiers.entries.filter(entry => entry.name !== '增减伤下限');
-            entries.push({ name: '胜兵求战', hero: attacker.Name, value: shengbingBonus });
-            const newFloor = after - (before - floor + shengbingBonus);
+            if (shengbingBonus) entries.push({ name: '胜兵求战', hero: attacker.Name, value: shengbingBonus });
+            if (snapshotWenfa) entries.push({ name: '文伐', hero: snapshotWenfa.Name, value: 20 });
+            const newFloor = after - (before - floor + added);
             if (newFloor) entries.push({ name: '增减伤下限', hero: '', value: newFloor });
             resolvedInfo.damageModifiers = { total: after - 100, entries };
         }
@@ -1400,6 +1411,7 @@ export class BattleHero {
             this.Arms -= damage;
         }
 
+        if (realDamage > 0 && wenfaSource) this.State.wenfaSource = null;
         this.Manger.addStat(attacker, skill, realDamage, 0);
         for (const ally of sharedAllies) {
             const loss = Math.min(ally.absorbYuxiDamage(sharedAmount), ally.Arms);
@@ -1855,6 +1867,10 @@ export class BattleHero {
         this.State.continuousDamage = {};
         if (this.State.noRecoverUntil > this.Manger.Round) {
             this.State.noRecoverUntil = 0;
+            removed++;
+        }
+        if (this.State.wenfaSource) {
+            this.State.wenfaSource = null;
             removed++;
         }
         for (const hooks of Object.values(this.HOOKS)) {

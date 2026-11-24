@@ -55,6 +55,8 @@ watch(evaluationWorkerCount, count => {
 const showBattleRecord = ref(false);
 const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1042, 1043]);
 const isPortraitCard = id => portraitCardIds.has(Number(id));
+const battleCardImage = (id, animated) => HEROS[id]?.cardPlaceholder ||
+    `/stzboptm/assets/card/${id}.${isPortraitCard(id) ? 'png' : animated ? 'webp' : 'jpg'}`;
 const recordCardImage = hero => hero
 	? `/stzboptm/assets/card/${hero.Id}${isPortraitCard(hero.Id) ? '.png' : '_long.jpg'}`
 	: '';
@@ -265,8 +267,8 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 			<div class="card-area">
 				<div class="card-box">
 					<div class="card" v-for="(item, index) in [...battleinfo.BlueTeam.hero].reverse()" @click="editTeamHero('blue', team.blue.heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${isPortraitCard(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${isPortraitCard(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="battleCardImage(item.Id, item.Animation)" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="battleCardImage(item.Id, item.Animation)" class="card-img gray" v-else>
 
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
@@ -303,8 +305,8 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 				</div>
 				<div class="card-box">
 					<div class="card" v-for="(item, index) in [...battleinfo.RedTeam.hero].reverse()" @click="editTeamHero('red', team.red.heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${isPortraitCard(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img" v-if="item && item.Arms > 0">
-						<img :src="`/stzboptm/assets/card/${item.Id}.${isPortraitCard(item.Id) ? 'png' : item.Animation ? 'webp' : 'jpg'}`" class="card-img gray" v-else>
+						<img :src="battleCardImage(item.Id, item.Animation)" class="card-img" v-if="item && item.Arms > 0">
+						<img :src="battleCardImage(item.Id, item.Animation)" class="card-img gray" v-else>
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${item.Camp}.png`">
@@ -367,7 +369,7 @@ const scoreEnvironment = async ({ name, build, opponents, excluded, evaluation, 
 			<div class="card-area">
 				<div class="card-box" v-for="camp in ['blue', 'red']" :key="camp">
 					<div class="card" v-for="(item, index) in [...team[camp].heros].reverse()" :key="index" @click="editTeamHero(camp, team[camp].heros.length - 1 - index)">
-						<img :src="`/stzboptm/assets/card/${item.id}.${isPortraitCard(item.id) ? 'png' : item.animation ? 'webp' : 'jpg'}`" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
+						<img :src="battleCardImage(item.id, item.animation)" class="card-img" @error="$event.target.src = '/stzboptm/assets/card/02.jpg'">
 						<img src="/assets/ui/card.png" class="card-border">
 						<div class="camp">
 							<img :src="`/stzboptm/assets/ui/camp${HEROS[item.id].camp}.png`">

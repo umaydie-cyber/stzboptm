@@ -2874,6 +2874,38 @@ export const __SKILLS__ = [
             return true;
         }
     },
+    {
+        id: 1105, name: '世仇',
+        desc: '普攻后有机会追击同一目标，造成受谋略影响的策略伤害，并使存活目标两回合不能恢复兵力。80 谋略时伤害率为 233%，每额外 10 点谋略提高 21 个百分点。',
+        level: 'A', type: 3, target: 1, target_type: 'enemy', limit: 0, rate: 60, study: false,
+        causesStrategyDamage: true,
+        callskill: function (self, target) {
+            if (!target || target.Arms <= 0) return;
+            const rate = clacSkillAdditionRate(233, 2.1, self.Attrs.int);
+            self.Manger.Record.pushRecord(self, `的攻击发动【${this.name}】（策略伤害率 ${rate}%）`);
+            target.beHurt(self, { type: 2, rate }, this);
+            if (target.Arms > 0 && !target.tryQiqinDefense('控制', self) &&
+                applyNoRecover(target, self.Manger.Round + 2, self)) {
+                self.Manger.Record.pushRecord(target, '陷入围困，2 回合内无法恢复兵力', 1);
+            }
+        }
+    },
+    {
+        id: 1106, name: '文伐',
+        desc: '普攻后有机会对同一目标造成策略伤害。随后目标受到的下一次直接策略攻击在增减伤区加 20 个百分点。80 谋略时伤害率为 228%，每额外 10 点谋略提高 21 个百分点。',
+        level: 'B', type: 3, target: 1, target_type: 'enemy', limit: 0, rate: 40, study: true,
+        causesStrategyDamage: true,
+        callskill: function (self, target) {
+            if (!target || target.Arms <= 0) return;
+            const rate = clacSkillAdditionRate(228, 2.1, self.Attrs.int);
+            self.Manger.Record.pushRecord(self, `的攻击发动【${this.name}】（策略伤害率 ${rate}%）`);
+            target.beHurt(self, { type: 2, rate }, this);
+            if (target.Arms > 0) {
+                target.State.wenfaSource = self;
+                self.Manger.Record.pushRecord(target, '的【文伐】使下一次受到的策略攻击伤害提高20%', 1);
+            }
+        }
+    },
     ...HENEI_DERIVED.map(config => ({
         id: config.id, name: config.name,
         desc: config.desc,
