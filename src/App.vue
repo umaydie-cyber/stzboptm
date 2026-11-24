@@ -53,9 +53,9 @@ watch(evaluationWorkerCount, count => {
     }
 });
 const showBattleRecord = ref(false);
-const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1042, 1043]);
+const portraitCardIds = new Set([1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1042, 1043, 1045]);
 const isPortraitCard = id => portraitCardIds.has(Number(id));
-const battleCardImage = (id, animated) => HEROS[id]?.cardPlaceholder ||
+const battleCardImage = (id, animated) =>
     `/stzboptm/assets/card/${id}.${isPortraitCard(id) ? 'png' : animated ? 'webp' : 'jpg'}`;
 const recordCardImage = hero => hero
 	? `/stzboptm/assets/card/${hero.Id}${isPortraitCard(hero.Id) ? '.png' : '_long.jpg'}`

@@ -508,7 +508,6 @@ export const __HEROS__ = [
     },
     {
         id: 1045, name: '王异', camp: 2, star: 5, cost: 25, army: 1, limit: 4, skill: 1105,
-        cardPlaceholder: '/stzboptm/assets/card/02.jpg',
         attrs: { atk: 88, def: 52, int: 90, spd: 53, des: 9 },
         attrs_grow: { atk: 1.42, def: 0.84, int: 1.70, spd: 0.86, des: 0.72 }
     }
